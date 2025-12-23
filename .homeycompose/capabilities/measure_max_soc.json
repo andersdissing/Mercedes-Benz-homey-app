@@ -1,0 +1,23 @@
+{
+  "type": "number",
+  "title": {
+    "en": "Max SoC",
+    "nl": "Max Laadniveau",
+    "de": "Max Ladezustand"
+  },
+  "label": {
+    "en": "Max SoC",
+    "nl": "Max Laadniveau",
+    "de": "Max Ladezustand"
+  },
+  "units": {
+    "en": "%"
+  },
+  "decimals": 0,
+  "min": 0,
+  "max": 100,
+  "chartType": "stepLine",
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor"
+}

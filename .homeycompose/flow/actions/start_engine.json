@@ -1,0 +1,20 @@
+{
+  "id": "start_engine",
+  "title": {
+    "en": "Start engine",
+    "nl": "Start motor",
+    "de": "Motor starten"
+  },
+  "hint": {
+    "en": "Requires PIN to be configured in device settings",
+    "nl": "Vereist dat PIN is geconfigureerd in apparaatinstellingen",
+    "de": "Erfordert PIN-Konfiguration in den Geräteeinstellungen"
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=mercedes-vehicle"
+    }
+  ]
+}

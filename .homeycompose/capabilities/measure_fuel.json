@@ -1,0 +1,23 @@
+{
+  "type": "number",
+  "title": {
+    "en": "Fuel Level",
+    "nl": "Brandstofniveau",
+    "de": "Tankfüllstand"
+  },
+  "label": {
+    "en": "Fuel",
+    "nl": "Brandstof",
+    "de": "Tank"
+  },
+  "units": {
+    "en": "%"
+  },
+  "decimals": 0,
+  "min": 0,
+  "max": 100,
+  "chartType": "stepLine",
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor"
+}

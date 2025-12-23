@@ -1,0 +1,12 @@
+{
+  "type": "string",
+  "title": {
+    "en": "Charge Flap DC Status",
+    "nl": "Laadklep DC Status",
+    "de": "Ladeklappe DC Status"
+  },
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/icons/charge_flap.svg"
+}

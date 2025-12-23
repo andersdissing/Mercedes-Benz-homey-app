@@ -1,0 +1,24 @@
+{
+  "title": {
+    "en": "Engine is !{{running|stopped}}",
+    "nl": "Motor is !{{aan|uit}}",
+    "de": "Motor ist !{{an|aus}}"
+  },
+  "titleFormatted": {
+    "en": "Engine of [[device]] is !{{running|stopped}}",
+    "nl": "Motor van [[device]] is !{{aan|uit}}",
+    "de": "Motor von [[device]] ist !{{an|aus}}"
+  },
+  "hint": {
+    "en": "This card checks if the vehicle engine is running.",
+    "nl": "Deze kaart controleert of de motor van het voertuig draait.",
+    "de": "Diese Karte prüft, ob der Fahrzeugmotor läuft."
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=mercedes-vehicle"
+    }
+  ]
+}

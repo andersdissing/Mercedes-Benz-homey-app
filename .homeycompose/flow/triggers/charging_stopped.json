@@ -1,0 +1,15 @@
+{
+  "id": "charging_stopped",
+  "title": {
+    "en": "Charging stopped",
+    "nl": "Opladen gestopt",
+    "de": "Laden gestoppt"
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=mercedes-vehicle"
+    }
+  ]
+}

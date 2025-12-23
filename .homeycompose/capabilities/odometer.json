@@ -1,0 +1,17 @@
+{
+  "type": "number",
+  "title": {
+    "en": "Odometer",
+    "nl": "Kilometerstand",
+    "de": "Kilometerstand"
+  },
+  "units": {
+    "en": "km"
+  },
+  "decimals": 0,
+  "min": 0,
+  "max": 999999,
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor"
+}

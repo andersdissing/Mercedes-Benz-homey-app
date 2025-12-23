@@ -1,0 +1,15 @@
+{
+  "id": "stop_climate",
+  "title": {
+    "en": "Stop climate control",
+    "nl": "Stop klimaatregeling",
+    "de": "Klimatisierung stoppen"
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=mercedes-vehicle"
+    }
+  ]
+}

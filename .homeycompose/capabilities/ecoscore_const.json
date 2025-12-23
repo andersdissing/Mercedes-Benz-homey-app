@@ -1,0 +1,15 @@
+{
+  "type": "number",
+  "title": {
+    "en": "Eco Score Constant",
+    "nl": "Eco Score Constant",
+    "de": "Eco Score Konstant"
+  },
+  "decimals": 0,
+  "min": 0,
+  "max": 100,
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/icons/ecoscore.svg"
+}

@@ -1,0 +1,23 @@
+{
+  "type": "number",
+  "title": {
+    "en": "Oil Level",
+    "nl": "Oliepeil",
+    "de": "Ölstand"
+  },
+  "label": {
+    "en": "Oil",
+    "nl": "Olie",
+    "de": "Öl"
+  },
+  "units": {
+    "en": "%"
+  },
+  "decimals": 0,
+  "min": 0,
+  "max": 100,
+  "chartType": "stepLine",
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor"
+}

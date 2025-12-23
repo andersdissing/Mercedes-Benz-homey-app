@@ -1,0 +1,15 @@
+{
+  "type": "number",
+  "title": {
+    "en": "Eco Score Acceleration",
+    "nl": "Eco Score Acceleratie",
+    "de": "Eco Score Beschleunigung"
+  },
+  "decimals": 0,
+  "min": 0,
+  "max": 100,
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/icons/ecoscore.svg"
+}

@@ -1,0 +1,98 @@
+syntax = "proto3";
+
+package proto;
+
+// Door enumeration
+enum Door {
+  UNKNOWN_DOOR = 0;
+  FRONT_LEFT = 1;
+  FRONT_RIGHT = 2;
+  REAR_LEFT = 3;
+  REAR_RIGHT = 4;
+  TRUNK = 5;
+  FUEL_FLAP = 6;
+  CHARGE_FLAP = 7;
+  CHARGE_COUPLER = 8;
+}
+
+// Backend enumeration for CommandRequest
+enum Backend {
+  VVA = 0;
+  VehicleAPI = 1;
+}
+
+// Command message types
+message DoorsLock {
+  repeated Door doors = 1;
+}
+
+message DoorsUnlock {
+  string pin = 1;
+  repeated Door doors = 2;
+}
+
+message EngineStart {
+  string pin = 1;
+}
+
+message EngineStop {
+}
+
+message AuxheatStart {
+}
+
+message AuxheatStop {
+}
+
+message WindowsOpen {
+  string pin = 1;
+}
+
+message WindowsClose {
+}
+
+message SigPosStart {
+  enum HornType {
+    HORN_OFF = 0;
+    HORN_LOW_VOLUME = 1;
+    HORN_HIGH_VOLUME = 2;
+  }
+
+  enum LightType {
+    LIGHT_OFF = 0;
+    DIPPED_HEAD_LIGHT = 1;
+    WARNING_LIGHT = 2;
+  }
+
+  enum SigposType {
+    LIGHT_ONLY = 0;
+    HORN_ONLY = 1;
+    LIGHT_AND_HORN = 2;
+    PANIC_ALARM = 3;
+  }
+
+  int32 horn_repeat = 1;
+  HornType horn_type = 2;
+  LightType light_type = 3;
+  int32 sigpos_duration = 4;
+  SigposType sigpos_type = 5;
+}
+
+// Main CommandRequest message
+message CommandRequest {
+  string vin = 1;
+  string request_id = 7;
+  Backend backend = 36;
+
+  oneof command {
+    DoorsLock doors_lock = 5;
+    DoorsUnlock doors_unlock = 6;
+    EngineStart engine_start = 19;
+    EngineStop engine_stop = 20;
+    AuxheatStart auxheat_start = 2;
+    AuxheatStop auxheat_stop = 3;
+    WindowsOpen windows_open = 12;
+    WindowsClose windows_close = 13;
+    SigPosStart sigpos_start = 35;
+  }
+}

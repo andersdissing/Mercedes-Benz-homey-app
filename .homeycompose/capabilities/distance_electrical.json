@@ -1,0 +1,18 @@
+{
+  "type": "number",
+  "title": {
+    "en": "Electric Distance",
+    "nl": "Elektrische Afstand",
+    "de": "Elektrische Strecke"
+  },
+  "units": {
+    "en": "km"
+  },
+  "decimals": 1,
+  "min": 0,
+  "max": 99999,
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/icons/distance_electrical.svg"
+}

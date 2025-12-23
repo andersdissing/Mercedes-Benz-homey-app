@@ -1,0 +1,65 @@
+{
+  "id": "com.mercedes.mbapi",
+  "version": "1.0.0",
+  "compatibility": ">=12.0.0",
+  "sdk": 3,
+  "platforms": [
+    "local",
+    "cloud"
+  ],
+  "name": {
+    "en": "Mercedes-Benz",
+    "nl": "Mercedes-Benz",
+    "de": "Mercedes-Benz"
+  },
+  "description": {
+    "en": "Control your Mercedes-Benz vehicle from Homey",
+    "nl": "Bedien je Mercedes-Benz auto vanuit Homey",
+    "de": "Steuern Sie Ihr Mercedes-Benz Fahrzeug von Homey aus"
+  },
+  "category": [
+    "appliances"
+  ],
+  "tags": {
+    "en": [
+      "mercedes",
+      "benz",
+      "car",
+      "vehicle",
+      "mercedes me",
+      "electric vehicle",
+      "ev",
+      "automobile"
+    ],
+    "nl": [
+      "mercedes",
+      "benz",
+      "auto",
+      "voertuig",
+      "mercedes me",
+      "elektrische auto",
+      "ev"
+    ],
+    "de": [
+      "mercedes",
+      "benz",
+      "auto",
+      "fahrzeug",
+      "mercedes me",
+      "elektroauto",
+      "ev"
+    ]
+  },
+  "permissions": [
+    "homey:manager:geolocation"
+  ],
+  "images": {
+    "small": "/assets/images/small.png",
+    "large": "/assets/images/large.png",
+    "xlarge": "/assets/images/xlarge.png"
+  },
+  "author": {
+    "name": "Mercedes-Benz Homey Integration",
+    "email": "support@example.com"
+  }
+}

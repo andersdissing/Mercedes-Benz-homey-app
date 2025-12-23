@@ -1,0 +1,27 @@
+{
+  "id": "low_battery",
+  "title": {
+    "en": "Battery is low",
+    "nl": "Batterij is laag",
+    "de": "Batterie ist niedrig"
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=mercedes-vehicle"
+    }
+  ],
+  "tokens": [
+    {
+      "name": "battery_level",
+      "type": "number",
+      "title": {
+        "en": "Battery level",
+        "nl": "Batterijniveau",
+        "de": "Batteriestand"
+      },
+      "example": 15
+    }
+  ]
+}

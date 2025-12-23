@@ -1,0 +1,15 @@
+{
+  "id": "stop_engine",
+  "title": {
+    "en": "Stop engine",
+    "nl": "Stop motor",
+    "de": "Motor stoppen"
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=mercedes-vehicle"
+    }
+  ]
+}

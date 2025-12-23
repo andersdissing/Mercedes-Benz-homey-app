@@ -1,0 +1,23 @@
+{
+  "type": "number",
+  "title": {
+    "en": "AdBlue Level",
+    "nl": "AdBlue Niveau",
+    "de": "AdBlue Füllstand"
+  },
+  "label": {
+    "en": "AdBlue",
+    "nl": "AdBlue",
+    "de": "AdBlue"
+  },
+  "units": {
+    "en": "%"
+  },
+  "decimals": 0,
+  "min": 0,
+  "max": 100,
+  "chartType": "stepLine",
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor"
+}

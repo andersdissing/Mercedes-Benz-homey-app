@@ -1,0 +1,12 @@
+{
+  "type": "string",
+  "title": {
+    "en": "Departure Time",
+    "nl": "Vertrektijd",
+    "de": "Abfahrtszeit"
+  },
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/icons/driven_time.svg"
+}

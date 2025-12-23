@@ -1,0 +1,37 @@
+{
+  "name": "com.mercedes.mbapi",
+  "version": "1.0.0",
+  "description": "Mercedes-Benz integration for Homey Pro",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "homey",
+    "mercedes",
+    "mercedes-benz",
+    "car",
+    "vehicle",
+    "smart-car"
+  ],
+  "author": "Mercedes-Benz Homey Integration",
+  "license": "GPL-3.0",
+  "dependencies": {
+    "axios": "^1.6.0",
+    "axios-cookiejar-support": "^6.0.5",
+    "protobufjs": "^7.5.4",
+    "tough-cookie": "^6.0.0",
+    "ws": "^8.14.0"
+  },
+  "devDependencies": {
+    "homey": "^3.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/com.mercedes.mbapi.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/com.mercedes.mbapi/issues"
+  },
+  "homepage": "https://github.com/yourusername/com.mercedes.mbapi#readme"
+}

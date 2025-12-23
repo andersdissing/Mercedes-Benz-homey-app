@@ -1,0 +1,15 @@
+{
+  "id": "vehicle_unlocked",
+  "title": {
+    "en": "Vehicle was unlocked",
+    "nl": "Voertuig is ontgrendeld",
+    "de": "Fahrzeug wurde entriegelt"
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=mercedes-vehicle"
+    }
+  ]
+}

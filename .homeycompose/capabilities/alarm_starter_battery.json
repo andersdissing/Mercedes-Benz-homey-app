@@ -1,0 +1,16 @@
+{
+  "type": "boolean",
+  "title": {
+    "en": "Starter Battery Low",
+    "nl": "Startaccu Laag",
+    "de": "Starterbatterie Niedrig"
+  },
+  "label": {
+    "en": "Starter Battery",
+    "nl": "Startaccu",
+    "de": "Starterbatterie"
+  },
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor"
+}

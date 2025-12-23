@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package proto;
+
+import "vehicle-commands.proto";
+
+// ClientMessage is the main wrapper for all WebSocket messages
+message ClientMessage {
+  string tracking_id = 5;
+
+  oneof msg {
+    CommandRequest commandRequest = 3;
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "type": "number",
+  "title": {
+    "en": "Eco Score Total",
+    "nl": "Eco Score Totaal",
+    "de": "Eco Score Gesamt"
+  },
+  "decimals": 0,
+  "min": 0,
+  "max": 100,
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/icons/ecoscore.svg"
+}

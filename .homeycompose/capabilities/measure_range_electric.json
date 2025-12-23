@@ -1,0 +1,21 @@
+{
+  "type": "number",
+  "title": {
+    "en": "Electric Range",
+    "nl": "Elektrisch Bereik",
+    "de": "Elektrische Reichweite"
+  },
+  "label": {
+    "en": "Range (EV)",
+    "nl": "Bereik (EV)",
+    "de": "Reichweite (EV)"
+  },
+  "units": {
+    "en": "km"
+  },
+  "decimals": 0,
+  "chartType": "stepLine",
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor"
+}

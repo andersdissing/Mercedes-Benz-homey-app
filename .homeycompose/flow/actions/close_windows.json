@@ -1,0 +1,15 @@
+{
+  "id": "close_windows",
+  "title": {
+    "en": "Close windows",
+    "nl": "Sluit ramen",
+    "de": "Fenster schließen"
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=mercedes-vehicle"
+    }
+  ]
+}

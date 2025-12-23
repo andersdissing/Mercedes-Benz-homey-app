@@ -1,0 +1,15 @@
+{
+  "id": "engine_started",
+  "title": {
+    "en": "Engine was started",
+    "nl": "Motor is gestart",
+    "de": "Motor wurde gestartet"
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=mercedes-vehicle"
+    }
+  ]
+}
