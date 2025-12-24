@@ -1,0 +1,12 @@
+{
+  "name": {
+    "en": "Mercedes-Benz Vehicle",
+    "nl": "Mercedes-Benz Voertuig",
+    "de": "Mercedes-Benz Fahrzeug"
+  },
+  "class": "other",
+  "platforms": [
+    "local",
+    "cloud"
+  ]
+}

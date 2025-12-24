@@ -1,0 +1,15 @@
+{
+  "id": "flash_lights",
+  "title": {
+    "en": "Flash lights",
+    "nl": "Knipperlichten",
+    "de": "Lichter blinken"
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=mercedes-vehicle"
+    }
+  ]
+}

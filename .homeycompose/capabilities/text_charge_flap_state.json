@@ -1,0 +1,12 @@
+{
+  "type": "string",
+  "title": {
+    "en": "Charge Flap State",
+    "nl": "Laadklep Status",
+    "de": "Ladeklappenstatus"
+  },
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/icons/charge_flap.svg"
+}

@@ -1,0 +1,18 @@
+{
+  "type": "number",
+  "title": {
+    "en": "Driving Time",
+    "nl": "Rijtijd",
+    "de": "Fahrzeit"
+  },
+  "units": {
+    "en": "min"
+  },
+  "decimals": 0,
+  "min": 0,
+  "max": 99999,
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/icons/driven_time.svg"
+}

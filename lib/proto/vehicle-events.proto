@@ -1,0 +1,242 @@
+// Mercedes-Benz Vehicle Events Protocol Buffer Definition
+// Minimal version for Homey Pro app - extracted from mbapi2020 HA integration
+
+syntax = "proto3";
+
+package proto;
+
+// VEPUpdate is the main message containing vehicle attribute updates
+message VEPUpdate {
+  int32 sequence_number = 1;
+  string vin = 2;
+  bool full_update = 15;
+  int64 emit_timestamp = 10;
+  int64 emit_timestamp_in_ms = 14;
+  map<string, VehicleAttributeStatus> attributes = 11;
+}
+
+// VehicleAttributeStatus contains the value and metadata for a single vehicle attribute
+message VehicleAttributeStatus {
+  int64 timestamp = 1 [deprecated = true];
+  int64 timestamp_in_ms = 10;
+  bool changed = 2;
+  int32 status = 3;
+  repeated int32 service_ids = 30;
+  string display_value = 11;
+
+  // Unit types (oneof display_unit)
+  oneof display_unit {
+    CombustionConsumptionUnit combustion_consumption_unit = 12;
+    GasConsumptionUnit gas_consumption_unit = 13;
+    ElectricityConsumptionUnit electricity_consumption_unit = 14;
+    SpeedDistanceUnit speed_distance_unit = 15 [deprecated = true];
+    SpeedUnit speed_unit = 25;
+    DistanceUnit distance_unit = 26;
+    TemperatureUnit temperature_unit = 16;
+    PressureUnit pressure_unit = 17;
+    RatioUnit ratio_unit = 18;
+    ClockHourUnit clock_hour_unit = 19;
+  }
+
+  // Value types (oneof attribute_type)
+  oneof attribute_type {
+    int64 int_value = 4;
+    bool bool_value = 5;
+    string string_value = 6;
+    double double_value = 7;
+    bool nil_value = 8;
+    string unsupported_value = 9;
+  }
+
+  // Unit enums
+  enum CombustionConsumptionUnit {
+    UNSPECIFIED_COMBUSTION_CONSUMPTION_UNIT = 0;
+    LITER_PER_100KM = 1;
+    KM_PER_LITER = 2;
+    MPG_UK = 3;
+    MPG_US = 4;
+  }
+
+  enum GasConsumptionUnit {
+    UNSPECIFIED_GAS_CONSUMPTION_UNIT = 0;
+    KG_PER_100KM = 1;
+    KM_PER_KG = 2;
+    M_PER_KG = 3;
+  }
+
+  enum ElectricityConsumptionUnit {
+    UNSPECIFIED_ELECTRICITY_CONSUMPTION_UNIT = 0;
+    KWH_PER_100KM = 1;
+    KM_PER_KWH = 2;
+    KWH_PER_100MI = 3;
+    M_PER_KWH = 4;
+    MPGE = 5;
+  }
+
+  enum SpeedDistanceUnit {
+    option deprecated = true;
+    UNSPECIFIED_SPEED_DISTANCE_UNIT = 0;
+    KM_PER_H = 1;
+    M_PER_H = 2;
+  }
+
+  enum SpeedUnit {
+    UNSPECIFIED_SPEED_UNIT = 0;
+    KM_PER_HOUR = 1;
+    M_PER_HOUR = 2;
+  }
+
+  enum DistanceUnit {
+    UNSPECIFIED_DISTANCE_UNIT = 0;
+    KILOMETERS = 1;
+    MILES = 2;
+  }
+
+  enum TemperatureUnit {
+    UNSPECIFIED_TEMPERATURE_UNIT = 0;
+    CELSIUS = 1;
+    FAHRENHEIT = 2;
+  }
+
+  enum PressureUnit {
+    UNSPECIFIED_PRESSURE_UNIT = 0;
+    KPA = 1;
+    BAR = 2;
+    PSI = 3;
+  }
+
+  enum RatioUnit {
+    UNSPECIFIED_RATIO_UNIT = 0;
+    PERCENT = 1;
+  }
+
+  enum ClockHourUnit {
+    UNSPECIFIED_CLOCK_HOUR_UNIT = 0;
+    T12H = 1;
+    T24H = 2;
+  }
+}
+
+// WebSocket Messages
+
+// VEPUpdatesByVIN - wrapper for VEP updates from WebSocket
+// CORRECTED: updates is field 1, sequence_number is field 2
+message VEPUpdatesByVIN {
+  map<string, VEPUpdate> updates = 1;
+  int32 sequence_number = 2;
+}
+
+// DebugMessage - debug information from server
+message DebugMessage {
+  string message = 1;
+}
+
+// AssignedVehicles - list of vehicles assigned to user
+message AssignedVehicles {
+  repeated string vins = 1;
+}
+
+// CommandStatusUpdate - individual command status
+message CommandStatusUpdate {
+  string request_id = 1;
+  string state = 2;  // INITIATED, ENQUEUED, PROCESSING, FINISHED, FAILED
+  repeated string errors = 3;
+  int64 timestamp_in_ms = 4;
+}
+
+// VinCommandStatusUpdates - command status updates for a specific VIN
+message VinCommandStatusUpdates {
+  repeated CommandStatusUpdate updates = 1;
+}
+
+// AppTwinCommandStatusUpdatesByVIN - command status updates by VIN
+message AppTwinCommandStatusUpdatesByVIN {
+  int32 sequence_number = 1;
+  map<string, AppTwinCommandStatusUpdatesByPID> updates_by_vin = 2;
+}
+
+message AppTwinCommandStatusUpdatesByPID {
+  string vin = 1;
+  map<int64, AppTwinCommandStatus> updates_by_pid = 2;
+}
+
+message AppTwinCommandStatus {
+  int64 process_id = 1;
+  string request_id = 2;
+  int64 timestamp_in_ms = 3;
+  VehicleAPIError errors = 4;
+  int32 state = 8;
+}
+
+message VehicleAPIError {
+  string code = 1;
+  string message = 2;
+}
+
+// ServiceStatusUpdate - service status updates
+message ServiceStatusUpdate {
+  int32 sequence_number = 1;
+  repeated string updates = 2;
+}
+
+// UserDataUpdate - user data updates
+message UserDataUpdate {
+  int32 sequence_number = 1;
+  string user_id = 2;
+}
+
+// PushMessage - incoming WebSocket messages from server
+// CORRECTED FIELD NUMBERS to match HA implementation
+message PushMessage {
+  oneof msg {
+    VEPUpdate vepUpdate = 1;
+    VEPUpdatesByVIN vepUpdates = 2;
+    DebugMessage debugMessage = 3;
+    ServiceStatusUpdate service_status_updates = 6; // HA has 9 for ServiceStatusUpdatesByVIN? Keeping 6 if HA code I saw was old or I misread.
+    // Actually, let's use the ones I saw in the file: 
+    // vepUpdate=1, vepUpdates=2, debugMessage=3
+    // service_status_updates=9 (ServiceStatusUpdatesByVIN), service_status_update=13 (ServiceStatusUpdate)
+    // user_data_update=10
+    // apptwin_command_status_updates_by_vin=17
+    // apptwin_pending_command_request=18
+    // assigned_vehicles=19
+    
+    // Updating to match HA exactly:
+    UserDataUpdate user_data_update = 10;
+    AppTwinCommandStatusUpdatesByVIN apptwin_command_status_updates_by_vin = 17;
+    bytes apptwin_pending_command_request = 18;
+    AssignedVehicles assigned_vehicles = 19;
+  }
+}
+
+// Client acknowledgment messages
+
+// AcknowledgeVEPUpdatesByVIN - acknowledge VEP updates
+message AcknowledgeVEPUpdatesByVIN {
+  int32 sequence_number = 1;
+}
+
+// AcknowledgeAppTwinCommandStatusUpdateByVIN - acknowledge command status
+message AcknowledgeAppTwinCommandStatusUpdateByVIN {
+  int32 sequence_number = 1;
+}
+
+// AcknowledgeServiceStatusUpdate - acknowledge service status
+message AcknowledgeServiceStatusUpdate {
+  int32 sequence_number = 1;
+}
+
+// AcknowledgeUserDataUpdate - acknowledge user data update
+message AcknowledgeUserDataUpdate {
+  int32 sequence_number = 1;
+}
+
+// ClientMessage - outgoing messages from client
+message ClientMessage {
+  oneof msg {
+    AcknowledgeVEPUpdatesByVIN acknowledge_vep_updates_by_vin = 1;
+    AcknowledgeAppTwinCommandStatusUpdateByVIN acknowledge_apptwin_command_status_update_by_vin = 2;
+    AcknowledgeServiceStatusUpdate acknowledge_service_status_update = 3;
+    AcknowledgeUserDataUpdate acknowledge_user_data_update = 4;
+  }
+}

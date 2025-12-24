@@ -1,0 +1,19 @@
+{
+  "type": "number",
+  "title": {
+    "en": "Heading",
+    "nl": "Richting",
+    "de": "Kurs"
+  },
+  "units": {
+    "en": "°"
+  },
+  "icon": "/assets/icons/heading.svg",
+  "decimals": 1,
+  "min": 0,
+  "max": 360,
+  "chartType": "line",
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor"
+}

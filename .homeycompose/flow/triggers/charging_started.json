@@ -1,0 +1,27 @@
+{
+  "id": "charging_started",
+  "title": {
+    "en": "Charging started",
+    "nl": "Opladen gestart",
+    "de": "Laden gestartet"
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=mercedes-vehicle"
+    }
+  ],
+  "tokens": [
+    {
+      "name": "charging_power",
+      "type": "number",
+      "title": {
+        "en": "Charging power",
+        "nl": "Laadvermogen",
+        "de": "Ladeleistung"
+      },
+      "example": 11
+    }
+  ]
+}

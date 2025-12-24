@@ -1,0 +1,18 @@
+{
+  "type": "number",
+  "title": {
+    "en": "Average Speed",
+    "nl": "Gemiddelde Snelheid",
+    "de": "Durchschnittsgeschwindigkeit"
+  },
+  "units": {
+    "en": "km/h"
+  },
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/speed.svg",
+  "decimals": 1,
+  "min": 0,
+  "max": 250
+}

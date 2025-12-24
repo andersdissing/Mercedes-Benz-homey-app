@@ -1,0 +1,74 @@
+{
+  "name": {
+    "en": "Mercedes-Benz Vehicle",
+    "nl": "Mercedes-Benz Voertuig",
+    "de": "Mercedes-Benz Fahrzeug"
+  },
+  "class": "other",
+  "platforms": [
+    "local",
+    "cloud"
+  ],
+  "capabilities": [
+    "locked",
+    "measure_battery",
+    "meter_power",
+    "odometer",
+    "distance_start",
+    "distance_electrical",
+    "driven_time_start",
+    "average_speed",
+    "ecoscore_total",
+    "ecoscore_accel",
+    "ecoscore_const",
+    "ecoscore_freewhl",
+    "alarm_generic",
+    "measure_range_electric",
+    "measure_range_liquid",
+    "measure_fuel",
+    "measure_adblue_level",
+    "alarm_starter_battery",
+    "onoff.ignition",
+    "measure_oil_level",
+    "text_charging_status",
+    "text_charge_program",
+    "measure_max_soc",
+    "text_end_charge_time",
+    "window_sunroof",
+    "text_charge_flap_state",
+    "text_charge_inlet_coupler",
+    "text_charge_inlet_lock",
+    "text_charge_flap_dc_status",
+    "text_departure_time",
+    "text_departure_time_mode",
+    "measure_latitude",
+    "measure_longitude",
+    "measure_heading",
+    "text_geofence_last_event",
+    "text_geofence_last_zone",
+    "time_geofence_last_event",
+    "tire_pressure_bar.tire_fl",
+    "tire_pressure_bar.tire_fr",
+    "tire_pressure_bar.tire_rl",
+    "tire_pressure_bar.tire_rr",
+    "onoff.engine",
+    "onoff.climate"
+  ],
+  "pair": [
+    {
+      "id": "login_credentials",
+      "template": "login_credentials"
+    },
+    {
+      "id": "list_devices",
+      "template": "list_devices",
+      "navigation": {
+        "next": "add_devices"
+      }
+    },
+    {
+      "id": "add_devices",
+      "template": "add_devices"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "id": "vehicle_locked",
+  "title": {
+    "en": "Vehicle was locked",
+    "nl": "Voertuig is vergrendeld",
+    "de": "Fahrzeug wurde verriegelt"
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=mercedes-vehicle"
+    }
+  ]
+}

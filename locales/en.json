@@ -1,0 +1,15 @@
+{
+  "pair": {
+    "login_failed": "Login failed. Please check your credentials and try again.",
+    "fetch_vehicles_failed": "Failed to fetch vehicles. Please try again.",
+    "no_vehicles_found": "No vehicles found on your account."
+  },
+  "error": {
+    "auth_failed": "Authentication failed. Please re-add the device.",
+    "pin_required": "Security PIN is required for this operation. Please set it in device settings.",
+    "lock_failed": "Failed to change lock state. Please try again.",
+    "engine_control_failed": "Failed to control engine. Ensure PIN is set and vehicle supports remote start.",
+    "climate_control_failed": "Failed to control climate. Please try again.",
+    "flash_lights_failed": "Failed to flash lights. Please try again."
+  }
+}

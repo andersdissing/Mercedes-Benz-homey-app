@@ -1,0 +1,15 @@
+{
+  "id": "unlock_vehicle",
+  "title": {
+    "en": "Unlock vehicle",
+    "nl": "Ontgrendel voertuig",
+    "de": "Fahrzeug entriegeln"
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=mercedes-vehicle"
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "type": "string",
+  "title": {
+    "en": "Departure Time Mode",
+    "nl": "Vertrektijd Modus",
+    "de": "Abfahrtszeit Modus"
+  },
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/icons/driven_time.svg"
+}

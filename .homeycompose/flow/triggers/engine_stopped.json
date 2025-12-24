@@ -1,0 +1,15 @@
+{
+  "id": "engine_stopped",
+  "title": {
+    "en": "Engine was stopped",
+    "nl": "Motor is gestopt",
+    "de": "Motor wurde gestoppt"
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=mercedes-vehicle"
+    }
+  ]
+}

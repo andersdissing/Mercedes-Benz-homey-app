@@ -1,0 +1,24 @@
+{
+  "title": {
+    "en": "All windows are !{{closed|open}}",
+    "nl": "Alle ramen zijn !{{gesloten|open}}",
+    "de": "Alle Fenster sind !{{geschlossen|offen}}"
+  },
+  "titleFormatted": {
+    "en": "All windows of [[device]] are !{{closed|open}}",
+    "nl": "Alle ramen van [[device]] zijn !{{gesloten|open}}",
+    "de": "Alle Fenster von [[device]] sind !{{geschlossen|offen}}"
+  },
+  "hint": {
+    "en": "This card checks if all vehicle windows are closed.",
+    "nl": "Deze kaart controleert of alle ramen van het voertuig gesloten zijn.",
+    "de": "Diese Karte prüft, ob alle Fahrzeugfenster geschlossen sind."
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=mercedes-vehicle"
+    }
+  ]
+}

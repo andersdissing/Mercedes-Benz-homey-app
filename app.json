@@ -1,0 +1,1066 @@
+{
+  "_comment": "This file is generated. Please edit .homeycompose/app.json instead.",
+  "id": "com.mercedes.mbapi",
+  "version": "1.0.0",
+  "compatibility": ">=12.0.0",
+  "sdk": 3,
+  "platforms": [
+    "local",
+    "cloud"
+  ],
+  "name": {
+    "en": "Mercedes-Benz",
+    "nl": "Mercedes-Benz",
+    "de": "Mercedes-Benz"
+  },
+  "description": {
+    "en": "Control your Mercedes-Benz vehicle from Homey",
+    "nl": "Bedien je Mercedes-Benz auto vanuit Homey",
+    "de": "Steuern Sie Ihr Mercedes-Benz Fahrzeug von Homey aus"
+  },
+  "category": [
+    "appliances"
+  ],
+  "tags": {
+    "en": [
+      "mercedes",
+      "benz",
+      "car",
+      "vehicle",
+      "mercedes me",
+      "electric vehicle",
+      "ev",
+      "automobile"
+    ],
+    "nl": [
+      "mercedes",
+      "benz",
+      "auto",
+      "voertuig",
+      "mercedes me",
+      "elektrische auto",
+      "ev"
+    ],
+    "de": [
+      "mercedes",
+      "benz",
+      "auto",
+      "fahrzeug",
+      "mercedes me",
+      "elektroauto",
+      "ev"
+    ]
+  },
+  "permissions": [
+    "homey:manager:geolocation"
+  ],
+  "images": {
+    "small": "/assets/images/small.png",
+    "large": "/assets/images/large.png",
+    "xlarge": "/assets/images/xlarge.png"
+  },
+  "author": {
+    "name": "Mercedes-Benz Homey Integration",
+    "email": "support@example.com"
+  },
+  "flow": {
+    "triggers": [
+      {
+        "id": "charging_started",
+        "title": {
+          "en": "Charging started",
+          "nl": "Opladen gestart",
+          "de": "Laden gestartet"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "charging_power",
+            "type": "number",
+            "title": {
+              "en": "Charging power",
+              "nl": "Laadvermogen",
+              "de": "Ladeleistung"
+            },
+            "example": 11
+          }
+        ]
+      },
+      {
+        "id": "charging_stopped",
+        "title": {
+          "en": "Charging stopped",
+          "nl": "Opladen gestopt",
+          "de": "Laden gestoppt"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle"
+          }
+        ]
+      },
+      {
+        "id": "engine_started",
+        "title": {
+          "en": "Engine was started",
+          "nl": "Motor is gestart",
+          "de": "Motor wurde gestartet"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle"
+          }
+        ]
+      },
+      {
+        "id": "engine_stopped",
+        "title": {
+          "en": "Engine was stopped",
+          "nl": "Motor is gestopt",
+          "de": "Motor wurde gestoppt"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle"
+          }
+        ]
+      },
+      {
+        "id": "low_battery",
+        "title": {
+          "en": "Battery is low",
+          "nl": "Batterij is laag",
+          "de": "Batterie ist niedrig"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "battery_level",
+            "type": "number",
+            "title": {
+              "en": "Battery level",
+              "nl": "Batterijniveau",
+              "de": "Batteriestand"
+            },
+            "example": 15
+          }
+        ]
+      },
+      {
+        "id": "vehicle_locked",
+        "title": {
+          "en": "Vehicle was locked",
+          "nl": "Voertuig is vergrendeld",
+          "de": "Fahrzeug wurde verriegelt"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle"
+          }
+        ]
+      },
+      {
+        "id": "vehicle_unlocked",
+        "title": {
+          "en": "Vehicle was unlocked",
+          "nl": "Voertuig is ontgrendeld",
+          "de": "Fahrzeug wurde entriegelt"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle"
+          }
+        ]
+      }
+    ],
+    "conditions": [
+      {
+        "title": {
+          "en": "Vehicle is !{{charging|not charging}}",
+          "nl": "Voertuig is !{{aan het opladen|niet aan het opladen}}",
+          "de": "Fahrzeug !{{lädt|lädt nicht}}"
+        },
+        "titleFormatted": {
+          "en": "Vehicle [[device]] is !{{charging|not charging}}",
+          "nl": "Voertuig [[device]] is !{{aan het opladen|niet aan het opladen}}",
+          "de": "Fahrzeug [[device]] !{{lädt|lädt nicht}}"
+        },
+        "hint": {
+          "en": "This card checks if the vehicle is currently charging.",
+          "nl": "Deze kaart controleert of het voertuig momenteel aan het opladen is.",
+          "de": "Diese Karte prüft, ob das Fahrzeug gerade lädt."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle"
+          }
+        ],
+        "id": "is_charging"
+      },
+      {
+        "title": {
+          "en": "Engine is !{{running|stopped}}",
+          "nl": "Motor is !{{aan|uit}}",
+          "de": "Motor ist !{{an|aus}}"
+        },
+        "titleFormatted": {
+          "en": "Engine of [[device]] is !{{running|stopped}}",
+          "nl": "Motor van [[device]] is !{{aan|uit}}",
+          "de": "Motor von [[device]] ist !{{an|aus}}"
+        },
+        "hint": {
+          "en": "This card checks if the vehicle engine is running.",
+          "nl": "Deze kaart controleert of de motor van het voertuig draait.",
+          "de": "Diese Karte prüft, ob der Fahrzeugmotor läuft."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle"
+          }
+        ],
+        "id": "is_engine_running"
+      },
+      {
+        "title": {
+          "en": "Vehicle is !{{locked|unlocked}}",
+          "nl": "Voertuig is !{{vergrendeld|ontgrendeld}}",
+          "de": "Fahrzeug ist !{{verriegelt|entriegelt}}"
+        },
+        "titleFormatted": {
+          "en": "Vehicle [[device]] is !{{locked|unlocked}}",
+          "nl": "Voertuig [[device]] is !{{vergrendeld|ontgrendeld}}",
+          "de": "Fahrzeug [[device]] ist !{{verriegelt|entriegelt}}"
+        },
+        "hint": {
+          "en": "This card checks if the vehicle doors are locked.",
+          "nl": "Deze kaart controleert of de voertuigdeuren vergrendeld zijn.",
+          "de": "Diese Karte prüft, ob die Fahrzeugtüren verriegelt sind."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle"
+          }
+        ],
+        "id": "is_locked"
+      },
+      {
+        "title": {
+          "en": "Tire pressure is !{{OK|too low}}",
+          "nl": "Bandenspanning is !{{OK|te laag}}",
+          "de": "Reifendruck ist !{{OK|zu niedrig}}"
+        },
+        "titleFormatted": {
+          "en": "Tire pressure of [[device]] is !{{OK|too low}}",
+          "nl": "Bandenspanning van [[device]] is !{{OK|te laag}}",
+          "de": "Reifendruck von [[device]] ist !{{OK|zu niedrig}}"
+        },
+        "hint": {
+          "en": "This card checks if all tire pressures are within acceptable range (>= 2.0 bar).",
+          "nl": "Deze kaart controleert of alle bandenspanningen binnen het acceptabele bereik liggen (>= 2.0 bar).",
+          "de": "Diese Karte prüft, ob alle Reifendrücke im akzeptablen Bereich liegen (>= 2.0 bar)."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle"
+          }
+        ],
+        "id": "tire_pressure_ok"
+      },
+      {
+        "title": {
+          "en": "All windows are !{{closed|open}}",
+          "nl": "Alle ramen zijn !{{gesloten|open}}",
+          "de": "Alle Fenster sind !{{geschlossen|offen}}"
+        },
+        "titleFormatted": {
+          "en": "All windows of [[device]] are !{{closed|open}}",
+          "nl": "Alle ramen van [[device]] zijn !{{gesloten|open}}",
+          "de": "Alle Fenster von [[device]] sind !{{geschlossen|offen}}"
+        },
+        "hint": {
+          "en": "This card checks if all vehicle windows are closed.",
+          "nl": "Deze kaart controleert of alle ramen van het voertuig gesloten zijn.",
+          "de": "Diese Karte prüft, ob alle Fahrzeugfenster geschlossen sind."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle"
+          }
+        ],
+        "id": "windows_closed"
+      }
+    ],
+    "actions": [
+      {
+        "id": "close_windows",
+        "title": {
+          "en": "Close windows",
+          "nl": "Sluit ramen",
+          "de": "Fenster schließen"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle"
+          }
+        ]
+      },
+      {
+        "id": "flash_lights",
+        "title": {
+          "en": "Flash lights",
+          "nl": "Knipperlichten",
+          "de": "Lichter blinken"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle"
+          }
+        ]
+      },
+      {
+        "id": "lock_vehicle",
+        "title": {
+          "en": "Lock vehicle",
+          "nl": "Vergrendel voertuig",
+          "de": "Fahrzeug verriegeln"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle"
+          }
+        ]
+      },
+      {
+        "id": "open_windows",
+        "title": {
+          "en": "Open windows",
+          "nl": "Open ramen",
+          "de": "Fenster öffnen"
+        },
+        "hint": {
+          "en": "Requires PIN to be configured in device settings",
+          "nl": "Vereist dat PIN is geconfigureerd in apparaatinstellingen",
+          "de": "Erfordert PIN-Konfiguration in den Geräteeinstellungen"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle"
+          }
+        ]
+      },
+      {
+        "id": "start_climate",
+        "title": {
+          "en": "Start climate control",
+          "nl": "Start klimaatregeling",
+          "de": "Klimatisierung starten"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle"
+          }
+        ]
+      },
+      {
+        "id": "start_engine",
+        "title": {
+          "en": "Start engine",
+          "nl": "Start motor",
+          "de": "Motor starten"
+        },
+        "hint": {
+          "en": "Requires PIN to be configured in device settings",
+          "nl": "Vereist dat PIN is geconfigureerd in apparaatinstellingen",
+          "de": "Erfordert PIN-Konfiguration in den Geräteeinstellungen"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle"
+          }
+        ]
+      },
+      {
+        "id": "stop_climate",
+        "title": {
+          "en": "Stop climate control",
+          "nl": "Stop klimaatregeling",
+          "de": "Klimatisierung stoppen"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle"
+          }
+        ]
+      },
+      {
+        "id": "stop_engine",
+        "title": {
+          "en": "Stop engine",
+          "nl": "Stop motor",
+          "de": "Motor stoppen"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle"
+          }
+        ]
+      },
+      {
+        "id": "unlock_vehicle",
+        "title": {
+          "en": "Unlock vehicle",
+          "nl": "Ontgrendel voertuig",
+          "de": "Fahrzeug entriegeln"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle"
+          }
+        ]
+      }
+    ]
+  },
+  "drivers": [
+    {
+      "name": {
+        "en": "Mercedes-Benz Vehicle",
+        "nl": "Mercedes-Benz Voertuig",
+        "de": "Mercedes-Benz Fahrzeug"
+      },
+      "class": "other",
+      "platforms": [
+        "local",
+        "cloud"
+      ],
+      "capabilities": [
+        "locked",
+        "measure_battery",
+        "meter_power",
+        "odometer",
+        "distance_start",
+        "distance_electrical",
+        "driven_time_start",
+        "average_speed",
+        "ecoscore_total",
+        "ecoscore_accel",
+        "ecoscore_const",
+        "ecoscore_freewhl",
+        "alarm_generic",
+        "measure_range_electric",
+        "measure_range_liquid",
+        "measure_fuel",
+        "measure_adblue_level",
+        "alarm_starter_battery",
+        "onoff.ignition",
+        "measure_oil_level",
+        "text_charging_status",
+        "text_charge_program",
+        "measure_max_soc",
+        "text_end_charge_time",
+        "window_sunroof",
+        "text_charge_flap_state",
+        "text_charge_inlet_coupler",
+        "text_charge_inlet_lock",
+        "text_charge_flap_dc_status",
+        "text_departure_time",
+        "text_departure_time_mode",
+        "measure_latitude",
+        "measure_longitude",
+        "measure_heading",
+        "text_geofence_last_event",
+        "text_geofence_last_zone",
+        "time_geofence_last_event",
+        "tire_pressure_bar.tire_fl",
+        "tire_pressure_bar.tire_fr",
+        "tire_pressure_bar.tire_rl",
+        "tire_pressure_bar.tire_rr",
+        "onoff.engine",
+        "onoff.climate"
+      ],
+      "pair": [
+        {
+          "id": "login_credentials",
+          "template": "login_credentials"
+        },
+        {
+          "id": "list_devices",
+          "template": "list_devices",
+          "navigation": {
+            "next": "add_devices"
+          }
+        },
+        {
+          "id": "add_devices",
+          "template": "add_devices"
+        }
+      ],
+      "id": "mercedes-vehicle"
+    }
+  ],
+  "capabilities": {
+    "alarm_starter_battery": {
+      "type": "boolean",
+      "title": {
+        "en": "Starter Battery Low",
+        "nl": "Startaccu Laag",
+        "de": "Starterbatterie Niedrig"
+      },
+      "label": {
+        "en": "Starter Battery",
+        "nl": "Startaccu",
+        "de": "Starterbatterie"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor"
+    },
+    "average_speed": {
+      "type": "number",
+      "title": {
+        "en": "Average Speed",
+        "nl": "Gemiddelde Snelheid",
+        "de": "Durchschnittsgeschwindigkeit"
+      },
+      "units": {
+        "en": "km/h"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/speed.svg",
+      "decimals": 1,
+      "min": 0,
+      "max": 250
+    },
+    "distance_electrical": {
+      "type": "number",
+      "title": {
+        "en": "Electric Distance",
+        "nl": "Elektrische Afstand",
+        "de": "Elektrische Strecke"
+      },
+      "units": {
+        "en": "km"
+      },
+      "decimals": 1,
+      "min": 0,
+      "max": 99999,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/icons/distance_electrical.svg"
+    },
+    "distance_start": {
+      "type": "number",
+      "title": {
+        "en": "Trip Distance",
+        "nl": "Ritafstand",
+        "de": "Fahrtstrecke"
+      },
+      "units": {
+        "en": "km"
+      },
+      "decimals": 1,
+      "min": 0,
+      "max": 99999,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/icons/distance_start.svg"
+    },
+    "driven_time_start": {
+      "type": "number",
+      "title": {
+        "en": "Driving Time",
+        "nl": "Rijtijd",
+        "de": "Fahrzeit"
+      },
+      "units": {
+        "en": "min"
+      },
+      "decimals": 0,
+      "min": 0,
+      "max": 99999,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/icons/driven_time.svg"
+    },
+    "ecoscore_accel": {
+      "type": "number",
+      "title": {
+        "en": "Eco Score Acceleration",
+        "nl": "Eco Score Acceleratie",
+        "de": "Eco Score Beschleunigung"
+      },
+      "decimals": 0,
+      "min": 0,
+      "max": 100,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/icons/ecoscore.svg"
+    },
+    "ecoscore_const": {
+      "type": "number",
+      "title": {
+        "en": "Eco Score Constant",
+        "nl": "Eco Score Constant",
+        "de": "Eco Score Konstant"
+      },
+      "decimals": 0,
+      "min": 0,
+      "max": 100,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/icons/ecoscore.svg"
+    },
+    "ecoscore_freewhl": {
+      "type": "number",
+      "title": {
+        "en": "Eco Score Freewheel",
+        "nl": "Eco Score Vrijloop",
+        "de": "Eco Score Freilauf"
+      },
+      "decimals": 0,
+      "min": 0,
+      "max": 100,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/icons/ecoscore.svg"
+    },
+    "ecoscore_total": {
+      "type": "number",
+      "title": {
+        "en": "Eco Score Total",
+        "nl": "Eco Score Totaal",
+        "de": "Eco Score Gesamt"
+      },
+      "decimals": 0,
+      "min": 0,
+      "max": 100,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/icons/ecoscore.svg"
+    },
+    "measure_adblue_level": {
+      "type": "number",
+      "title": {
+        "en": "AdBlue Level",
+        "nl": "AdBlue Niveau",
+        "de": "AdBlue Füllstand"
+      },
+      "label": {
+        "en": "AdBlue",
+        "nl": "AdBlue",
+        "de": "AdBlue"
+      },
+      "units": {
+        "en": "%"
+      },
+      "decimals": 0,
+      "min": 0,
+      "max": 100,
+      "chartType": "stepLine",
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor"
+    },
+    "measure_fuel": {
+      "type": "number",
+      "title": {
+        "en": "Fuel Level",
+        "nl": "Brandstofniveau",
+        "de": "Tankfüllstand"
+      },
+      "label": {
+        "en": "Fuel",
+        "nl": "Brandstof",
+        "de": "Tank"
+      },
+      "units": {
+        "en": "%"
+      },
+      "decimals": 0,
+      "min": 0,
+      "max": 100,
+      "chartType": "stepLine",
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor"
+    },
+    "measure_heading": {
+      "type": "number",
+      "title": {
+        "en": "Heading",
+        "nl": "Richting",
+        "de": "Kurs"
+      },
+      "units": {
+        "en": "°"
+      },
+      "icon": "/assets/icons/heading.svg",
+      "decimals": 1,
+      "min": 0,
+      "max": 360,
+      "chartType": "line",
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor"
+    },
+    "measure_latitude": {
+      "type": "number",
+      "title": {
+        "en": "Latitude",
+        "nl": "Breedtegraad",
+        "de": "Breitengrad"
+      },
+      "decimals": 6,
+      "icon": "/assets/icons/latitude.svg",
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor"
+    },
+    "measure_longitude": {
+      "type": "number",
+      "title": {
+        "en": "Longitude",
+        "nl": "Lengtegraad",
+        "de": "Längengrad"
+      },
+      "decimals": 6,
+      "icon": "/assets/icons/longitude.svg",
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor"
+    },
+    "measure_max_soc": {
+      "type": "number",
+      "title": {
+        "en": "Max SoC",
+        "nl": "Max Laadniveau",
+        "de": "Max Ladezustand"
+      },
+      "label": {
+        "en": "Max SoC",
+        "nl": "Max Laadniveau",
+        "de": "Max Ladezustand"
+      },
+      "units": {
+        "en": "%"
+      },
+      "decimals": 0,
+      "min": 0,
+      "max": 100,
+      "chartType": "stepLine",
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor"
+    },
+    "measure_oil_level": {
+      "type": "number",
+      "title": {
+        "en": "Oil Level",
+        "nl": "Oliepeil",
+        "de": "Ölstand"
+      },
+      "label": {
+        "en": "Oil",
+        "nl": "Olie",
+        "de": "Öl"
+      },
+      "units": {
+        "en": "%"
+      },
+      "decimals": 0,
+      "min": 0,
+      "max": 100,
+      "chartType": "stepLine",
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor"
+    },
+    "measure_range_electric": {
+      "type": "number",
+      "title": {
+        "en": "Electric Range",
+        "nl": "Elektrisch Bereik",
+        "de": "Elektrische Reichweite"
+      },
+      "label": {
+        "en": "Range (EV)",
+        "nl": "Bereik (EV)",
+        "de": "Reichweite (EV)"
+      },
+      "units": {
+        "en": "km"
+      },
+      "decimals": 0,
+      "chartType": "stepLine",
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor"
+    },
+    "measure_range_liquid": {
+      "type": "number",
+      "title": {
+        "en": "Liquid Range",
+        "nl": "Brandstof Bereik",
+        "de": "Kraftstoff Reichweite"
+      },
+      "label": {
+        "en": "Range (Fuel)",
+        "nl": "Bereik (Brandstof)",
+        "de": "Reichweite (Kraftstoff)"
+      },
+      "units": {
+        "en": "km"
+      },
+      "decimals": 0,
+      "chartType": "stepLine",
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor"
+    },
+    "odometer": {
+      "type": "number",
+      "title": {
+        "en": "Odometer",
+        "nl": "Kilometerstand",
+        "de": "Kilometerstand"
+      },
+      "units": {
+        "en": "km"
+      },
+      "decimals": 0,
+      "min": 0,
+      "max": 999999,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor"
+    },
+    "text_charge_flap_dc_status": {
+      "type": "string",
+      "title": {
+        "en": "Charge Flap DC Status",
+        "nl": "Laadklep DC Status",
+        "de": "Ladeklappe DC Status"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/icons/charge_flap.svg"
+    },
+    "text_charge_flap_state": {
+      "type": "string",
+      "title": {
+        "en": "Charge Flap State",
+        "nl": "Laadklep Status",
+        "de": "Ladeklappenstatus"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/icons/charge_flap.svg"
+    },
+    "text_charge_inlet_coupler": {
+      "type": "string",
+      "title": {
+        "en": "Charge Inlet Coupler",
+        "nl": "Laadinlaat Koppeling",
+        "de": "Ladeeinlasskuppler"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/icons/charge_flap.svg"
+    },
+    "text_charge_inlet_lock": {
+      "type": "string",
+      "title": {
+        "en": "Charge Inlet Lock",
+        "nl": "Laadinlaat Vergrendeling",
+        "de": "Ladeeinlassverriegelung"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/icons/charge_flap.svg"
+    },
+    "text_charge_program": {
+      "type": "string",
+      "title": {
+        "en": "Charge Program",
+        "nl": "Laadprogramma",
+        "de": "Ladeprogramm"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor"
+    },
+    "text_charging_status": {
+      "type": "string",
+      "title": {
+        "en": "Charging Status",
+        "nl": "Laadstatus",
+        "de": "Ladestatus"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor"
+    },
+    "text_departure_time": {
+      "type": "string",
+      "title": {
+        "en": "Departure Time",
+        "nl": "Vertrektijd",
+        "de": "Abfahrtszeit"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/icons/driven_time.svg"
+    },
+    "text_departure_time_mode": {
+      "type": "string",
+      "title": {
+        "en": "Departure Time Mode",
+        "nl": "Vertrektijd Modus",
+        "de": "Abfahrtszeit Modus"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/icons/driven_time.svg"
+    },
+    "text_end_charge_time": {
+      "type": "string",
+      "title": {
+        "en": "End of Charge Time",
+        "nl": "Eindtijd Laden",
+        "de": "Ladeende Zeit"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor"
+    },
+    "text_geofence_last_event": {
+      "type": "string",
+      "title": {
+        "en": "Last Geofence Event",
+        "nl": "Laatste Geofence Event",
+        "de": "Letztes Geofence Ereignis"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/icons/geofence.svg"
+    },
+    "text_geofence_last_zone": {
+      "type": "string",
+      "title": {
+        "en": "Last Geofence Zone",
+        "nl": "Laatste Geofence Zone",
+        "de": "Letzte Geofence Zone"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/icons/geofence.svg"
+    },
+    "time_geofence_last_event": {
+      "type": "string",
+      "title": {
+        "en": "Last Geofence Time",
+        "nl": "Laatste Geofence Tijd",
+        "de": "Letzte Geofence Zeit"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/icons/geofence.svg"
+    },
+    "tire_pressure_bar": {
+      "type": "number",
+      "title": {
+        "en": "Tire Pressure",
+        "nl": "Bandenspanning",
+        "de": "Reifendruck"
+      },
+      "units": {
+        "en": "bar"
+      },
+      "decimals": 2,
+      "min": 0,
+      "max": 5,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/tire_pressure.svg"
+    },
+    "window_sunroof": {
+      "type": "string",
+      "title": {
+        "en": "Sunroof Status",
+        "nl": "Schuifdak Status",
+        "de": "Schiebedach Status"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor"
+    }
+  }
+}

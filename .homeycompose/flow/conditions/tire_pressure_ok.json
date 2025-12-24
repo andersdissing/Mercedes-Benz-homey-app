@@ -1,0 +1,24 @@
+{
+  "title": {
+    "en": "Tire pressure is !{{OK|too low}}",
+    "nl": "Bandenspanning is !{{OK|te laag}}",
+    "de": "Reifendruck ist !{{OK|zu niedrig}}"
+  },
+  "titleFormatted": {
+    "en": "Tire pressure of [[device]] is !{{OK|too low}}",
+    "nl": "Bandenspanning van [[device]] is !{{OK|te laag}}",
+    "de": "Reifendruck von [[device]] ist !{{OK|zu niedrig}}"
+  },
+  "hint": {
+    "en": "This card checks if all tire pressures are within acceptable range (>= 2.0 bar).",
+    "nl": "Deze kaart controleert of alle bandenspanningen binnen het acceptabele bereik liggen (>= 2.0 bar).",
+    "de": "Diese Karte prüft, ob alle Reifendrücke im akzeptablen Bereich liegen (>= 2.0 bar)."
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=mercedes-vehicle"
+    }
+  ]
+}

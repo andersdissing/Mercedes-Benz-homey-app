@@ -1,0 +1,12 @@
+{
+  "type": "string",
+  "title": {
+    "en": "Last Geofence Event",
+    "nl": "Laatste Geofence Event",
+    "de": "Letztes Geofence Ereignis"
+  },
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/icons/geofence.svg"
+}

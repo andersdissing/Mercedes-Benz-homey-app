@@ -1,0 +1,21 @@
+{
+  "type": "number",
+  "title": {
+    "en": "Liquid Range",
+    "nl": "Brandstof Bereik",
+    "de": "Kraftstoff Reichweite"
+  },
+  "label": {
+    "en": "Range (Fuel)",
+    "nl": "Bereik (Brandstof)",
+    "de": "Reichweite (Kraftstoff)"
+  },
+  "units": {
+    "en": "km"
+  },
+  "decimals": 0,
+  "chartType": "stepLine",
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor"
+}

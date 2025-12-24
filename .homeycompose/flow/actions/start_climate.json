@@ -1,0 +1,15 @@
+{
+  "id": "start_climate",
+  "title": {
+    "en": "Start climate control",
+    "nl": "Start klimaatregeling",
+    "de": "Klimatisierung starten"
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=mercedes-vehicle"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "id": "lock_vehicle",
+  "title": {
+    "en": "Lock vehicle",
+    "nl": "Vergrendel voertuig",
+    "de": "Fahrzeug verriegeln"
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=mercedes-vehicle"
+    }
+  ]
+}

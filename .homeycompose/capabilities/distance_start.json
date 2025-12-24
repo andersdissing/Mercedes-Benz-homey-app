@@ -1,0 +1,18 @@
+{
+  "type": "number",
+  "title": {
+    "en": "Trip Distance",
+    "nl": "Ritafstand",
+    "de": "Fahrtstrecke"
+  },
+  "units": {
+    "en": "km"
+  },
+  "decimals": 1,
+  "min": 0,
+  "max": 99999,
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/icons/distance_start.svg"
+}

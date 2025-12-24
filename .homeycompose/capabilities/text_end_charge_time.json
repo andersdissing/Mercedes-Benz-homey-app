@@ -1,0 +1,11 @@
+{
+  "type": "string",
+  "title": {
+    "en": "End of Charge Time",
+    "nl": "Eindtijd Laden",
+    "de": "Ladeende Zeit"
+  },
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor"
+}

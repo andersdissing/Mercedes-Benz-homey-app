@@ -1,0 +1,24 @@
+{
+  "title": {
+    "en": "Vehicle is !{{locked|unlocked}}",
+    "nl": "Voertuig is !{{vergrendeld|ontgrendeld}}",
+    "de": "Fahrzeug ist !{{verriegelt|entriegelt}}"
+  },
+  "titleFormatted": {
+    "en": "Vehicle [[device]] is !{{locked|unlocked}}",
+    "nl": "Voertuig [[device]] is !{{vergrendeld|ontgrendeld}}",
+    "de": "Fahrzeug [[device]] ist !{{verriegelt|entriegelt}}"
+  },
+  "hint": {
+    "en": "This card checks if the vehicle doors are locked.",
+    "nl": "Deze kaart controleert of de voertuigdeuren vergrendeld zijn.",
+    "de": "Diese Karte prüft, ob die Fahrzeugtüren verriegelt sind."
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=mercedes-vehicle"
+    }
+  ]
+}
