@@ -1,0 +1,23 @@
+{
+  "type": "boolean",
+  "title": {
+    "en": "Remote start",
+    "nl": "Afstandsstart",
+    "de": "Fernstart"
+  },
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/icons/remote_start.svg",
+  "insights": true,
+  "insightsTitleTrue": {
+    "en": "Remote start active",
+    "nl": "Afstandsstart actief",
+    "de": "Fernstart aktiv"
+  },
+  "insightsTitleFalse": {
+    "en": "Remote start inactive",
+    "nl": "Afstandsstart inactief",
+    "de": "Fernstart inaktiv"
+  }
+}

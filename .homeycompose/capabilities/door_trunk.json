@@ -1,0 +1,12 @@
+{
+  "type": "string",
+  "title": {
+    "en": "Trunk",
+    "nl": "Kofferbak",
+    "de": "Kofferraum"
+  },
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/icons/door.svg"
+}

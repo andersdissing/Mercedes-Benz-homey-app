@@ -18,7 +18,6 @@
     "distance_electrical",
     "driven_time_start",
     "average_speed",
-    "ecoscore_total",
     "ecoscore_accel",
     "ecoscore_const",
     "ecoscore_freewhl",
@@ -27,7 +26,6 @@
     "measure_range_liquid",
     "measure_fuel",
     "measure_adblue_level",
-    "alarm_starter_battery",
     "onoff.ignition",
     "measure_oil_level",
     "text_charging_status",
@@ -35,10 +33,6 @@
     "measure_max_soc",
     "text_end_charge_time",
     "window_sunroof",
-    "text_charge_flap_state",
-    "text_charge_inlet_coupler",
-    "text_charge_inlet_lock",
-    "text_charge_flap_dc_status",
     "text_departure_time",
     "text_departure_time_mode",
     "measure_latitude",
@@ -51,6 +45,24 @@
     "tire_pressure_bar.tire_fr",
     "tire_pressure_bar.tire_rl",
     "tire_pressure_bar.tire_rr",
+    "window_front_left",
+    "window_front_right",
+    "window_rear_left",
+    "window_rear_right",
+    "door_front_left",
+    "door_front_right",
+    "door_rear_left",
+    "door_rear_right",
+    "door_trunk",
+    "door_hood",
+    "parking_brake_engaged",
+    "alarm_theft",
+    "measure_service_days",
+    "measure_battery_temperature",
+    "onoff_precond",
+    "onoff_auxheat",
+    "onoff_remote_start",
+    "theft_system_armed",
     "onoff.engine",
     "onoff.climate"
   ],
@@ -70,5 +82,10 @@
       "id": "add_devices",
       "template": "add_devices"
     }
-  ]
+  ],
+  "energy": {
+    "batteries": [
+      "OTHER"
+    ]
+  }
 }

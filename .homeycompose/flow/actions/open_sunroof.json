@@ -1,0 +1,24 @@
+{
+  "title": {
+    "en": "Open sunroof",
+    "nl": "Open schuifdak",
+    "de": "Schiebedach öffnen"
+  },
+  "titleFormatted": {
+    "en": "Open the sunroof of [[device]]",
+    "nl": "Open het schuifdak van [[device]]",
+    "de": "Schiebedach von [[device]] öffnen"
+  },
+  "hint": {
+    "en": "Opens the sunroof. Requires PIN configuration in device settings.",
+    "nl": "Opent het schuifdak. PIN-configuratie in apparaatinstellingen vereist.",
+    "de": "Öffnet das Schiebedach. Erfordert PIN-Konfiguration in den Geräteeinstellungen."
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=mercedes-vehicle"
+    }
+  ]
+}

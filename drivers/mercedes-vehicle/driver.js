@@ -247,7 +247,6 @@ class MercedesVehicleDriver extends Homey.Driver {
             'distance_start',
             'distance_electrical',
             'driven_time_start',
-            'ecoscore_total',
             'ecoscore_accel',
             'ecoscore_const',
             'ecoscore_freewhl',

@@ -1,0 +1,27 @@
+{
+  "id": "geofence_entered",
+  "title": {
+    "en": "Vehicle entered geofence zone",
+    "nl": "Voertuig heeft geofence zone betreden",
+    "de": "Fahrzeug hat Geofence-Zone betreten"
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=mercedes-vehicle"
+    }
+  ],
+  "tokens": [
+    {
+      "name": "zone_name",
+      "type": "string",
+      "title": {
+        "en": "Zone name",
+        "nl": "Zone naam",
+        "de": "Zonenname"
+      },
+      "example": "Home"
+    }
+  ]
+}

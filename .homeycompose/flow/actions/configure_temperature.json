@@ -1,0 +1,31 @@
+{
+  "title": {
+    "en": "Set cabin temperature",
+    "nl": "Stel cabinetemperatuur in",
+    "de": "Innenraumtemperatur einstellen"
+  },
+  "hint": {
+    "en": "Sets the target temperature for the vehicle's climate control.",
+    "nl": "Stelt de doeltemperatuur in voor de klimaatregeling van het voertuig.",
+    "de": "Legt die Zieltemperatur für die Klimaanlage des Fahrzeugs fest."
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=mercedes-vehicle"
+    },
+    {
+      "type": "number",
+      "name": "temperature",
+      "title": {
+        "en": "Temperature (°C)",
+        "nl": "Temperatuur (°C)",
+        "de": "Temperatur (°C)"
+      },
+      "min": 16,
+      "max": 28,
+      "step": 0.5
+    }
+  ]
+}

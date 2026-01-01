@@ -1,0 +1,27 @@
+{
+  "id": "charging_completed",
+  "title": {
+    "en": "Charging completed",
+    "nl": "Opladen voltooid",
+    "de": "Laden abgeschlossen"
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=mercedes-vehicle"
+    }
+  ],
+  "tokens": [
+    {
+      "name": "battery_level",
+      "type": "number",
+      "title": {
+        "en": "Battery level",
+        "nl": "Batterijniveau",
+        "de": "Batteriestand"
+      },
+      "example": 100
+    }
+  ]
+}

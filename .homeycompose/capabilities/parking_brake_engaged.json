@@ -1,0 +1,12 @@
+{
+  "type": "boolean",
+  "title": {
+    "en": "Parking Brake",
+    "nl": "Handrem",
+    "de": "Feststellbremse"
+  },
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/icons/parking_brake.svg"
+}

@@ -1,0 +1,27 @@
+{
+  "id": "door_opened",
+  "title": {
+    "en": "A door was opened",
+    "nl": "Een deur is geopend",
+    "de": "Eine Tür wurde geöffnet"
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=mercedes-vehicle"
+    }
+  ],
+  "tokens": [
+    {
+      "name": "door",
+      "type": "string",
+      "title": {
+        "en": "Door",
+        "nl": "Deur",
+        "de": "Tür"
+      },
+      "example": "front_left"
+    }
+  ]
+}

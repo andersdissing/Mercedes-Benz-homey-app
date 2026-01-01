@@ -66,6 +66,33 @@
   "flow": {
     "triggers": [
       {
+        "id": "charging_completed",
+        "title": {
+          "en": "Charging completed",
+          "nl": "Opladen voltooid",
+          "de": "Laden abgeschlossen"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "battery_level",
+            "type": "number",
+            "title": {
+              "en": "Battery level",
+              "nl": "Batterijniveau",
+              "de": "Batteriestand"
+            },
+            "example": 100
+          }
+        ]
+      },
+      {
         "id": "charging_started",
         "title": {
           "en": "Charging started",
@@ -108,6 +135,60 @@
         ]
       },
       {
+        "id": "door_closed",
+        "title": {
+          "en": "A door was closed",
+          "nl": "Een deur is gesloten",
+          "de": "Eine Tür wurde geschlossen"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "door",
+            "type": "string",
+            "title": {
+              "en": "Door",
+              "nl": "Deur",
+              "de": "Tür"
+            },
+            "example": "front_left"
+          }
+        ]
+      },
+      {
+        "id": "door_opened",
+        "title": {
+          "en": "A door was opened",
+          "nl": "Een deur is geopend",
+          "de": "Eine Tür wurde geöffnet"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "door",
+            "type": "string",
+            "title": {
+              "en": "Door",
+              "nl": "Deur",
+              "de": "Tür"
+            },
+            "example": "front_left"
+          }
+        ]
+      },
+      {
         "id": "engine_started",
         "title": {
           "en": "Engine was started",
@@ -138,6 +219,60 @@
         ]
       },
       {
+        "id": "geofence_entered",
+        "title": {
+          "en": "Vehicle entered geofence zone",
+          "nl": "Voertuig heeft geofence zone betreden",
+          "de": "Fahrzeug hat Geofence-Zone betreten"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "zone_name",
+            "type": "string",
+            "title": {
+              "en": "Zone name",
+              "nl": "Zone naam",
+              "de": "Zonenname"
+            },
+            "example": "Home"
+          }
+        ]
+      },
+      {
+        "id": "geofence_left",
+        "title": {
+          "en": "Vehicle left geofence zone",
+          "nl": "Voertuig heeft geofence zone verlaten",
+          "de": "Fahrzeug hat Geofence-Zone verlassen"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "zone_name",
+            "type": "string",
+            "title": {
+              "en": "Zone name",
+              "nl": "Zone naam",
+              "de": "Zonenname"
+            },
+            "example": "Home"
+          }
+        ]
+      },
+      {
         "id": "low_battery",
         "title": {
           "en": "Battery is low",
@@ -161,6 +296,33 @@
               "de": "Batteriestand"
             },
             "example": 15
+          }
+        ]
+      },
+      {
+        "id": "vehicle_alarm",
+        "title": {
+          "en": "Vehicle alarm triggered",
+          "nl": "Voertuigalarm geactiveerd",
+          "de": "Fahrzeugalarm ausgelöst"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "reason",
+            "type": "string",
+            "title": {
+              "en": "Reason",
+              "nl": "Reden",
+              "de": "Grund"
+            },
+            "example": "DOOR_FRONT_LEFT"
           }
         ]
       },
@@ -193,9 +355,155 @@
             "filter": "driver_id=mercedes-vehicle"
           }
         ]
+      },
+      {
+        "id": "warning_light_activated",
+        "title": {
+          "en": "Warning light activated",
+          "nl": "Waarschuwingslampje geactiveerd",
+          "de": "Warnleuchte aktiviert"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle"
+          }
+        ]
+      },
+      {
+        "id": "window_closed",
+        "title": {
+          "en": "A window was closed",
+          "nl": "Een raam is gesloten",
+          "de": "Ein Fenster wurde geschlossen"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "window",
+            "type": "string",
+            "title": {
+              "en": "Window",
+              "nl": "Raam",
+              "de": "Fenster"
+            },
+            "example": "front_left"
+          }
+        ]
+      },
+      {
+        "id": "window_opened",
+        "title": {
+          "en": "A window was opened",
+          "nl": "Een raam is geopend",
+          "de": "Ein Fenster wurde geöffnet"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "window",
+            "type": "string",
+            "title": {
+              "en": "Window",
+              "nl": "Raam",
+              "de": "Fenster"
+            },
+            "example": "front_left"
+          }
+        ]
       }
     ],
     "conditions": [
+      {
+        "title": {
+          "en": "Any door is !{{open|closed}}",
+          "nl": "Een deur is !{{open|gesloten}}",
+          "de": "Eine Tür ist !{{offen|geschlossen}}"
+        },
+        "titleFormatted": {
+          "en": "Any door of [[device]] is !{{open|closed}}",
+          "nl": "Een deur van [[device]] is !{{open|gesloten}}",
+          "de": "Eine Tür von [[device]] ist !{{offen|geschlossen}}"
+        },
+        "hint": {
+          "en": "This card checks if any door (including trunk and hood) is open.",
+          "nl": "Deze kaart controleert of een deur (inclusief kofferbak en motorkap) open is.",
+          "de": "Diese Karte prüft, ob eine Tür (einschließlich Kofferraum und Motorhaube) geöffnet ist."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle"
+          }
+        ],
+        "id": "any_door_open"
+      },
+      {
+        "title": {
+          "en": "Battery level !{{is above|is below}} ...",
+          "nl": "Batterijniveau !{{is boven|is onder}} ...",
+          "de": "Batteriestand !{{ist über|ist unter}} ..."
+        },
+        "hint": {
+          "en": "This card checks if the battery level is above or below a specified percentage.",
+          "nl": "Deze kaart controleert of het batterijniveau boven of onder een opgegeven percentage is.",
+          "de": "Diese Karte prüft, ob der Batteriestand über oder unter einem bestimmten Prozentsatz liegt."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle"
+          },
+          {
+            "type": "number",
+            "name": "threshold",
+            "title": {
+              "en": "Threshold %",
+              "nl": "Drempel %",
+              "de": "Schwellenwert %"
+            },
+            "min": 0,
+            "max": 100,
+            "step": 1
+          }
+        ],
+        "id": "battery_level"
+      },
+      {
+        "title": {
+          "en": "Auxiliary heating !{{is|is not}} active",
+          "nl": "Standverwarming !{{is|is niet}} actief",
+          "de": "Standheizung !{{ist|ist nicht}} aktiv"
+        },
+        "hint": {
+          "en": "This card checks if auxiliary heating is currently active.",
+          "nl": "Deze kaart controleert of de standverwarming momenteel actief is.",
+          "de": "Diese Karte prüft, ob die Standheizung gerade aktiv ist."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle"
+          }
+        ],
+        "id": "is_auxheat_active"
+      },
       {
         "title": {
           "en": "Vehicle is !{{charging|not charging}}",
@@ -248,6 +556,40 @@
       },
       {
         "title": {
+          "en": "Vehicle !{{is|is not}} in geofence zone ...",
+          "nl": "Voertuig !{{is|is niet}} in geofence zone ...",
+          "de": "Fahrzeug !{{ist|ist nicht}} in Geofence-Zone ..."
+        },
+        "hint": {
+          "en": "This card checks if the vehicle is currently inside a specified geofence zone.",
+          "nl": "Deze kaart controleert of het voertuig zich momenteel in een opgegeven geofence zone bevindt.",
+          "de": "Diese Karte prüft, ob das Fahrzeug sich gerade in einer bestimmten Geofence-Zone befindet."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle"
+          },
+          {
+            "type": "text",
+            "name": "zone_name",
+            "title": {
+              "en": "Zone name",
+              "nl": "Zone naam",
+              "de": "Zonenname"
+            },
+            "placeholder": {
+              "en": "Home",
+              "nl": "Thuis",
+              "de": "Zuhause"
+            }
+          }
+        ],
+        "id": "is_in_geofence"
+      },
+      {
+        "title": {
           "en": "Vehicle is !{{locked|unlocked}}",
           "nl": "Voertuig is !{{vergrendeld|ontgrendeld}}",
           "de": "Fahrzeug ist !{{verriegelt|entriegelt}}"
@@ -273,6 +615,56 @@
       },
       {
         "title": {
+          "en": "Preconditioning is !{{active|inactive}}",
+          "nl": "Voorconditionering is !{{actief|inactief}}",
+          "de": "Vorklimatisierung ist !{{aktiv|inaktiv}}"
+        },
+        "titleFormatted": {
+          "en": "Preconditioning of [[device]] is !{{active|inactive}}",
+          "nl": "Voorconditionering van [[device]] is !{{actief|inactief}}",
+          "de": "Vorklimatisierung von [[device]] ist !{{aktiv|inaktiv}}"
+        },
+        "hint": {
+          "en": "This card checks if the vehicle's preconditioning/climate control is currently active.",
+          "nl": "Deze kaart controleert of de voorconditionering/klimaatregeling van het voertuig momenteel actief is.",
+          "de": "Diese Karte prüft, ob die Vorklimatisierung des Fahrzeugs gerade aktiv ist."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle"
+          }
+        ],
+        "id": "is_preconditioning"
+      },
+      {
+        "title": {
+          "en": "Sunroof is !{{open|closed}}",
+          "nl": "Schuifdak is !{{open|gesloten}}",
+          "de": "Schiebedach ist !{{offen|geschlossen}}"
+        },
+        "titleFormatted": {
+          "en": "Sunroof of [[device]] is !{{open|closed}}",
+          "nl": "Schuifdak van [[device]] is !{{open|gesloten}}",
+          "de": "Schiebedach von [[device]] ist !{{offen|geschlossen}}"
+        },
+        "hint": {
+          "en": "This card checks if the sunroof is open or tilted.",
+          "nl": "Deze kaart controleert of het schuifdak open of gekanteld is.",
+          "de": "Diese Karte prüft, ob das Schiebedach offen oder gekippt ist."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle"
+          }
+        ],
+        "id": "sunroof_open"
+      },
+      {
+        "title": {
           "en": "Tire pressure is !{{OK|too low}}",
           "nl": "Bandenspanning is !{{OK|te laag}}",
           "de": "Reifendruck ist !{{OK|zu niedrig}}"
@@ -295,6 +687,31 @@
           }
         ],
         "id": "tire_pressure_ok"
+      },
+      {
+        "title": {
+          "en": "Warning light is !{{active|inactive}}",
+          "nl": "Waarschuwingslampje is !{{actief|inactief}}",
+          "de": "Warnleuchte ist !{{aktiv|inaktiv}}"
+        },
+        "titleFormatted": {
+          "en": "Warning light of [[device]] is !{{active|inactive}}",
+          "nl": "Waarschuwingslampje van [[device]] is !{{actief|inactief}}",
+          "de": "Warnleuchte von [[device]] ist !{{aktiv|inaktiv}}"
+        },
+        "hint": {
+          "en": "This card checks if any warning light (washer fluid, coolant, brake fluid, engine) is active.",
+          "nl": "Deze kaart controleert of een waarschuwingslampje (ruitenwisservloeistof, koelvloeistof, remvloeistof, motor) actief is.",
+          "de": "Diese Karte prüft, ob eine Warnleuchte (Wischwasser, Kühlmittel, Bremsflüssigkeit, Motor) aktiv ist."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle"
+          }
+        ],
+        "id": "warning_active"
       },
       {
         "title": {
@@ -324,6 +741,31 @@
     ],
     "actions": [
       {
+        "title": {
+          "en": "Close sunroof",
+          "nl": "Sluit schuifdak",
+          "de": "Schiebedach schließen"
+        },
+        "titleFormatted": {
+          "en": "Close the sunroof of [[device]]",
+          "nl": "Sluit het schuifdak van [[device]]",
+          "de": "Schiebedach von [[device]] schließen"
+        },
+        "hint": {
+          "en": "Closes the sunroof.",
+          "nl": "Sluit het schuifdak.",
+          "de": "Schließt das Schiebedach."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle"
+          }
+        ],
+        "id": "close_sunroof"
+      },
+      {
         "id": "close_windows",
         "title": {
           "en": "Close windows",
@@ -337,6 +779,240 @@
             "filter": "driver_id=mercedes-vehicle"
           }
         ]
+      },
+      {
+        "title": {
+          "en": "Set departure time",
+          "nl": "Stel vertrektijd in",
+          "de": "Abfahrtszeit einstellen"
+        },
+        "hint": {
+          "en": "Configures the departure time for preconditioning. The vehicle will be ready at this time.",
+          "nl": "Configureert de vertrektijd voor voorklimatisering. Het voertuig is klaar op dit tijdstip.",
+          "de": "Konfiguriert die Abfahrtszeit für die Vorklimatisierung. Das Fahrzeug ist zu diesem Zeitpunkt bereit."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle"
+          },
+          {
+            "type": "number",
+            "name": "hour",
+            "title": {
+              "en": "Hour",
+              "nl": "Uur",
+              "de": "Stunde"
+            },
+            "min": 0,
+            "max": 23,
+            "step": 1
+          },
+          {
+            "type": "number",
+            "name": "minute",
+            "title": {
+              "en": "Minute",
+              "nl": "Minuut",
+              "de": "Minute"
+            },
+            "min": 0,
+            "max": 59,
+            "step": 1
+          },
+          {
+            "type": "dropdown",
+            "name": "mode",
+            "title": {
+              "en": "Mode",
+              "nl": "Modus",
+              "de": "Modus"
+            },
+            "values": [
+              {
+                "id": "0",
+                "label": {
+                  "en": "Disabled",
+                  "nl": "Uitgeschakeld",
+                  "de": "Deaktiviert"
+                }
+              },
+              {
+                "id": "1",
+                "label": {
+                  "en": "Single use",
+                  "nl": "Eenmalig",
+                  "de": "Einmalig"
+                }
+              },
+              {
+                "id": "2",
+                "label": {
+                  "en": "Weekly",
+                  "nl": "Wekelijks",
+                  "de": "Wöchentlich"
+                }
+              }
+            ]
+          }
+        ],
+        "id": "configure_departure_time"
+      },
+      {
+        "title": {
+          "en": "Set maximum charge level",
+          "nl": "Stel maximaal laadniveau in",
+          "de": "Maximalen Ladestand einstellen"
+        },
+        "hint": {
+          "en": "Sets the maximum battery charge level (state of charge) for the vehicle.",
+          "nl": "Stelt het maximale batterij laadniveau in voor het voertuig.",
+          "de": "Legt den maximalen Batterieladestand für das Fahrzeug fest."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle"
+          },
+          {
+            "type": "number",
+            "name": "max_soc",
+            "title": {
+              "en": "Maximum charge %",
+              "nl": "Maximaal laden %",
+              "de": "Maximale Ladung %"
+            },
+            "min": 50,
+            "max": 100,
+            "step": 10
+          },
+          {
+            "type": "dropdown",
+            "name": "charge_program",
+            "title": {
+              "en": "Charge program",
+              "nl": "Laadprogramma",
+              "de": "Ladeprogramm"
+            },
+            "values": [
+              {
+                "id": "0",
+                "label": {
+                  "en": "Default",
+                  "nl": "Standaard",
+                  "de": "Standard"
+                }
+              },
+              {
+                "id": "2",
+                "label": {
+                  "en": "Home",
+                  "nl": "Thuis",
+                  "de": "Zuhause"
+                }
+              },
+              {
+                "id": "3",
+                "label": {
+                  "en": "Work",
+                  "nl": "Werk",
+                  "de": "Arbeit"
+                }
+              }
+            ]
+          }
+        ],
+        "id": "configure_max_soc"
+      },
+      {
+        "title": {
+          "en": "Configure seat heating",
+          "nl": "Stoelverwarming instellen",
+          "de": "Sitzheizung konfigurieren"
+        },
+        "hint": {
+          "en": "Enables or disables seat heating for each seat during preconditioning.",
+          "nl": "Schakelt stoelverwarming voor elke stoel in of uit tijdens voorklimatisering.",
+          "de": "Aktiviert oder deaktiviert die Sitzheizung für jeden Sitz während der Vorklimatisierung."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle"
+          },
+          {
+            "type": "checkbox",
+            "name": "front_left",
+            "title": {
+              "en": "Front left",
+              "nl": "Linksvoor",
+              "de": "Vorne links"
+            }
+          },
+          {
+            "type": "checkbox",
+            "name": "front_right",
+            "title": {
+              "en": "Front right",
+              "nl": "Rechtsvoor",
+              "de": "Vorne rechts"
+            }
+          },
+          {
+            "type": "checkbox",
+            "name": "rear_left",
+            "title": {
+              "en": "Rear left",
+              "nl": "Linksachter",
+              "de": "Hinten links"
+            }
+          },
+          {
+            "type": "checkbox",
+            "name": "rear_right",
+            "title": {
+              "en": "Rear right",
+              "nl": "Rechtsachter",
+              "de": "Hinten rechts"
+            }
+          }
+        ],
+        "id": "configure_seat_heating"
+      },
+      {
+        "title": {
+          "en": "Set cabin temperature",
+          "nl": "Stel cabinetemperatuur in",
+          "de": "Innenraumtemperatur einstellen"
+        },
+        "hint": {
+          "en": "Sets the target temperature for the vehicle's climate control.",
+          "nl": "Stelt de doeltemperatuur in voor de klimaatregeling van het voertuig.",
+          "de": "Legt die Zieltemperatur für die Klimaanlage des Fahrzeugs fest."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle"
+          },
+          {
+            "type": "number",
+            "name": "temperature",
+            "title": {
+              "en": "Temperature (°C)",
+              "nl": "Temperatuur (°C)",
+              "de": "Temperatur (°C)"
+            },
+            "min": 16,
+            "max": 28,
+            "step": 0.5
+          }
+        ],
+        "id": "configure_temperature"
       },
       {
         "id": "flash_lights",
@@ -369,6 +1045,31 @@
         ]
       },
       {
+        "title": {
+          "en": "Open sunroof",
+          "nl": "Open schuifdak",
+          "de": "Schiebedach öffnen"
+        },
+        "titleFormatted": {
+          "en": "Open the sunroof of [[device]]",
+          "nl": "Open het schuifdak van [[device]]",
+          "de": "Schiebedach von [[device]] öffnen"
+        },
+        "hint": {
+          "en": "Opens the sunroof. Requires PIN configuration in device settings.",
+          "nl": "Opent het schuifdak. PIN-configuratie in apparaatinstellingen vereist.",
+          "de": "Öffnet das Schiebedach. Erfordert PIN-Konfiguration in den Geräteeinstellungen."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle"
+          }
+        ],
+        "id": "open_sunroof"
+      },
+      {
         "id": "open_windows",
         "title": {
           "en": "Open windows",
@@ -387,6 +1088,123 @@
             "filter": "driver_id=mercedes-vehicle"
           }
         ]
+      },
+      {
+        "title": {
+          "en": "Send route to car",
+          "nl": "Stuur route naar auto",
+          "de": "Route an Auto senden"
+        },
+        "hint": {
+          "en": "Sends a destination to the vehicle's navigation system.",
+          "nl": "Stuurt een bestemming naar het navigatiesysteem van het voertuig.",
+          "de": "Sendet ein Ziel an das Navigationssystem des Fahrzeugs."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle"
+          },
+          {
+            "type": "text",
+            "name": "title",
+            "title": {
+              "en": "Destination name",
+              "nl": "Bestemmingsnaam",
+              "de": "Zielname"
+            },
+            "placeholder": {
+              "en": "Home",
+              "nl": "Thuis",
+              "de": "Zuhause"
+            }
+          },
+          {
+            "type": "number",
+            "name": "latitude",
+            "title": {
+              "en": "Latitude",
+              "nl": "Breedtegraad",
+              "de": "Breitengrad"
+            },
+            "placeholder": {
+              "en": "52.3676",
+              "nl": "52.3676",
+              "de": "52.3676"
+            }
+          },
+          {
+            "type": "number",
+            "name": "longitude",
+            "title": {
+              "en": "Longitude",
+              "nl": "Lengtegraad",
+              "de": "Längengrad"
+            },
+            "placeholder": {
+              "en": "4.9041",
+              "nl": "4.9041",
+              "de": "4.9041"
+            }
+          }
+        ],
+        "id": "send_route"
+      },
+      {
+        "title": {
+          "en": "Sound horn",
+          "nl": "Claxonneer",
+          "de": "Hupe betätigen"
+        },
+        "hint": {
+          "en": "Sounds the vehicle's horn. Use with care as this may disturb others.",
+          "nl": "Laat de claxon van het voertuig klinken. Gebruik met zorg, dit kan anderen storen.",
+          "de": "Betätigt die Fahrzeughupe. Mit Vorsicht verwenden, da dies andere stören kann."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle"
+          },
+          {
+            "type": "dropdown",
+            "name": "mode",
+            "title": {
+              "en": "Mode",
+              "nl": "Modus",
+              "de": "Modus"
+            },
+            "values": [
+              {
+                "id": "horn_light",
+                "label": {
+                  "en": "Horn and lights",
+                  "nl": "Claxon en lichten",
+                  "de": "Hupe und Lichter"
+                }
+              },
+              {
+                "id": "horn_only",
+                "label": {
+                  "en": "Horn only",
+                  "nl": "Alleen claxon",
+                  "de": "Nur Hupe"
+                }
+              },
+              {
+                "id": "panic",
+                "label": {
+                  "en": "Panic alarm",
+                  "nl": "Paniek alarm",
+                  "de": "Panikalarm"
+                }
+              }
+            ]
+          }
+        ],
+        "id": "sound_horn"
       },
       {
         "id": "start_climate",
@@ -424,6 +1242,26 @@
         ]
       },
       {
+        "title": {
+          "en": "Start preconditioning",
+          "nl": "Start voorklimatisering",
+          "de": "Vorklimatisierung starten"
+        },
+        "hint": {
+          "en": "Starts the electric climate control (preconditioning) for the vehicle. Works best when plugged in.",
+          "nl": "Start de elektrische klimaatregeling (voorklimatisering) voor het voertuig. Werkt het beste wanneer aangesloten.",
+          "de": "Startet die elektrische Klimaanlage (Vorklimatisierung) für das Fahrzeug. Funktioniert am besten bei angeschlossenem Ladekabel."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle"
+          }
+        ],
+        "id": "start_precond"
+      },
+      {
         "id": "stop_climate",
         "title": {
           "en": "Stop climate control",
@@ -452,6 +1290,51 @@
             "filter": "driver_id=mercedes-vehicle"
           }
         ]
+      },
+      {
+        "title": {
+          "en": "Stop preconditioning",
+          "nl": "Stop voorklimatisering",
+          "de": "Vorklimatisierung stoppen"
+        },
+        "hint": {
+          "en": "Stops the electric climate control (preconditioning) for the vehicle.",
+          "nl": "Stopt de elektrische klimaatregeling (voorklimatisering) voor het voertuig.",
+          "de": "Stoppt die elektrische Klimaanlage (Vorklimatisierung) für das Fahrzeug."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle"
+          }
+        ],
+        "id": "stop_precond"
+      },
+      {
+        "title": {
+          "en": "Tilt sunroof",
+          "nl": "Kantel schuifdak",
+          "de": "Schiebedach kippen"
+        },
+        "titleFormatted": {
+          "en": "Tilt the sunroof of [[device]]",
+          "nl": "Kantel het schuifdak van [[device]]",
+          "de": "Schiebedach von [[device]] kippen"
+        },
+        "hint": {
+          "en": "Tilts/lifts the sunroof for ventilation.",
+          "nl": "Kantelt het schuifdak voor ventilatie.",
+          "de": "Kippt das Schiebedach zur Belüftung."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle"
+          }
+        ],
+        "id": "tilt_sunroof"
       },
       {
         "id": "unlock_vehicle",
@@ -491,7 +1374,6 @@
         "distance_electrical",
         "driven_time_start",
         "average_speed",
-        "ecoscore_total",
         "ecoscore_accel",
         "ecoscore_const",
         "ecoscore_freewhl",
@@ -500,7 +1382,6 @@
         "measure_range_liquid",
         "measure_fuel",
         "measure_adblue_level",
-        "alarm_starter_battery",
         "onoff.ignition",
         "measure_oil_level",
         "text_charging_status",
@@ -508,10 +1389,6 @@
         "measure_max_soc",
         "text_end_charge_time",
         "window_sunroof",
-        "text_charge_flap_state",
-        "text_charge_inlet_coupler",
-        "text_charge_inlet_lock",
-        "text_charge_flap_dc_status",
         "text_departure_time",
         "text_departure_time_mode",
         "measure_latitude",
@@ -524,6 +1401,24 @@
         "tire_pressure_bar.tire_fr",
         "tire_pressure_bar.tire_rl",
         "tire_pressure_bar.tire_rr",
+        "window_front_left",
+        "window_front_right",
+        "window_rear_left",
+        "window_rear_right",
+        "door_front_left",
+        "door_front_right",
+        "door_rear_left",
+        "door_rear_right",
+        "door_trunk",
+        "door_hood",
+        "parking_brake_engaged",
+        "alarm_theft",
+        "measure_service_days",
+        "measure_battery_temperature",
+        "onoff_precond",
+        "onoff_auxheat",
+        "onoff_remote_start",
+        "theft_system_armed",
         "onoff.engine",
         "onoff.climate"
       ],
@@ -544,25 +1439,26 @@
           "template": "add_devices"
         }
       ],
+      "energy": {
+        "batteries": [
+          "OTHER"
+        ]
+      },
       "id": "mercedes-vehicle"
     }
   ],
   "capabilities": {
-    "alarm_starter_battery": {
+    "alarm_theft": {
       "type": "boolean",
       "title": {
-        "en": "Starter Battery Low",
-        "nl": "Startaccu Laag",
-        "de": "Starterbatterie Niedrig"
-      },
-      "label": {
-        "en": "Starter Battery",
-        "nl": "Startaccu",
-        "de": "Starterbatterie"
+        "en": "Theft Alarm",
+        "nl": "Diefstalalarm",
+        "de": "Diebstahlalarm"
       },
       "getable": true,
       "setable": false,
-      "uiComponent": "sensor"
+      "uiComponent": "sensor",
+      "icon": "/assets/icons/alarm.svg"
     },
     "average_speed": {
       "type": "number",
@@ -617,6 +1513,78 @@
       "setable": false,
       "uiComponent": "sensor",
       "icon": "/assets/icons/distance_start.svg"
+    },
+    "door_front_left": {
+      "type": "string",
+      "title": {
+        "en": "Door, Front Left",
+        "nl": "Deur, Links Voor",
+        "de": "Tür, Vorne Links"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/icons/door.svg"
+    },
+    "door_front_right": {
+      "type": "string",
+      "title": {
+        "en": "Door, Front Right",
+        "nl": "Deur, Rechts Voor",
+        "de": "Tür, Vorne Rechts"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/icons/door.svg"
+    },
+    "door_hood": {
+      "type": "string",
+      "title": {
+        "en": "Hood",
+        "nl": "Motorkap",
+        "de": "Motorhaube"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/icons/door.svg"
+    },
+    "door_rear_left": {
+      "type": "string",
+      "title": {
+        "en": "Door, Rear Left",
+        "nl": "Deur, Links Achter",
+        "de": "Tür, Hinten Links"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/icons/door.svg"
+    },
+    "door_rear_right": {
+      "type": "string",
+      "title": {
+        "en": "Door, Rear Right",
+        "nl": "Deur, Rechts Achter",
+        "de": "Tür, Hinten Rechts"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/icons/door.svg"
+    },
+    "door_trunk": {
+      "type": "string",
+      "title": {
+        "en": "Trunk",
+        "nl": "Kofferbak",
+        "de": "Kofferraum"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/icons/door.svg"
     },
     "driven_time_start": {
       "type": "number",
@@ -681,21 +1649,6 @@
       "uiComponent": "sensor",
       "icon": "/assets/icons/ecoscore.svg"
     },
-    "ecoscore_total": {
-      "type": "number",
-      "title": {
-        "en": "Eco Score Total",
-        "nl": "Eco Score Totaal",
-        "de": "Eco Score Gesamt"
-      },
-      "decimals": 0,
-      "min": 0,
-      "max": 100,
-      "getable": true,
-      "setable": false,
-      "uiComponent": "sensor",
-      "icon": "/assets/icons/ecoscore.svg"
-    },
     "measure_adblue_level": {
       "type": "number",
       "title": {
@@ -718,6 +1671,24 @@
       "getable": true,
       "setable": false,
       "uiComponent": "sensor"
+    },
+    "measure_battery_temperature": {
+      "type": "number",
+      "title": {
+        "en": "Battery Temperature",
+        "nl": "Batterijtemperatuur",
+        "de": "Batterietemperatur"
+      },
+      "units": {
+        "en": "°C"
+      },
+      "decimals": 1,
+      "min": -40,
+      "max": 80,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/icons/battery_temp.svg"
     },
     "measure_fuel": {
       "type": "number",
@@ -875,6 +1846,24 @@
       "setable": false,
       "uiComponent": "sensor"
     },
+    "measure_service_days": {
+      "type": "number",
+      "title": {
+        "en": "Service in Days",
+        "nl": "Service over Dagen",
+        "de": "Service in Tagen"
+      },
+      "units": {
+        "en": "days",
+        "nl": "dagen",
+        "de": "Tage"
+      },
+      "decimals": 0,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/icons/service.svg"
+    },
     "odometer": {
       "type": "number",
       "title": {
@@ -892,53 +1881,75 @@
       "setable": false,
       "uiComponent": "sensor"
     },
-    "text_charge_flap_dc_status": {
-      "type": "string",
+    "onoff_auxheat": {
+      "type": "boolean",
       "title": {
-        "en": "Charge Flap DC Status",
-        "nl": "Laadklep DC Status",
-        "de": "Ladeklappe DC Status"
+        "en": "Auxiliary heating",
+        "nl": "Standverwarming",
+        "de": "Standheizung"
       },
       "getable": true,
       "setable": false,
       "uiComponent": "sensor",
-      "icon": "/assets/icons/charge_flap.svg"
+      "icon": "/assets/icons/auxheat.svg",
+      "insights": true,
+      "insightsTitleTrue": {
+        "en": "Auxiliary heating on",
+        "nl": "Standverwarming aan",
+        "de": "Standheizung an"
+      },
+      "insightsTitleFalse": {
+        "en": "Auxiliary heating off",
+        "nl": "Standverwarming uit",
+        "de": "Standheizung aus"
+      }
     },
-    "text_charge_flap_state": {
-      "type": "string",
+    "onoff_precond": {
+      "type": "boolean",
       "title": {
-        "en": "Charge Flap State",
-        "nl": "Laadklep Status",
-        "de": "Ladeklappenstatus"
+        "en": "Preconditioning",
+        "nl": "Voorconditionering",
+        "de": "Vorklimatisierung"
       },
       "getable": true,
       "setable": false,
       "uiComponent": "sensor",
-      "icon": "/assets/icons/charge_flap.svg"
+      "icon": "/assets/icons/precond.svg"
     },
-    "text_charge_inlet_coupler": {
-      "type": "string",
+    "onoff_remote_start": {
+      "type": "boolean",
       "title": {
-        "en": "Charge Inlet Coupler",
-        "nl": "Laadinlaat Koppeling",
-        "de": "Ladeeinlasskuppler"
+        "en": "Remote start",
+        "nl": "Afstandsstart",
+        "de": "Fernstart"
       },
       "getable": true,
       "setable": false,
       "uiComponent": "sensor",
-      "icon": "/assets/icons/charge_flap.svg"
+      "icon": "/assets/icons/remote_start.svg",
+      "insights": true,
+      "insightsTitleTrue": {
+        "en": "Remote start active",
+        "nl": "Afstandsstart actief",
+        "de": "Fernstart aktiv"
+      },
+      "insightsTitleFalse": {
+        "en": "Remote start inactive",
+        "nl": "Afstandsstart inactief",
+        "de": "Fernstart inaktiv"
+      }
     },
-    "text_charge_inlet_lock": {
-      "type": "string",
+    "parking_brake_engaged": {
+      "type": "boolean",
       "title": {
-        "en": "Charge Inlet Lock",
-        "nl": "Laadinlaat Vergrendeling",
-        "de": "Ladeeinlassverriegelung"
+        "en": "Parking Brake",
+        "nl": "Handrem",
+        "de": "Feststellbremse"
       },
       "getable": true,
       "setable": false,
       "uiComponent": "sensor",
-      "icon": "/assets/icons/charge_flap.svg"
+      "icon": "/assets/icons/parking_brake.svg"
     },
     "text_charge_program": {
       "type": "string",
@@ -1021,6 +2032,29 @@
       "uiComponent": "sensor",
       "icon": "/assets/icons/geofence.svg"
     },
+    "theft_system_armed": {
+      "type": "boolean",
+      "title": {
+        "en": "Theft system armed",
+        "nl": "Anti-diefstal systeem ingeschakeld",
+        "de": "Diebstahlsicherung aktiviert"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/icons/alarm.svg",
+      "insights": true,
+      "insightsTitleTrue": {
+        "en": "Theft system armed",
+        "nl": "Anti-diefstal systeem ingeschakeld",
+        "de": "Diebstahlsicherung aktiviert"
+      },
+      "insightsTitleFalse": {
+        "en": "Theft system disarmed",
+        "nl": "Anti-diefstal systeem uitgeschakeld",
+        "de": "Diebstahlsicherung deaktiviert"
+      }
+    },
     "time_geofence_last_event": {
       "type": "string",
       "title": {
@@ -1050,6 +2084,54 @@
       "setable": false,
       "uiComponent": "sensor",
       "icon": "/assets/tire_pressure.svg"
+    },
+    "window_front_left": {
+      "type": "string",
+      "title": {
+        "en": "Window, Front Left",
+        "nl": "Raam, Links Voor",
+        "de": "Fenster, Vorne Links"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/icons/window.svg"
+    },
+    "window_front_right": {
+      "type": "string",
+      "title": {
+        "en": "Window, Front Right",
+        "nl": "Raam, Rechts Voor",
+        "de": "Fenster, Vorne Rechts"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/icons/window.svg"
+    },
+    "window_rear_left": {
+      "type": "string",
+      "title": {
+        "en": "Window, Rear Left",
+        "nl": "Raam, Links Achter",
+        "de": "Fenster, Hinten Links"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/icons/window.svg"
+    },
+    "window_rear_right": {
+      "type": "string",
+      "title": {
+        "en": "Window, Rear Right",
+        "nl": "Raam, Rechts Achter",
+        "de": "Fenster, Hinten Rechts"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/icons/window.svg"
     },
     "window_sunroof": {
       "type": "string",

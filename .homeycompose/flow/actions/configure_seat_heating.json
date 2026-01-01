@@ -1,0 +1,55 @@
+{
+  "title": {
+    "en": "Configure seat heating",
+    "nl": "Stoelverwarming instellen",
+    "de": "Sitzheizung konfigurieren"
+  },
+  "hint": {
+    "en": "Enables or disables seat heating for each seat during preconditioning.",
+    "nl": "Schakelt stoelverwarming voor elke stoel in of uit tijdens voorklimatisering.",
+    "de": "Aktiviert oder deaktiviert die Sitzheizung für jeden Sitz während der Vorklimatisierung."
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=mercedes-vehicle"
+    },
+    {
+      "type": "checkbox",
+      "name": "front_left",
+      "title": {
+        "en": "Front left",
+        "nl": "Linksvoor",
+        "de": "Vorne links"
+      }
+    },
+    {
+      "type": "checkbox",
+      "name": "front_right",
+      "title": {
+        "en": "Front right",
+        "nl": "Rechtsvoor",
+        "de": "Vorne rechts"
+      }
+    },
+    {
+      "type": "checkbox",
+      "name": "rear_left",
+      "title": {
+        "en": "Rear left",
+        "nl": "Linksachter",
+        "de": "Hinten links"
+      }
+    },
+    {
+      "type": "checkbox",
+      "name": "rear_right",
+      "title": {
+        "en": "Rear right",
+        "nl": "Rechtsachter",
+        "de": "Hinten rechts"
+      }
+    }
+  ]
+}

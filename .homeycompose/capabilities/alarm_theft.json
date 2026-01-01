@@ -1,0 +1,12 @@
+{
+  "type": "boolean",
+  "title": {
+    "en": "Theft Alarm",
+    "nl": "Diefstalalarm",
+    "de": "Diebstahlalarm"
+  },
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/icons/alarm.svg"
+}

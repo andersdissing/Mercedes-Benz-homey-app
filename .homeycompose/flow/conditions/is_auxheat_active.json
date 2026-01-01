@@ -1,0 +1,19 @@
+{
+  "title": {
+    "en": "Auxiliary heating !{{is|is not}} active",
+    "nl": "Standverwarming !{{is|is niet}} actief",
+    "de": "Standheizung !{{ist|ist nicht}} aktiv"
+  },
+  "hint": {
+    "en": "This card checks if auxiliary heating is currently active.",
+    "nl": "Deze kaart controleert of de standverwarming momenteel actief is.",
+    "de": "Diese Karte prüft, ob die Standheizung gerade aktiv ist."
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=mercedes-vehicle"
+    }
+  ]
+}

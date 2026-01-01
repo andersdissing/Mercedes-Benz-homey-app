@@ -1,0 +1,78 @@
+{
+  "title": {
+    "en": "Set departure time",
+    "nl": "Stel vertrektijd in",
+    "de": "Abfahrtszeit einstellen"
+  },
+  "hint": {
+    "en": "Configures the departure time for preconditioning. The vehicle will be ready at this time.",
+    "nl": "Configureert de vertrektijd voor voorklimatisering. Het voertuig is klaar op dit tijdstip.",
+    "de": "Konfiguriert die Abfahrtszeit für die Vorklimatisierung. Das Fahrzeug ist zu diesem Zeitpunkt bereit."
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=mercedes-vehicle"
+    },
+    {
+      "type": "number",
+      "name": "hour",
+      "title": {
+        "en": "Hour",
+        "nl": "Uur",
+        "de": "Stunde"
+      },
+      "min": 0,
+      "max": 23,
+      "step": 1
+    },
+    {
+      "type": "number",
+      "name": "minute",
+      "title": {
+        "en": "Minute",
+        "nl": "Minuut",
+        "de": "Minute"
+      },
+      "min": 0,
+      "max": 59,
+      "step": 1
+    },
+    {
+      "type": "dropdown",
+      "name": "mode",
+      "title": {
+        "en": "Mode",
+        "nl": "Modus",
+        "de": "Modus"
+      },
+      "values": [
+        {
+          "id": "0",
+          "label": {
+            "en": "Disabled",
+            "nl": "Uitgeschakeld",
+            "de": "Deaktiviert"
+          }
+        },
+        {
+          "id": "1",
+          "label": {
+            "en": "Single use",
+            "nl": "Eenmalig",
+            "de": "Einmalig"
+          }
+        },
+        {
+          "id": "2",
+          "label": {
+            "en": "Weekly",
+            "nl": "Wekelijks",
+            "de": "Wöchentlich"
+          }
+        }
+      ]
+    }
+  ]
+}

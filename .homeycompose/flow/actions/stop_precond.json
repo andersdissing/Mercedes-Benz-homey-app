@@ -1,0 +1,19 @@
+{
+  "title": {
+    "en": "Stop preconditioning",
+    "nl": "Stop voorklimatisering",
+    "de": "Vorklimatisierung stoppen"
+  },
+  "hint": {
+    "en": "Stops the electric climate control (preconditioning) for the vehicle.",
+    "nl": "Stopt de elektrische klimaatregeling (voorklimatisering) voor het voertuig.",
+    "de": "Stoppt die elektrische Klimaanlage (Vorklimatisierung) für das Fahrzeug."
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=mercedes-vehicle"
+    }
+  ]
+}

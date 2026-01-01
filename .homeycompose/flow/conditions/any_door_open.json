@@ -1,0 +1,24 @@
+{
+  "title": {
+    "en": "Any door is !{{open|closed}}",
+    "nl": "Een deur is !{{open|gesloten}}",
+    "de": "Eine Tür ist !{{offen|geschlossen}}"
+  },
+  "titleFormatted": {
+    "en": "Any door of [[device]] is !{{open|closed}}",
+    "nl": "Een deur van [[device]] is !{{open|gesloten}}",
+    "de": "Eine Tür von [[device]] ist !{{offen|geschlossen}}"
+  },
+  "hint": {
+    "en": "This card checks if any door (including trunk and hood) is open.",
+    "nl": "Deze kaart controleert of een deur (inclusief kofferbak en motorkap) open is.",
+    "de": "Diese Karte prüft, ob eine Tür (einschließlich Kofferraum und Motorhaube) geöffnet ist."
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=mercedes-vehicle"
+    }
+  ]
+}

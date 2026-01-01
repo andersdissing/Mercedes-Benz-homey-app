@@ -1,0 +1,18 @@
+{
+  "type": "number",
+  "title": {
+    "en": "Service in Days",
+    "nl": "Service over Dagen",
+    "de": "Service in Tagen"
+  },
+  "units": {
+    "en": "days",
+    "nl": "dagen",
+    "de": "Tage"
+  },
+  "decimals": 0,
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/icons/service.svg"
+}

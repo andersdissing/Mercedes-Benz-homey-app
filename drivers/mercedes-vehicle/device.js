@@ -83,24 +83,227 @@ class MercedesVehicleDevice extends Homey.Device {
         await this.addCapability('time_geofence_last_event');
       }
 
-      // Add charge flap state capability
-      if (!this.hasCapability('text_charge_flap_state')) {
-        await this.addCapability('text_charge_flap_state');
+      // Remove deprecated capabilities (migration)
+      try {
+        if (this.hasCapability('text_charge_flap_state')) {
+          this.log('[INIT] Removing deprecated text_charge_flap_state capability');
+          await this.removeCapability('text_charge_flap_state');
+        }
+      } catch (e) {
+        this.log('[INIT] Could not remove text_charge_flap_state:', e.message);
+      }
+      try {
+        if (this.hasCapability('ecoscore_total')) {
+          this.log('[INIT] Removing deprecated ecoscore_total capability');
+          await this.removeCapability('ecoscore_total');
+        }
+      } catch (e) {
+        this.log('[INIT] Could not remove ecoscore_total:', e.message);
       }
 
-      // Add charge inlet coupler state capability
-      if (!this.hasCapability('text_charge_inlet_coupler')) {
-        await this.addCapability('text_charge_inlet_coupler');
+      // Remove deprecated charge inlet capabilities
+      const chargeInletCaps = ['text_charge_inlet_coupler', 'text_charge_inlet_lock', 'text_charge_flap_dc_status'];
+      for (const cap of chargeInletCaps) {
+        try {
+          if (this.hasCapability(cap)) {
+            this.log(`[INIT] Removing deprecated ${cap} capability`);
+            await this.removeCapability(cap);
+          }
+        } catch (e) {
+          this.log(`[INIT] Could not remove ${cap}:`, e.message);
+        }
       }
 
-      // Add charge inlet lock state capability
-      if (!this.hasCapability('text_charge_inlet_lock')) {
-        await this.addCapability('text_charge_inlet_lock');
+      // Add text capabilities that might be missing
+      const textCaps = [
+        'text_charging_status', 'text_charge_program', 'text_end_charge_time',
+        'window_sunroof', 'measure_fuel', 'measure_adblue_level',
+        'measure_max_soc', 'measure_oil_level',
+        'ecoscore_accel', 'ecoscore_const', 'ecoscore_freewhl',
+        'distance_start', 'distance_electrical', 'driven_time_start',
+        'odometer', 'meter_power', 'alarm_generic'
+      ];
+      for (const cap of textCaps) {
+        if (!this.hasCapability(cap)) {
+          this.log(`[INIT] Adding missing ${cap} capability`);
+          await this.addCapability(cap);
+        }
       }
 
-      // Add charge flap DC status capability
-      if (!this.hasCapability('text_charge_flap_dc_status')) {
-        await this.addCapability('text_charge_flap_dc_status');
+      // Add tire pressure capabilities
+      const tirePressureCaps = ['tire_pressure_bar.tire_fl', 'tire_pressure_bar.tire_fr', 'tire_pressure_bar.tire_rl', 'tire_pressure_bar.tire_rr'];
+      for (const cap of tirePressureCaps) {
+        if (!this.hasCapability(cap)) {
+          this.log(`[INIT] Adding missing ${cap} capability`);
+          await this.addCapability(cap);
+        }
+      }
+
+      // Remove old window_status.* capabilities and add new window_* capabilities
+      const oldWindowCaps = ['window_status.front_left', 'window_status.front_right', 'window_status.rear_left', 'window_status.rear_right'];
+      for (const cap of oldWindowCaps) {
+        try {
+          if (this.hasCapability(cap)) {
+            this.log(`[INIT] Removing old ${cap} capability`);
+            await this.removeCapability(cap);
+          }
+        } catch (e) {
+          this.log(`[INIT] Could not remove ${cap}:`, e.message);
+        }
+      }
+
+      const windowCaps = ['window_front_left', 'window_front_right', 'window_rear_left', 'window_rear_right'];
+      for (const cap of windowCaps) {
+        try {
+          if (!this.hasCapability(cap)) {
+            this.log(`[INIT] Adding missing ${cap} capability`);
+            await this.addCapability(cap);
+          }
+        } catch (e) {
+          this.log(`[INIT] Could not add ${cap}:`, e.message);
+        }
+      }
+
+      // Remove old door_status.* capabilities and add new door_* capabilities
+      const oldDoorCaps = ['door_status.front_left', 'door_status.front_right', 'door_status.rear_left', 'door_status.rear_right', 'door_status.trunk', 'door_status.hood'];
+      for (const cap of oldDoorCaps) {
+        try {
+          if (this.hasCapability(cap)) {
+            this.log(`[INIT] Removing old ${cap} capability`);
+            await this.removeCapability(cap);
+          }
+        } catch (e) {
+          this.log(`[INIT] Could not remove ${cap}:`, e.message);
+        }
+      }
+
+      const doorCaps = ['door_front_left', 'door_front_right', 'door_rear_left', 'door_rear_right', 'door_trunk', 'door_hood'];
+      for (const cap of doorCaps) {
+        try {
+          if (!this.hasCapability(cap)) {
+            this.log(`[INIT] Adding missing ${cap} capability`);
+            await this.addCapability(cap);
+          }
+        } catch (e) {
+          this.log(`[INIT] Could not add ${cap}:`, e.message);
+        }
+      }
+
+      // Migrate parking brake capability from alarm_parking_brake to parking_brake_engaged
+      if (this.hasCapability('alarm_parking_brake')) {
+        this.log('[INIT] Removing deprecated alarm_parking_brake capability');
+        await this.removeCapability('alarm_parking_brake');
+      }
+      if (!this.hasCapability('parking_brake_engaged')) {
+        this.log('[INIT] Adding missing parking_brake_engaged capability');
+        await this.addCapability('parking_brake_engaged');
+      }
+
+      // Remove deprecated alarm_starter_battery capability
+      try {
+        if (this.hasCapability('alarm_starter_battery')) {
+          this.log('[INIT] Removing deprecated alarm_starter_battery capability');
+          await this.removeCapability('alarm_starter_battery');
+        }
+      } catch (e) {
+        this.log('[INIT] Could not remove alarm_starter_battery:', e.message);
+      }
+
+      // Remove deprecated tire temperature capabilities
+      const tireTempCaps = ['tire_temperature.tire_fl', 'tire_temperature.tire_fr', 'tire_temperature.tire_rl', 'tire_temperature.tire_rr'];
+      for (const cap of tireTempCaps) {
+        try {
+          if (this.hasCapability(cap)) {
+            this.log(`[INIT] Removing deprecated ${cap} capability`);
+            await this.removeCapability(cap);
+          }
+        } catch (e) {
+          this.log(`[INIT] Could not remove ${cap}:`, e.message);
+        }
+      }
+
+      // Remove deprecated alarm_tire_warning capability
+      try {
+        if (this.hasCapability('alarm_tire_warning')) {
+          this.log('[INIT] Removing deprecated alarm_tire_warning capability');
+          await this.removeCapability('alarm_tire_warning');
+        }
+      } catch (e) {
+        this.log('[INIT] Could not remove alarm_tire_warning:', e.message);
+      }
+
+      // Add theft alarm capability
+      if (!this.hasCapability('alarm_theft')) {
+        this.log('[INIT] Adding missing alarm_theft capability');
+        await this.addCapability('alarm_theft');
+      }
+
+      // Add service interval days capability
+      if (!this.hasCapability('measure_service_days')) {
+        this.log('[INIT] Adding missing measure_service_days capability');
+        await this.addCapability('measure_service_days');
+      }
+
+      // Add battery temperature capability
+      if (!this.hasCapability('measure_battery_temperature')) {
+        this.log('[INIT] Adding missing measure_battery_temperature capability');
+        await this.addCapability('measure_battery_temperature');
+      }
+
+      // Add range capabilities
+      if (!this.hasCapability('measure_range_electric')) {
+        this.log('[INIT] Adding missing measure_range_electric capability');
+        await this.addCapability('measure_range_electric');
+      }
+      if (!this.hasCapability('measure_range_liquid')) {
+        this.log('[INIT] Adding missing measure_range_liquid capability');
+        await this.addCapability('measure_range_liquid');
+      }
+
+      // Add preconditioning status capability
+      if (!this.hasCapability('onoff_precond')) {
+        this.log('[INIT] Adding missing onoff_precond capability');
+        await this.addCapability('onoff_precond');
+      }
+
+      // Add auxiliary heating status capability
+      if (!this.hasCapability('onoff_auxheat')) {
+        this.log('[INIT] Adding missing onoff_auxheat capability');
+        await this.addCapability('onoff_auxheat');
+      }
+
+      // Add remote start status capability
+      if (!this.hasCapability('onoff_remote_start')) {
+        this.log('[INIT] Adding missing onoff_remote_start capability');
+        await this.addCapability('onoff_remote_start');
+      }
+
+      // Add onoff.ignition capability
+      if (!this.hasCapability('onoff.ignition')) {
+        this.log('[INIT] Adding missing onoff.ignition capability');
+        await this.addCapability('onoff.ignition');
+      }
+
+      // Add onoff.engine capability
+      if (!this.hasCapability('onoff.engine')) {
+        this.log('[INIT] Adding missing onoff.engine capability');
+        await this.addCapability('onoff.engine');
+      }
+
+      // Add onoff.climate capability
+      if (!this.hasCapability('onoff.climate')) {
+        this.log('[INIT] Adding missing onoff.climate capability');
+        await this.addCapability('onoff.climate');
+      }
+
+      // Migrate theft system armed capability from alarm_theft_system to theft_system_armed
+      if (this.hasCapability('alarm_theft_system')) {
+        this.log('[INIT] Removing deprecated alarm_theft_system capability');
+        await this.removeCapability('alarm_theft_system');
+      }
+      if (!this.hasCapability('theft_system_armed')) {
+        this.log('[INIT] Adding missing theft_system_armed capability');
+        await this.addCapability('theft_system_armed');
       }
 
       // Add departure time capability
@@ -115,10 +318,6 @@ class MercedesVehicleDevice extends Homey.Device {
 
       // Initialize text capabilities with default values if not set
       const textCapabilities = [
-        'text_charge_flap_state',
-        'text_charge_inlet_coupler',
-        'text_charge_inlet_lock',
-        'text_charge_flap_dc_status',
         'text_departure_time',
         'text_departure_time_mode',
         'text_geofence_last_event',
@@ -241,16 +440,48 @@ class MercedesVehicleDevice extends Homey.Device {
         if (geofenceEvents && geofenceEvents.length > 0) {
           const last = geofenceEvents[geofenceEvents.length - 1];
           this.log('[POLL] Last geofence event:', last);
-          
+
+          // Extract location from geofence event (this is where lat/long come from!)
+          if (last.coordinate) {
+            if (last.coordinate.latitude !== undefined) {
+              this.log(`[POLL] Setting latitude from geofence: ${last.coordinate.latitude}`);
+              await this.setCapabilityValue('measure_latitude', parseFloat(last.coordinate.latitude));
+            }
+            if (last.coordinate.longitude !== undefined) {
+              this.log(`[POLL] Setting longitude from geofence: ${last.coordinate.longitude}`);
+              await this.setCapabilityValue('measure_longitude', parseFloat(last.coordinate.longitude));
+            }
+          }
+
+          // Check if this is a new event
+          const lastEventTime = this.getCapabilityValue('time_geofence_last_event');
+          const newEventTime = last.time ? new Date(last.time * 1000).toISOString() : null;
+          const isNewEvent = newEventTime && newEventTime !== lastEventTime;
+
           if (last.type) {
             await this.setCapabilityValue('text_geofence_last_event', last.type);
           }
-          if (last.fence && last.fence.name) {
+          if (last.snapshot && last.snapshot.name) {
+            await this.setCapabilityValue('text_geofence_last_zone', last.snapshot.name);
+          } else if (last.fence && last.fence.name) {
             await this.setCapabilityValue('text_geofence_last_zone', last.fence.name);
           }
-          if (last.time) {
-            // API returns seconds
-            await this.setCapabilityValue('time_geofence_last_event', new Date(last.time * 1000).toISOString());
+          if (newEventTime) {
+            await this.setCapabilityValue('time_geofence_last_event', newEventTime);
+          }
+
+          // Trigger flow cards for new geofence events
+          if (isNewEvent) {
+            const zoneName = (last.snapshot && last.snapshot.name) || (last.fence && last.fence.name) || 'Unknown';
+            const eventType = String(last.type).toUpperCase();
+
+            if (eventType === 'ENTER' || eventType === 'ENTERED' || eventType === 'LEAVE_TO_ENTER') {
+              await this.homey.flow.getDeviceTriggerCard('geofence_entered')
+                .trigger(this, { zone_name: zoneName });
+            } else if (eventType === 'LEAVE' || eventType === 'LEFT' || eventType === 'ENTER_TO_LEAVE') {
+              await this.homey.flow.getDeviceTriggerCard('geofence_left')
+                .trigger(this, { zone_name: zoneName });
+            }
           }
         }
       } catch (geoError) {
@@ -327,9 +558,10 @@ class MercedesVehicleDevice extends Homey.Device {
         }
       }
 
-      // Charging power (kW)
-      if (data.chargingPower !== undefined) {
-        const chargingPower = parseFloat(data.chargingPower);
+      // Charging power (kW) - check both lowercase and camelCase variants
+      const chargingPowerValue = data.chargingpower ?? data.chargingPower;
+      if (chargingPowerValue !== undefined) {
+        const chargingPower = parseFloat(chargingPowerValue);
         const wasCharging = this.getCapabilityValue('meter_power') > 0;
         const isCharging = chargingPower > 0;
 
@@ -346,9 +578,10 @@ class MercedesVehicleDevice extends Homey.Device {
         }
       }
 
-      // Engine state
-      if (data.engineState !== undefined) {
-        const engineRunning = data.engineState === true || data.engineState === 'RUNNING';
+      // Engine state - check both lowercase and camelCase variants
+      const engineStateValue = data.enginestate ?? data.engineState;
+      if (engineStateValue !== undefined) {
+        const engineRunning = engineStateValue === true || engineStateValue === 'RUNNING';
         const wasRunning = this.getCapabilityValue('onoff.engine');
 
         if (wasRunning !== engineRunning) {
@@ -369,17 +602,22 @@ class MercedesVehicleDevice extends Homey.Device {
       }
 
       // Tire pressures (already converted from kPa to bar in parser)
-      if (data.tirepressureFrontLeft !== undefined) {
-        await this.setCapabilityValue('tire_pressure_bar.tire_fl', parseFloat(data.tirepressureFrontLeft));
+      // Check both lowercase and camelCase variants for API compatibility
+      const tirePressureFL = data.tirepressurefrontleft ?? data.tirepressureFrontLeft;
+      if (tirePressureFL !== undefined) {
+        await this.setCapabilityValue('tire_pressure_bar.tire_fl', parseFloat(tirePressureFL));
       }
-      if (data.tirepressureFrontRight !== undefined) {
-        await this.setCapabilityValue('tire_pressure_bar.tire_fr', parseFloat(data.tirepressureFrontRight));
+      const tirePressureFR = data.tirepressurefrontright ?? data.tirepressureFrontRight;
+      if (tirePressureFR !== undefined) {
+        await this.setCapabilityValue('tire_pressure_bar.tire_fr', parseFloat(tirePressureFR));
       }
-      if (data.tirepressureRearLeft !== undefined) {
-        await this.setCapabilityValue('tire_pressure_bar.tire_rl', parseFloat(data.tirepressureRearLeft));
+      const tirePressureRL = data.tirepressurerearleft ?? data.tirepressureRearLeft;
+      if (tirePressureRL !== undefined) {
+        await this.setCapabilityValue('tire_pressure_bar.tire_rl', parseFloat(tirePressureRL));
       }
-      if (data.tirepressureRearRight !== undefined) {
-        await this.setCapabilityValue('tire_pressure_bar.tire_rr', parseFloat(data.tirepressureRearRight));
+      const tirePressureRR = data.tirepressurerearright ?? data.tirepressureRearRight;
+      if (tirePressureRR !== undefined) {
+        await this.setCapabilityValue('tire_pressure_bar.tire_rr', parseFloat(tirePressureRR));
       }
 
       // Odometer reading
@@ -388,27 +626,31 @@ class MercedesVehicleDevice extends Homey.Device {
         await this.setCapabilityValue('odometer', parseFloat(data.odo));
       }
 
-      // Trip distance since start
-      if (data.distanceStart !== undefined) {
-        this.log(`[UPDATE] Setting trip distance to: ${data.distanceStart} km`);
-        await this.setCapabilityValue('distance_start', parseFloat(data.distanceStart));
+      // Trip distance since start - check both lowercase and camelCase variants
+      const distanceStartValue = data.distancestart ?? data.distanceStart;
+      if (distanceStartValue !== undefined) {
+        this.log(`[UPDATE] Setting trip distance to: ${distanceStartValue} km`);
+        await this.setCapabilityValue('distance_start', parseFloat(distanceStartValue));
       }
 
-      // Electric trip distance
-      if (data.distanceElectricalStart !== undefined) {
-        this.log(`[UPDATE] Setting electric distance to: ${data.distanceElectricalStart} km`);
-        await this.setCapabilityValue('distance_electrical', parseFloat(data.distanceElectricalStart));
+      // Electric trip distance - check both lowercase and camelCase variants
+      const distanceElectricalValue = data.distanceelectricalstart ?? data.distanceElectricalStart;
+      if (distanceElectricalValue !== undefined) {
+        this.log(`[UPDATE] Setting electric distance to: ${distanceElectricalValue} km`);
+        await this.setCapabilityValue('distance_electrical', parseFloat(distanceElectricalValue));
       }
 
-      // Driving time since start
-      if (data.drivenTimeStart !== undefined) {
-        this.log(`[UPDATE] Setting driving time to: ${data.drivenTimeStart} min`);
-        await this.setCapabilityValue('driven_time_start', parseInt(data.drivenTimeStart));
+      // Driving time since start - check both lowercase and camelCase variants
+      const drivenTimeValue = data.driventimestart ?? data.drivenTimeStart;
+      if (drivenTimeValue !== undefined) {
+        this.log(`[UPDATE] Setting driving time to: ${drivenTimeValue} min`);
+        await this.setCapabilityValue('driven_time_start', parseInt(drivenTimeValue));
       }
 
-      // Average speed since start
-      if (data.averageSpeedStart !== undefined) {
-        const speed = parseFloat(data.averageSpeedStart);
+      // Average speed since start - check both lowercase and camelCase variants
+      const averageSpeedValue = data.averagespeedstart ?? data.averageSpeedStart;
+      if (averageSpeedValue !== undefined) {
+        const speed = parseFloat(averageSpeedValue);
         this.log(`[UPDATE] Setting average speed to: ${speed} km/h`);
         await this.setCapabilityValue('average_speed', speed);
       } else {
@@ -416,28 +658,32 @@ class MercedesVehicleDevice extends Homey.Device {
         await this.setCapabilityValue('average_speed', 0);
       }
 
-      // Eco scores
-      if (data.ecoscoretotal !== undefined) {
-        this.log(`[UPDATE] Setting total eco score to: ${data.ecoscoretotal}`);
-        await this.setCapabilityValue('ecoscore_total', parseInt(data.ecoscoretotal));
+      const ecoScoreAccel = data.ecoscoreaccel ?? data.ecoScoreAccel ?? data.ecoscoreAccel;
+      if (ecoScoreAccel !== undefined) {
+        this.log(`[UPDATE] Setting acceleration eco score to: ${ecoScoreAccel}`);
+        await this.setCapabilityValue('ecoscore_accel', parseInt(ecoScoreAccel));
       }
-      if (data.ecoscoreaccel !== undefined) {
-        this.log(`[UPDATE] Setting acceleration eco score to: ${data.ecoscoreaccel}`);
-        await this.setCapabilityValue('ecoscore_accel', parseInt(data.ecoscoreaccel));
+      const ecoScoreConst = data.ecoscoreconst ?? data.ecoScoreConst ?? data.ecoscoreConst;
+      if (ecoScoreConst !== undefined) {
+        this.log(`[UPDATE] Setting constant eco score to: ${ecoScoreConst}`);
+        await this.setCapabilityValue('ecoscore_const', parseInt(ecoScoreConst));
       }
-      if (data.ecoscoreconst !== undefined) {
-        this.log(`[UPDATE] Setting constant eco score to: ${data.ecoscoreconst}`);
-        await this.setCapabilityValue('ecoscore_const', parseInt(data.ecoscoreconst));
-      }
-      if (data.ecoscorefreewhl !== undefined) {
-        this.log(`[UPDATE] Setting freewheel eco score to: ${data.ecoscorefreewhl}`);
-        await this.setCapabilityValue('ecoscore_freewhl', parseInt(data.ecoscorefreewhl));
+      const ecoScoreFreeWhl = data.ecoscorefreewhl ?? data.ecoScoreFreeWhl ?? data.ecoscoreFreeWhl ?? data.ecoScoreFreewheel;
+      if (ecoScoreFreeWhl !== undefined) {
+        this.log(`[UPDATE] Setting freewheel eco score to: ${ecoScoreFreeWhl}`);
+        await this.setCapabilityValue('ecoscore_freewhl', parseInt(ecoScoreFreeWhl));
       }
 
-      // Generic alarm (warnings)
+      // Generic alarm (warnings) with trigger
       const hasWarning = data.warningwashwater || data.warningcoolantlevellow ||
                         data.warningbrakefluid || data.warningenginelight;
+      const hadWarning = this.getCapabilityValue('alarm_generic');
       await this.setCapabilityValue('alarm_generic', hasWarning === true);
+
+      // Trigger warning light activated when a new warning appears
+      if (hasWarning === true && hadWarning !== true) {
+        await this.homey.flow.getDeviceTriggerCard('warning_light_activated').trigger(this);
+      }
 
       // --- NEW CAPABILITIES ---
 
@@ -465,12 +711,6 @@ class MercedesVehicleDevice extends Homey.Device {
         await this.setCapabilityValue('measure_adblue_level', parseInt(data.tankLevelAdBlue));
       }
 
-      // Starter battery state (binary sensor)
-      if (data.starterBatteryState !== undefined) {
-        const isWarning = data.starterBatteryState !== 'NORMAL';
-        this.log(`[UPDATE] Setting starter battery alarm to: ${isWarning}`);
-        await this.setCapabilityValue('alarm_starter_battery', isWarning);
-      }
 
       // Ignition state (onoff.ignition)
       if (data.ignitionstate !== undefined) {
@@ -489,22 +729,35 @@ class MercedesVehicleDevice extends Homey.Device {
         await this.setCapabilityValue('measure_oil_level', parseInt(data.oilLevel));
       }
 
-      // Charging status (text)
+      // Charging status (text) with charging completed trigger
       if (data.chargingstatus !== undefined) {
+        const oldStatus = this.getCapabilityValue('text_charging_status');
         this.log(`[UPDATE] Setting charging status to: ${data.chargingstatus}`);
-        await this.setCapabilityValue('text_charging_status', data.chargingstatus);
+        await this.setCapabilityValue('text_charging_status', String(data.chargingstatus));
+
+        // Trigger charging completed when status changes to completed/finished
+        const completedStatuses = ['FINISHED', 'COMPLETED', 'END', '4'];
+        const wasCharging = oldStatus && !completedStatuses.includes(String(oldStatus).toUpperCase());
+        const isCompleted = completedStatuses.includes(String(data.chargingstatus).toUpperCase());
+
+        if (wasCharging && isCompleted) {
+          const batteryLevel = this.getCapabilityValue('measure_battery') || 0;
+          await this.homey.flow.getDeviceTriggerCard('charging_completed')
+            .trigger(this, { battery_level: batteryLevel });
+        }
       }
 
       // Selected charge program (text)
       if (data.selectedChargeProgram !== undefined) {
         this.log(`[UPDATE] Setting selected charge program to: ${data.selectedChargeProgram}`);
-        await this.setCapabilityValue('text_charge_program', data.selectedChargeProgram);
+        await this.setCapabilityValue('text_charge_program', String(data.selectedChargeProgram));
       }
 
-      // Max SoC
-      if (data.max_soc !== undefined) {
-        this.log(`[UPDATE] Setting max SoC to: ${data.max_soc}%`);
-        await this.setCapabilityValue('measure_max_soc', parseInt(data.max_soc));
+      // Max SoC (check both maxSoc and max_soc as API may use either)
+      const maxSocValue = data.maxSoc !== undefined ? data.maxSoc : data.max_soc;
+      if (maxSocValue !== undefined) {
+        this.log(`[UPDATE] Setting max SoC to: ${maxSocValue}%`);
+        await this.setCapabilityValue('measure_max_soc', parseInt(maxSocValue));
       }
 
       // End of charge time (timestamp)
@@ -519,32 +772,19 @@ class MercedesVehicleDevice extends Homey.Device {
 
       // Sunroof status (text)
       if (data.sunroofstatus !== undefined) {
-        this.log(`[UPDATE] Setting sunroof status to: ${data.sunroofstatus}`);
-        await this.setCapabilityValue('window_sunroof', data.sunroofstatus);
-      }
-
-      // Charge Flap State
-      if (data.chargeflap !== undefined) {
-        this.log(`[UPDATE] Setting charge flap state to: ${data.chargeflap}`);
-        await this.setCapabilityValue('text_charge_flap_state', data.chargeflap);
-      }
-
-      // Charge Inlet Coupler State
-      if (data.chargeinletcoupler !== undefined) {
-        this.log(`[UPDATE] Setting charge inlet coupler state to: ${data.chargeinletcoupler}`);
-        await this.setCapabilityValue('text_charge_inlet_coupler', data.chargeinletcoupler);
-      }
-
-      // Charge Inlet Lock State
-      if (data.chargeinletlock !== undefined) {
-        this.log(`[UPDATE] Setting charge inlet lock state to: ${data.chargeinletlock}`);
-        await this.setCapabilityValue('text_charge_inlet_lock', data.chargeinletlock);
-      }
-
-      // Charge Flap DC Status
-      if (data.chargeFlapDCStatus !== undefined) {
-        this.log(`[UPDATE] Setting charge flap DC status to: ${data.chargeFlapDCStatus}`);
-        await this.setCapabilityValue('text_charge_flap_dc_status', data.chargeFlapDCStatus);
+        const sunroofMap = {
+          0: 'Closed',
+          1: 'Open',
+          2: 'Tilted',
+          3: 'Running',
+          4: 'Anti-Booming',
+          5: 'Intermediate',
+          6: 'Opening',
+          7: 'Closing'
+        };
+        const sunroofStatus = sunroofMap[data.sunroofstatus] || String(data.sunroofstatus);
+        this.log(`[UPDATE] Setting sunroof status to: ${sunroofStatus} (raw: ${data.sunroofstatus})`);
+        await this.setCapabilityValue('window_sunroof', sunroofStatus);
       }
 
       // Departure Time
@@ -553,25 +793,212 @@ class MercedesVehicleDevice extends Homey.Device {
         await this.setCapabilityValue('text_departure_time', data.departuretime);
       }
 
-      // Departure Time Mode
-      if (data.departureTimeMode !== undefined) {
-        this.log(`[UPDATE] Setting departure time mode to: ${data.departureTimeMode}`);
-        await this.setCapabilityValue('text_departure_time_mode', data.departureTimeMode);
+      // Departure Time Mode (check multiple possible field names)
+      const departureTimeModeRaw = data.departureTimeMode !== undefined ? data.departureTimeMode :
+                                   data.departuretimemode !== undefined ? data.departuretimemode :
+                                   data.departuretime_mode;
+      if (departureTimeModeRaw !== undefined) {
+        const departureModeMap = {
+          0: 'Inactive',
+          1: 'Single',
+          2: 'Weekly'
+        };
+        const departureTimeModeValue = departureModeMap[departureTimeModeRaw] || String(departureTimeModeRaw);
+        this.log(`[UPDATE] Setting departure time mode to: ${departureTimeModeValue} (raw: ${departureTimeModeRaw})`);
+        await this.setCapabilityValue('text_departure_time_mode', departureTimeModeValue);
       }
 
-      // Location
-      if (data.positionLat !== undefined && data.positionLong !== undefined) {
-        const lat = parseFloat(data.positionLat);
-        const long = parseFloat(data.positionLong);
+      // Position latitude/longitude are NOT available in vehicle attributes API
+      // They come from geofencing violations API (polled separately)
+      const posLat = data.positionlat ?? data.positionLat ?? data.latitude ?? data.gpsLat ?? data.gpslat;
+      const posLong = data.positionlong ?? data.positionLong ?? data.longitude ?? data.gpsLon ?? data.gpslon;
+      if (posLat !== undefined && posLong !== undefined) {
+        const lat = parseFloat(posLat);
+        const long = parseFloat(posLong);
         this.log(`[UPDATE] Setting location: ${lat}, ${long}`);
         await this.setCapabilityValue('measure_latitude', lat);
         await this.setCapabilityValue('measure_longitude', long);
       }
 
-      if (data.positionHeading !== undefined) {
-        const heading = parseFloat(data.positionHeading);
+      // Heading - the correct field name is positionHeading (camelCase)
+      const posHeading = data.positionHeading ?? data.positionheading ?? data.heading ?? data.gpsHeading ?? data.gpsheading;
+      if (posHeading !== undefined) {
+        const heading = parseFloat(posHeading);
         this.log(`[UPDATE] Setting heading: ${heading}`);
         await this.setCapabilityValue('measure_heading', heading);
+      }
+
+      // Window statuses with flow triggers
+      const windowMappings = [
+        { key: 'windowstatusfrontleft', cap: 'window_front_left', name: 'front_left' },
+        { key: 'windowstatusfrontright', cap: 'window_front_right', name: 'front_right' },
+        { key: 'windowstatusrearleft', cap: 'window_rear_left', name: 'rear_left' },
+        { key: 'windowstatusrearright', cap: 'window_rear_right', name: 'rear_right' }
+      ];
+
+      for (const win of windowMappings) {
+        if (data[win.key] !== undefined) {
+          try {
+            if (!this.hasCapability(win.cap)) {
+              this.log(`[UPDATE] Skipping ${win.cap} - capability not available (re-pair device to fix)`);
+              continue;
+            }
+            const windowStatusMap = {
+              0: 'Intermediate',
+              1: 'Open',
+              2: 'Closed',
+              3: 'Airing',
+              4: 'Running'
+            };
+            const rawStatus = data[win.key];
+            const newStatus = windowStatusMap[rawStatus] || String(rawStatus);
+            const oldStatus = this.getCapabilityValue(win.cap);
+            await this.setCapabilityValue(win.cap, newStatus);
+
+            // Trigger flow cards on status change
+            if (oldStatus !== newStatus) {
+              if (newStatus === 'Closed' || newStatus === 'CLOSED' || newStatus === '2') {
+                await this.homey.flow.getDeviceTriggerCard('window_closed')
+                  .trigger(this, { window: win.name });
+              } else if (newStatus === 'Open' || newStatus === 'OPEN' || newStatus === '1' || newStatus === 'Intermediate' || newStatus === 'Airing') {
+                await this.homey.flow.getDeviceTriggerCard('window_opened')
+                  .trigger(this, { window: win.name });
+              }
+            }
+          } catch (e) {
+            this.log(`[UPDATE] Error updating ${win.cap}:`, e.message);
+          }
+        }
+      }
+
+      // Door statuses with flow triggers
+      const doorMappings = [
+        { keys: ['doorstatusfrontleft', 'doorStatusFrontLeft', 'doorFrontLeftStatus'], cap: 'door_front_left', name: 'front_left' },
+        { keys: ['doorstatusfrontright', 'doorStatusFrontRight', 'doorFrontRightStatus'], cap: 'door_front_right', name: 'front_right' },
+        { keys: ['doorstatusrearleft', 'doorStatusRearLeft', 'doorRearLeftStatus'], cap: 'door_rear_left', name: 'rear_left' },
+        { keys: ['doorstatusrearright', 'doorStatusRearRight', 'doorRearRightStatus'], cap: 'door_rear_right', name: 'rear_right' },
+        { keys: ['decklidstatus', 'decklidStatus', 'trunkStatus'], cap: 'door_trunk', name: 'trunk' },
+        { keys: ['enginehoodstatus', 'engineHoodStatus', 'hoodStatus'], cap: 'door_hood', name: 'hood' }
+      ];
+
+      for (const door of doorMappings) {
+        // Find the first matching key
+        const matchingKey = door.keys.find(k => data[k] !== undefined);
+        if (matchingKey !== undefined && data[matchingKey] !== undefined) {
+          try {
+            if (!this.hasCapability(door.cap)) {
+              this.log(`[UPDATE] Skipping ${door.cap} - capability not available (re-pair device to fix)`);
+              continue;
+            }
+            const doorData = data[matchingKey];
+            const newStatus = doorData === true ? 'Open' : doorData === false ? 'Closed' : String(doorData);
+            const oldStatus = this.getCapabilityValue(door.cap);
+            await this.setCapabilityValue(door.cap, newStatus);
+
+            // Trigger flow cards on status change
+            if (oldStatus !== newStatus) {
+              if (newStatus === 'Closed' || newStatus === 'CLOSED' || newStatus === 'false' || newStatus === '0') {
+                await this.homey.flow.getDeviceTriggerCard('door_closed')
+                  .trigger(this, { door: door.name });
+              } else if (newStatus === 'Open' || newStatus === 'OPEN' || newStatus === 'true' || newStatus === '1') {
+                await this.homey.flow.getDeviceTriggerCard('door_opened')
+                  .trigger(this, { door: door.name });
+              }
+            }
+          } catch (e) {
+            this.log(`[UPDATE] Error updating ${door.cap}:`, e.message);
+          }
+        }
+      }
+
+      // Parking brake status
+      if (data.parkbrakestatus !== undefined) {
+        const parkBrakeEngaged = data.parkbrakestatus === true || data.parkbrakestatus === 'true' || data.parkbrakestatus === 1;
+        await this.setCapabilityValue('parking_brake_engaged', parkBrakeEngaged);
+      }
+
+      // Service interval days
+      if (data.serviceintervaldays !== undefined) {
+        await this.setCapabilityValue('measure_service_days', parseInt(data.serviceintervaldays));
+      }
+
+      // Battery temperature (EV) - check various possible attribute names
+      // Mercedes uses different naming conventions: temperaturehvbattery, hvbatterytemperature, etc.
+      const batteryTempValue = data.temperaturehvbattery ?? data.temperatureHVBattery ??
+        data.hvbatterytemperature ?? data.hvBatteryTemperature ??
+        data.ecoelectricbatterytemperature ?? data.ecoElectricBatteryTemperature ??
+        data.batterytemperature ?? data.batteryTemperature;
+      if (batteryTempValue !== undefined) {
+        this.log('[DATA] Battery temperature found:', batteryTempValue);
+        await this.setCapabilityValue('measure_battery_temperature', parseFloat(batteryTempValue));
+      }
+
+      // Debug: Log all attributes containing 'temp' or 'battery' to find correct key
+      const tempBatteryKeys = Object.keys(data).filter(k =>
+        k.toLowerCase().includes('temp') || k.toLowerCase().includes('battery')
+      );
+      if (tempBatteryKeys.length > 0) {
+        this.log('[DEBUG] Temperature/Battery related attributes:', tempBatteryKeys.map(k => `${k}=${data[k]}`).join(', '));
+      }
+
+      // Preconditioning status - check both lowercase and camelCase variants
+      const precondActiveValue = data.precondactive ?? data.precondActive;
+      if (precondActiveValue !== undefined) {
+        const precondActive = precondActiveValue === true || precondActiveValue === 'true' || precondActiveValue === 1;
+        await this.setCapabilityValue('onoff_precond', precondActive);
+      }
+
+      // Auxiliary heating status - check both lowercase and camelCase variants
+      const auxheatActiveValue = data.auxheatactive ?? data.auxheatActive;
+      if (auxheatActiveValue !== undefined) {
+        const auxheatActive = auxheatActiveValue === true || auxheatActiveValue === 'true' || auxheatActiveValue === 1;
+        await this.setCapabilityValue('onoff_auxheat', auxheatActive);
+      }
+
+      // Remote start status - check both lowercase and camelCase variants
+      const remoteStartActiveValue = data.remotestartactive ?? data.remoteStartActive;
+      if (remoteStartActiveValue !== undefined) {
+        const remoteStartActive = remoteStartActiveValue === true || remoteStartActiveValue === 'true' || remoteStartActiveValue === 1;
+        await this.setCapabilityValue('onoff_remote_start', remoteStartActive);
+      }
+
+      // Theft system armed status - check both lowercase and camelCase variants
+      const theftSystemArmedValue = data.theftsystemarmed ?? data.theftSystemArmed;
+      if (theftSystemArmedValue !== undefined) {
+        const theftArmed = theftSystemArmedValue === true || theftSystemArmedValue === 'true' || theftSystemArmedValue === 1;
+        await this.setCapabilityValue('theft_system_armed', theftArmed);
+      }
+
+      // Theft alarm status - check both lowercase and camelCase variants
+      const theftAlarmActiveValue = data.theftalarmactive ?? data.theftAlarmActive;
+      const lastTheftWarningValue = data.lasttheftwarning ?? data.lastTheftWarning;
+      if (theftAlarmActiveValue !== undefined || lastTheftWarningValue !== undefined) {
+        const theftActive = theftAlarmActiveValue === true || theftAlarmActiveValue === 1;
+        const wasTheftActive = this.getCapabilityValue('alarm_theft');
+        await this.setCapabilityValue('alarm_theft', theftActive);
+
+        // Trigger vehicle alarm flow card when alarm activates
+        if (theftActive && !wasTheftActive) {
+          const reasonValue = data.lasttheftwarningreason ?? data.lastTheftWarningReason;
+          const reason = reasonValue || 'UNKNOWN';
+          await this.homey.flow.getDeviceTriggerCard('vehicle_alarm')
+            .trigger(this, { reason: String(reason) });
+        }
+      }
+
+      // Geofence data from WebSocket (if available) - check multiple possible field names
+      const geofenceZone = data.geofencename ?? data.geofenceName ?? data.geofence_name ??
+                           data.lastgeofencezone ?? data.lastGeofenceZone ?? data.currentzone ?? data.currentZone;
+      if (geofenceZone !== undefined) {
+        this.log(`[UPDATE] Setting geofence zone to: ${geofenceZone}`);
+        await this.setCapabilityValue('text_geofence_last_zone', String(geofenceZone));
+      }
+
+      const geofenceEvent = data.geofenceevent ?? data.geofenceEvent ?? data.geofence_event ??
+                            data.lastgeofenceevent ?? data.lastGeofenceEvent;
+      if (geofenceEvent !== undefined) {
+        this.log(`[UPDATE] Setting geofence event to: ${geofenceEvent}`);
+        await this.setCapabilityValue('text_geofence_last_event', String(geofenceEvent));
       }
 
       this.log('Capabilities updated successfully');
@@ -920,6 +1347,58 @@ class MercedesVehicleDevice extends Homey.Device {
     }
   }
 
+  /**
+   * Flow action: Open sunroof
+   */
+  async openSunroofAction() {
+    this.log('[FLOW] Open sunroof action triggered');
+    try {
+      const settings = this.getSettings();
+      const pin = settings.pin;
+
+      if (!pin) {
+        throw new Error('PIN is not configured. Please set PIN in device settings.');
+      }
+
+      await this.api.openSunroof(this.vin, pin);
+      this.log('[FLOW] Sunroof opened successfully');
+      return true;
+    } catch (error) {
+      this.error('[FLOW] Failed to open sunroof:', error.message);
+      throw new Error(`Failed to open sunroof: ${error.message}`);
+    }
+  }
+
+  /**
+   * Flow action: Close sunroof
+   */
+  async closeSunroofAction() {
+    this.log('[FLOW] Close sunroof action triggered');
+    try {
+      await this.api.closeSunroof(this.vin);
+      this.log('[FLOW] Sunroof closed successfully');
+      return true;
+    } catch (error) {
+      this.error('[FLOW] Failed to close sunroof:', error.message);
+      throw new Error(`Failed to close sunroof: ${error.message}`);
+    }
+  }
+
+  /**
+   * Flow action: Tilt sunroof
+   */
+  async tiltSunroofAction() {
+    this.log('[FLOW] Tilt sunroof action triggered');
+    try {
+      await this.api.tiltSunroof(this.vin);
+      this.log('[FLOW] Sunroof tilted successfully');
+      return true;
+    } catch (error) {
+      this.error('[FLOW] Failed to tilt sunroof:', error.message);
+      throw new Error(`Failed to tilt sunroof: ${error.message}`);
+    }
+  }
+
   // ==================== Flow Card Condition Handlers ====================
 
   /**
@@ -989,6 +1468,232 @@ class MercedesVehicleDevice extends Homey.Device {
     const closed = await this.areWindowsClosed();
     this.log(`[FLOW] Windows closed condition checked: ${closed}`);
     return closed;
+  }
+
+  /**
+   * Flow condition: Is preconditioning active?
+   */
+  async isPreconditioning() {
+    const active = this.getCapabilityValue('onoff_precond');
+    this.log(`[FLOW] Is preconditioning condition checked: ${active}`);
+    return active === true;
+  }
+
+  /**
+   * Flow condition: Is auxiliary heating active?
+   */
+  async isAuxHeatActive() {
+    const active = this.getCapabilityValue('onoff_auxheat');
+    this.log(`[FLOW] Is auxiliary heating active condition checked: ${active}`);
+    return active === true;
+  }
+
+  /**
+   * Flow condition: Is any door open?
+   */
+  async anyDoorOpen() {
+    const doors = [
+      this.getCapabilityValue('door_front_left'),
+      this.getCapabilityValue('door_front_right'),
+      this.getCapabilityValue('door_rear_left'),
+      this.getCapabilityValue('door_rear_right'),
+      this.getCapabilityValue('door_trunk'),
+      this.getCapabilityValue('door_hood')
+    ];
+
+    const anyOpen = doors.some(status =>
+      status === 'OPEN' || status === 'true' || status === '1'
+    );
+
+    this.log(`[FLOW] Any door open condition checked: ${anyOpen}`);
+    return anyOpen;
+  }
+
+  /**
+   * Flow condition: Is any warning light active?
+   */
+  async warningActive() {
+    const warning = this.getCapabilityValue('alarm_generic');
+    this.log(`[FLOW] Warning active condition checked: ${warning}`);
+    return warning === true;
+  }
+
+  /**
+   * Flow condition: Is sunroof open?
+   */
+  async sunroofOpen() {
+    const status = this.getCapabilityValue('window_sunroof');
+    const isOpen = status !== 'CLOSED' && status !== '0' && status !== null && status !== '-';
+    this.log(`[FLOW] Sunroof open condition checked: ${isOpen} (status: ${status})`);
+    return isOpen;
+  }
+
+  /**
+   * Flow condition: Battery level above threshold
+   * @param {number} threshold - Battery percentage threshold
+   */
+  async batteryLevelAbove(threshold) {
+    const batteryLevel = this.getCapabilityValue('measure_battery') || 0;
+    const isAbove = batteryLevel >= threshold;
+    this.log(`[FLOW] Battery level condition: ${batteryLevel}% >= ${threshold}% = ${isAbove}`);
+    return isAbove;
+  }
+
+  /**
+   * Flow condition: Is vehicle in geofence zone
+   * @param {string} zoneName - Name of the geofence zone to check
+   */
+  async isInGeofence(zoneName) {
+    const lastEvent = this.getCapabilityValue('text_geofence_last_event');
+    const lastZone = this.getCapabilityValue('text_geofence_last_zone');
+
+    // Vehicle is in zone if last event was 'enter' or 'ENTER' and zone matches
+    const isEnter = lastEvent && (lastEvent.toUpperCase() === 'ENTER' || lastEvent.toUpperCase() === 'ENTERED');
+    const zoneMatches = lastZone && lastZone.toLowerCase() === zoneName.toLowerCase();
+    const inZone = isEnter && zoneMatches;
+
+    this.log(`[FLOW] Is in geofence condition: zone=${zoneName}, lastEvent=${lastEvent}, lastZone=${lastZone}, result=${inZone}`);
+    return inZone;
+  }
+
+  /**
+   * Flow action: Send route to car
+   * @param {string} title - Destination name
+   * @param {number} latitude - Latitude coordinate
+   * @param {number} longitude - Longitude coordinate
+   */
+  async sendRouteAction(title, latitude, longitude) {
+    this.log(`[FLOW] Send route action: ${title} (${latitude}, ${longitude})`);
+    try {
+      await this.api.sendRoute(this.vin, title, latitude, longitude, '', '', '');
+      this.log('[FLOW] Route sent successfully');
+      return true;
+    } catch (error) {
+      this.error('[FLOW] Failed to send route:', error.message);
+      throw new Error(`Failed to send route: ${error.message}`);
+    }
+  }
+
+  /**
+   * Flow action: Configure maximum state of charge
+   * @param {number} maxSoc - Maximum state of charge percentage (50-100)
+   * @param {string} chargeProgram - Charge program ID (0=Default, 2=Home, 3=Work)
+   */
+  async configureMaxSocAction(maxSoc, chargeProgram) {
+    this.log(`[FLOW] Configure max SOC action: ${maxSoc}%, program=${chargeProgram}`);
+    try {
+      await this.api.configureBatteryMaxSoc(this.vin, maxSoc, parseInt(chargeProgram, 10));
+      this.log('[FLOW] Max SOC configured successfully');
+      return true;
+    } catch (error) {
+      this.error('[FLOW] Failed to configure max SOC:', error.message);
+      throw new Error(`Failed to configure max SOC: ${error.message}`);
+    }
+  }
+
+  /**
+   * Flow action: Start preconditioning (ZEV electric climate)
+   */
+  async startPrecondAction() {
+    this.log('[FLOW] Start preconditioning action');
+    try {
+      await this.api.startPrecond(this.vin);
+      this.log('[FLOW] Preconditioning started successfully');
+      return true;
+    } catch (error) {
+      this.error('[FLOW] Failed to start preconditioning:', error.message);
+      throw new Error(`Failed to start preconditioning: ${error.message}`);
+    }
+  }
+
+  /**
+   * Flow action: Stop preconditioning (ZEV electric climate)
+   */
+  async stopPrecondAction() {
+    this.log('[FLOW] Stop preconditioning action');
+    try {
+      await this.api.stopPrecond(this.vin);
+      this.log('[FLOW] Preconditioning stopped successfully');
+      return true;
+    } catch (error) {
+      this.error('[FLOW] Failed to stop preconditioning:', error.message);
+      throw new Error(`Failed to stop preconditioning: ${error.message}`);
+    }
+  }
+
+  /**
+   * Flow action: Configure departure time for preconditioning
+   * @param {number} hour - Hour (0-23)
+   * @param {number} minute - Minute (0-59)
+   * @param {string} mode - Mode (0=disabled, 1=single, 2=weekly)
+   */
+  async configureDepartureTimeAction(hour, minute, mode) {
+    const departureTime = hour * 60 + minute;  // Convert to minutes from midnight
+    this.log(`[FLOW] Configure departure time action: ${hour}:${minute} (${departureTime} min), mode=${mode}`);
+    try {
+      await this.api.configurePrecondDeparture(this.vin, departureTime, parseInt(mode, 10));
+      this.log('[FLOW] Departure time configured successfully');
+      return true;
+    } catch (error) {
+      this.error('[FLOW] Failed to configure departure time:', error.message);
+      throw new Error(`Failed to configure departure time: ${error.message}`);
+    }
+  }
+
+  /**
+   * Flow action: Configure cabin temperature
+   * @param {number} temperature - Temperature in Celsius (16-28)
+   */
+  async configureTemperatureAction(temperature) {
+    this.log(`[FLOW] Configure temperature action: ${temperature}°C`);
+    try {
+      // Set all zones to the same temperature
+      const zones = [
+        { zone: 'frontLeft', temperature },
+        { zone: 'frontRight', temperature }
+      ];
+      await this.api.configureTemperature(this.vin, zones);
+      this.log('[FLOW] Temperature configured successfully');
+      return true;
+    } catch (error) {
+      this.error('[FLOW] Failed to configure temperature:', error.message);
+      throw new Error(`Failed to configure temperature: ${error.message}`);
+    }
+  }
+
+  /**
+   * Flow action: Configure seat heating
+   * @param {boolean} frontLeft - Front left seat heating
+   * @param {boolean} frontRight - Front right seat heating
+   * @param {boolean} rearLeft - Rear left seat heating
+   * @param {boolean} rearRight - Rear right seat heating
+   */
+  async configureSeatHeatingAction(frontLeft, frontRight, rearLeft, rearRight) {
+    this.log(`[FLOW] Configure seat heating action: FL=${frontLeft}, FR=${frontRight}, RL=${rearLeft}, RR=${rearRight}`);
+    try {
+      await this.api.configureSeatHeating(this.vin, frontLeft, frontRight, rearLeft, rearRight);
+      this.log('[FLOW] Seat heating configured successfully');
+      return true;
+    } catch (error) {
+      this.error('[FLOW] Failed to configure seat heating:', error.message);
+      throw new Error(`Failed to configure seat heating: ${error.message}`);
+    }
+  }
+
+  /**
+   * Flow action: Sound horn
+   * @param {string} mode - 'horn_light', 'horn_only', or 'panic'
+   */
+  async soundHornAction(mode) {
+    this.log(`[FLOW] Sound horn action with mode: ${mode}`);
+    try {
+      await this.api.soundHorn(this.vin, mode);
+      this.log('[FLOW] Horn activated successfully');
+      return true;
+    } catch (error) {
+      this.error('[FLOW] Failed to sound horn:', error.message);
+      throw new Error(`Failed to sound horn: ${error.message}`);
+    }
   }
 }
 

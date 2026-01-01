@@ -1,0 +1,54 @@
+{
+  "title": {
+    "en": "Sound horn",
+    "nl": "Claxonneer",
+    "de": "Hupe betätigen"
+  },
+  "hint": {
+    "en": "Sounds the vehicle's horn. Use with care as this may disturb others.",
+    "nl": "Laat de claxon van het voertuig klinken. Gebruik met zorg, dit kan anderen storen.",
+    "de": "Betätigt die Fahrzeughupe. Mit Vorsicht verwenden, da dies andere stören kann."
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=mercedes-vehicle"
+    },
+    {
+      "type": "dropdown",
+      "name": "mode",
+      "title": {
+        "en": "Mode",
+        "nl": "Modus",
+        "de": "Modus"
+      },
+      "values": [
+        {
+          "id": "horn_light",
+          "label": {
+            "en": "Horn and lights",
+            "nl": "Claxon en lichten",
+            "de": "Hupe und Lichter"
+          }
+        },
+        {
+          "id": "horn_only",
+          "label": {
+            "en": "Horn only",
+            "nl": "Alleen claxon",
+            "de": "Nur Hupe"
+          }
+        },
+        {
+          "id": "panic",
+          "label": {
+            "en": "Panic alarm",
+            "nl": "Paniek alarm",
+            "de": "Panikalarm"
+          }
+        }
+      ]
+    }
+  ]
+}

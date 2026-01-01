@@ -1,0 +1,66 @@
+{
+  "title": {
+    "en": "Set maximum charge level",
+    "nl": "Stel maximaal laadniveau in",
+    "de": "Maximalen Ladestand einstellen"
+  },
+  "hint": {
+    "en": "Sets the maximum battery charge level (state of charge) for the vehicle.",
+    "nl": "Stelt het maximale batterij laadniveau in voor het voertuig.",
+    "de": "Legt den maximalen Batterieladestand für das Fahrzeug fest."
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=mercedes-vehicle"
+    },
+    {
+      "type": "number",
+      "name": "max_soc",
+      "title": {
+        "en": "Maximum charge %",
+        "nl": "Maximaal laden %",
+        "de": "Maximale Ladung %"
+      },
+      "min": 50,
+      "max": 100,
+      "step": 10
+    },
+    {
+      "type": "dropdown",
+      "name": "charge_program",
+      "title": {
+        "en": "Charge program",
+        "nl": "Laadprogramma",
+        "de": "Ladeprogramm"
+      },
+      "values": [
+        {
+          "id": "0",
+          "label": {
+            "en": "Default",
+            "nl": "Standaard",
+            "de": "Standard"
+          }
+        },
+        {
+          "id": "2",
+          "label": {
+            "en": "Home",
+            "nl": "Thuis",
+            "de": "Zuhause"
+          }
+        },
+        {
+          "id": "3",
+          "label": {
+            "en": "Work",
+            "nl": "Werk",
+            "de": "Arbeit"
+          }
+        }
+      ]
+    }
+  ]
+}

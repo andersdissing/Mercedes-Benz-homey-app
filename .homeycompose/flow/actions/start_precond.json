@@ -1,0 +1,19 @@
+{
+  "title": {
+    "en": "Start preconditioning",
+    "nl": "Start voorklimatisering",
+    "de": "Vorklimatisierung starten"
+  },
+  "hint": {
+    "en": "Starts the electric climate control (preconditioning) for the vehicle. Works best when plugged in.",
+    "nl": "Start de elektrische klimaatregeling (voorklimatisering) voor het voertuig. Werkt het beste wanneer aangesloten.",
+    "de": "Startet die elektrische Klimaanlage (Vorklimatisierung) für das Fahrzeug. Funktioniert am besten bei angeschlossenem Ladekabel."
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=mercedes-vehicle"
+    }
+  ]
+}

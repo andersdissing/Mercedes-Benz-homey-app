@@ -1,0 +1,23 @@
+{
+  "type": "boolean",
+  "title": {
+    "en": "Theft system armed",
+    "nl": "Anti-diefstal systeem ingeschakeld",
+    "de": "Diebstahlsicherung aktiviert"
+  },
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/icons/alarm.svg",
+  "insights": true,
+  "insightsTitleTrue": {
+    "en": "Theft system armed",
+    "nl": "Anti-diefstal systeem ingeschakeld",
+    "de": "Diebstahlsicherung aktiviert"
+  },
+  "insightsTitleFalse": {
+    "en": "Theft system disarmed",
+    "nl": "Anti-diefstal systeem uitgeschakeld",
+    "de": "Diebstahlsicherung deaktiviert"
+  }
+}

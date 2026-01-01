@@ -1,0 +1,27 @@
+{
+  "id": "vehicle_alarm",
+  "title": {
+    "en": "Vehicle alarm triggered",
+    "nl": "Voertuigalarm geactiveerd",
+    "de": "Fahrzeugalarm ausgelöst"
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=mercedes-vehicle"
+    }
+  ],
+  "tokens": [
+    {
+      "name": "reason",
+      "type": "string",
+      "title": {
+        "en": "Reason",
+        "nl": "Reden",
+        "de": "Grund"
+      },
+      "example": "DOOR_FRONT_LEFT"
+    }
+  ]
+}

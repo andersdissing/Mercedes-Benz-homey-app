@@ -1,0 +1,12 @@
+{
+  "type": "string",
+  "title": {
+    "en": "Hood",
+    "nl": "Motorkap",
+    "de": "Motorhaube"
+  },
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/icons/door.svg"
+}

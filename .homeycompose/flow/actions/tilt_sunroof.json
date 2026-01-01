@@ -1,0 +1,24 @@
+{
+  "title": {
+    "en": "Tilt sunroof",
+    "nl": "Kantel schuifdak",
+    "de": "Schiebedach kippen"
+  },
+  "titleFormatted": {
+    "en": "Tilt the sunroof of [[device]]",
+    "nl": "Kantel het schuifdak van [[device]]",
+    "de": "Schiebedach von [[device]] kippen"
+  },
+  "hint": {
+    "en": "Tilts/lifts the sunroof for ventilation.",
+    "nl": "Kantelt het schuifdak voor ventilatie.",
+    "de": "Kippt das Schiebedach zur Belüftung."
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=mercedes-vehicle"
+    }
+  ]
+}

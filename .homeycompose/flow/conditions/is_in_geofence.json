@@ -1,0 +1,33 @@
+{
+  "title": {
+    "en": "Vehicle !{{is|is not}} in geofence zone ...",
+    "nl": "Voertuig !{{is|is niet}} in geofence zone ...",
+    "de": "Fahrzeug !{{ist|ist nicht}} in Geofence-Zone ..."
+  },
+  "hint": {
+    "en": "This card checks if the vehicle is currently inside a specified geofence zone.",
+    "nl": "Deze kaart controleert of het voertuig zich momenteel in een opgegeven geofence zone bevindt.",
+    "de": "Diese Karte prüft, ob das Fahrzeug sich gerade in einer bestimmten Geofence-Zone befindet."
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=mercedes-vehicle"
+    },
+    {
+      "type": "text",
+      "name": "zone_name",
+      "title": {
+        "en": "Zone name",
+        "nl": "Zone naam",
+        "de": "Zonenname"
+      },
+      "placeholder": {
+        "en": "Home",
+        "nl": "Thuis",
+        "de": "Zuhause"
+      }
+    }
+  ]
+}

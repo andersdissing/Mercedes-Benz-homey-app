@@ -1,0 +1,79 @@
+[
+  {
+    "type": "group",
+    "label": {
+      "en": "Security",
+      "nl": "Beveiliging",
+      "de": "Sicherheit"
+    },
+    "children": [
+      {
+        "id": "pin",
+        "type": "password",
+        "label": {
+          "en": "Vehicle PIN",
+          "nl": "Voertuig PIN",
+          "de": "Fahrzeug PIN"
+        },
+        "hint": {
+          "en": "Your Mercedes-Benz security PIN. Required for unlock, open windows, and open sunroof actions.",
+          "nl": "Uw Mercedes-Benz beveiligings-PIN. Vereist voor ontgrendelen, ramen openen en schuifdak openen.",
+          "de": "Ihre Mercedes-Benz Sicherheits-PIN. Erforderlich für Entriegeln, Fenster öffnen und Schiebedach öffnen."
+        },
+        "value": ""
+      }
+    ]
+  },
+  {
+    "type": "group",
+    "label": {
+      "en": "Data Updates",
+      "nl": "Gegevensupdates",
+      "de": "Datenaktualisierungen"
+    },
+    "children": [
+      {
+        "id": "polling_interval",
+        "type": "number",
+        "label": {
+          "en": "Polling interval (seconds)",
+          "nl": "Polling interval (seconden)",
+          "de": "Abfrageintervall (Sekunden)"
+        },
+        "hint": {
+          "en": "How often to poll for vehicle data when WebSocket is unavailable. Minimum 60 seconds.",
+          "nl": "Hoe vaak voertuiggegevens worden opgevraagd wanneer WebSocket niet beschikbaar is. Minimaal 60 seconden.",
+          "de": "Wie oft Fahrzeugdaten abgefragt werden, wenn WebSocket nicht verfügbar ist. Minimum 60 Sekunden."
+        },
+        "value": 180,
+        "min": 60,
+        "max": 3600
+      }
+    ]
+  },
+  {
+    "type": "group",
+    "label": {
+      "en": "Advanced",
+      "nl": "Geavanceerd",
+      "de": "Erweitert"
+    },
+    "children": [
+      {
+        "id": "debug_mode",
+        "type": "checkbox",
+        "label": {
+          "en": "Debug mode",
+          "nl": "Debug-modus",
+          "de": "Debug-Modus"
+        },
+        "hint": {
+          "en": "Enable detailed logging for troubleshooting.",
+          "nl": "Schakel gedetailleerde logging in voor probleemoplossing.",
+          "de": "Aktivieren Sie detaillierte Protokollierung zur Fehlerbehebung."
+        },
+        "value": false
+      }
+    ]
+  }
+]

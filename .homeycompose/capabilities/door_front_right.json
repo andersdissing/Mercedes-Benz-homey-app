@@ -1,0 +1,12 @@
+{
+  "type": "string",
+  "title": {
+    "en": "Door, Front Right",
+    "nl": "Deur, Rechts Voor",
+    "de": "Tür, Vorne Rechts"
+  },
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/icons/door.svg"
+}

@@ -1,0 +1,24 @@
+{
+  "title": {
+    "en": "Warning light is !{{active|inactive}}",
+    "nl": "Waarschuwingslampje is !{{actief|inactief}}",
+    "de": "Warnleuchte ist !{{aktiv|inaktiv}}"
+  },
+  "titleFormatted": {
+    "en": "Warning light of [[device]] is !{{active|inactive}}",
+    "nl": "Waarschuwingslampje van [[device]] is !{{actief|inactief}}",
+    "de": "Warnleuchte von [[device]] ist !{{aktiv|inaktiv}}"
+  },
+  "hint": {
+    "en": "This card checks if any warning light (washer fluid, coolant, brake fluid, engine) is active.",
+    "nl": "Deze kaart controleert of een waarschuwingslampje (ruitenwisservloeistof, koelvloeistof, remvloeistof, motor) actief is.",
+    "de": "Diese Karte prüft, ob eine Warnleuchte (Wischwasser, Kühlmittel, Bremsflüssigkeit, Motor) aktiv ist."
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=mercedes-vehicle"
+    }
+  ]
+}

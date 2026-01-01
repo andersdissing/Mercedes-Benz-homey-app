@@ -1,0 +1,12 @@
+{
+  "type": "string",
+  "title": {
+    "en": "Window, Front Left",
+    "nl": "Raam, Links Voor",
+    "de": "Fenster, Vorne Links"
+  },
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/icons/window.svg"
+}

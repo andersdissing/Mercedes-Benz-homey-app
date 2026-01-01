@@ -1,0 +1,15 @@
+{
+  "id": "warning_light_activated",
+  "title": {
+    "en": "Warning light activated",
+    "nl": "Waarschuwingslampje geactiveerd",
+    "de": "Warnleuchte aktiviert"
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=mercedes-vehicle"
+    }
+  ]
+}

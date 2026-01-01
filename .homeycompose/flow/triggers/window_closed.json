@@ -1,0 +1,27 @@
+{
+  "id": "window_closed",
+  "title": {
+    "en": "A window was closed",
+    "nl": "Een raam is gesloten",
+    "de": "Ein Fenster wurde geschlossen"
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=mercedes-vehicle"
+    }
+  ],
+  "tokens": [
+    {
+      "name": "window",
+      "type": "string",
+      "title": {
+        "en": "Window",
+        "nl": "Raam",
+        "de": "Fenster"
+      },
+      "example": "front_left"
+    }
+  ]
+}

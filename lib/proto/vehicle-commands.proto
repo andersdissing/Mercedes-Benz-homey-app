@@ -51,6 +51,47 @@ message WindowsOpen {
 message WindowsClose {
 }
 
+message SunroofOpen {
+  string pin = 1;
+}
+
+message SunroofClose {
+}
+
+message SunroofLift {
+}
+
+// ZEV (Zero Emission Vehicle) Preconditioning - Electric climate control
+message ZevPrecondStart {
+}
+
+message ZevPrecondStop {
+}
+
+// Configure preconditioning with departure time
+message ZevPrecondConfigure {
+  int32 departure_time = 1;  // Minutes from midnight
+  int32 departure_time_mode = 2;  // 0=disabled, 1=single, 2=weekly
+}
+
+// Temperature zone configuration
+message TemperatureConfigure {
+  repeated TemperaturePoint temperature_points = 1;
+}
+
+message TemperaturePoint {
+  string zone = 1;  // frontLeft, frontRight, rearLeft, rearRight
+  double temperature_in_celsius = 2;
+}
+
+// Seat heating configuration
+message PrecondSeatConfigure {
+  bool front_left = 1;
+  bool front_right = 2;
+  bool rear_left = 3;
+  bool rear_right = 4;
+}
+
 message SigPosStart {
   enum HornType {
     HORN_OFF = 0;
@@ -93,6 +134,14 @@ message CommandRequest {
     AuxheatStop auxheat_stop = 3;
     WindowsOpen windows_open = 12;
     WindowsClose windows_close = 13;
+    SunroofOpen sunroof_open = 14;
+    SunroofClose sunroof_close = 15;
+    SunroofLift sunroof_lift = 16;
     SigPosStart sigpos_start = 35;
+    ZevPrecondStart zev_precond_start = 17;
+    ZevPrecondStop zev_precond_stop = 18;
+    ZevPrecondConfigure zev_precond_configure = 21;
+    TemperatureConfigure temperature_configure = 22;
+    PrecondSeatConfigure precond_seat_configure = 23;
   }
 }

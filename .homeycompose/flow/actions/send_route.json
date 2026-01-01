@@ -1,0 +1,61 @@
+{
+  "title": {
+    "en": "Send route to car",
+    "nl": "Stuur route naar auto",
+    "de": "Route an Auto senden"
+  },
+  "hint": {
+    "en": "Sends a destination to the vehicle's navigation system.",
+    "nl": "Stuurt een bestemming naar het navigatiesysteem van het voertuig.",
+    "de": "Sendet ein Ziel an das Navigationssystem des Fahrzeugs."
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=mercedes-vehicle"
+    },
+    {
+      "type": "text",
+      "name": "title",
+      "title": {
+        "en": "Destination name",
+        "nl": "Bestemmingsnaam",
+        "de": "Zielname"
+      },
+      "placeholder": {
+        "en": "Home",
+        "nl": "Thuis",
+        "de": "Zuhause"
+      }
+    },
+    {
+      "type": "number",
+      "name": "latitude",
+      "title": {
+        "en": "Latitude",
+        "nl": "Breedtegraad",
+        "de": "Breitengrad"
+      },
+      "placeholder": {
+        "en": "52.3676",
+        "nl": "52.3676",
+        "de": "52.3676"
+      }
+    },
+    {
+      "type": "number",
+      "name": "longitude",
+      "title": {
+        "en": "Longitude",
+        "nl": "Lengtegraad",
+        "de": "Längengrad"
+      },
+      "placeholder": {
+        "en": "4.9041",
+        "nl": "4.9041",
+        "de": "4.9041"
+      }
+    }
+  ]
+}

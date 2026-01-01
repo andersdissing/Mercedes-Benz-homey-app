@@ -1,0 +1,24 @@
+{
+  "title": {
+    "en": "Preconditioning is !{{active|inactive}}",
+    "nl": "Voorconditionering is !{{actief|inactief}}",
+    "de": "Vorklimatisierung ist !{{aktiv|inaktiv}}"
+  },
+  "titleFormatted": {
+    "en": "Preconditioning of [[device]] is !{{active|inactive}}",
+    "nl": "Voorconditionering van [[device]] is !{{actief|inactief}}",
+    "de": "Vorklimatisierung von [[device]] ist !{{aktiv|inaktiv}}"
+  },
+  "hint": {
+    "en": "This card checks if the vehicle's preconditioning/climate control is currently active.",
+    "nl": "Deze kaart controleert of de voorconditionering/klimaatregeling van het voertuig momenteel actief is.",
+    "de": "Diese Karte prüft, ob die Vorklimatisierung des Fahrzeugs gerade aktiv ist."
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=mercedes-vehicle"
+    }
+  ]
+}

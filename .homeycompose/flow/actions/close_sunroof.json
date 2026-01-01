@@ -1,0 +1,24 @@
+{
+  "title": {
+    "en": "Close sunroof",
+    "nl": "Sluit schuifdak",
+    "de": "Schiebedach schließen"
+  },
+  "titleFormatted": {
+    "en": "Close the sunroof of [[device]]",
+    "nl": "Sluit het schuifdak van [[device]]",
+    "de": "Schiebedach von [[device]] schließen"
+  },
+  "hint": {
+    "en": "Closes the sunroof.",
+    "nl": "Sluit het schuifdak.",
+    "de": "Schließt das Schiebedach."
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=mercedes-vehicle"
+    }
+  ]
+}

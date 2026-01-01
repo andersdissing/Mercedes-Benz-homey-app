@@ -1,0 +1,12 @@
+{
+  "type": "string",
+  "title": {
+    "en": "Window, Rear Right",
+    "nl": "Raam, Rechts Achter",
+    "de": "Fenster, Hinten Rechts"
+  },
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/icons/window.svg"
+}

@@ -1,0 +1,23 @@
+{
+  "type": "boolean",
+  "title": {
+    "en": "Auxiliary heating",
+    "nl": "Standverwarming",
+    "de": "Standheizung"
+  },
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/icons/auxheat.svg",
+  "insights": true,
+  "insightsTitleTrue": {
+    "en": "Auxiliary heating on",
+    "nl": "Standverwarming aan",
+    "de": "Standheizung an"
+  },
+  "insightsTitleFalse": {
+    "en": "Auxiliary heating off",
+    "nl": "Standverwarming uit",
+    "de": "Standheizung aus"
+  }
+}
