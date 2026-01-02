@@ -95,6 +95,14 @@ class MercedesVehicleDriver extends Homey.Driver {
           return true;
         });
 
+      // Refresh vehicle data
+      this.homey.flow.getActionCard('refresh_data')
+        .registerRunListener(async (args) => {
+          this.log('[FLOW] Refresh data action triggered');
+          await args.device.refreshDataAction();
+          return true;
+        });
+
       // ==================== CONDITION CARDS ====================
 
       // Is locked?

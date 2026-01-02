@@ -1,0 +1,25 @@
+{
+  "id": "refresh_data",
+  "title": {
+    "en": "Refresh vehicle data",
+    "nl": "Voertuiggegevens vernieuwen",
+    "de": "Fahrzeugdaten aktualisieren"
+  },
+  "titleFormatted": {
+    "en": "Refresh vehicle data",
+    "nl": "Voertuiggegevens vernieuwen",
+    "de": "Fahrzeugdaten aktualisieren"
+  },
+  "hint": {
+    "en": "Manually refresh all vehicle data from the Mercedes API",
+    "nl": "Handmatig alle voertuiggegevens vernieuwen van de Mercedes API",
+    "de": "Alle Fahrzeugdaten manuell von der Mercedes-API aktualisieren"
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=mercedes-vehicle"
+    }
+  ]
+}

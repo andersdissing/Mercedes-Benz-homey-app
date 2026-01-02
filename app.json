@@ -1090,6 +1090,31 @@
         ]
       },
       {
+        "id": "refresh_data",
+        "title": {
+          "en": "Refresh vehicle data",
+          "nl": "Voertuiggegevens vernieuwen",
+          "de": "Fahrzeugdaten aktualisieren"
+        },
+        "titleFormatted": {
+          "en": "Refresh vehicle data",
+          "nl": "Voertuiggegevens vernieuwen",
+          "de": "Fahrzeugdaten aktualisieren"
+        },
+        "hint": {
+          "en": "Manually refresh all vehicle data from the Mercedes API",
+          "nl": "Handmatig alle voertuiggegevens vernieuwen van de Mercedes API",
+          "de": "Alle Fahrzeugdaten manuell von der Mercedes-API aktualisieren"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle"
+          }
+        ]
+      },
+      {
         "title": {
           "en": "Send route to car",
           "nl": "Stuur route naar auto",
@@ -1444,6 +1469,80 @@
           "OTHER"
         ]
       },
+      "settings": [
+        {
+          "type": "group",
+          "label": {
+            "en": "Data Refresh",
+            "nl": "Gegevens verversen",
+            "de": "Datenaktualisierung"
+          },
+          "children": [
+            {
+              "id": "disable_auto_refresh",
+              "type": "checkbox",
+              "label": {
+                "en": "Disable automatic refresh",
+                "nl": "Automatisch vernieuwen uitschakelen",
+                "de": "Automatische Aktualisierung deaktivieren"
+              },
+              "hint": {
+                "en": "Turn off automatic refresh and use a flow trigger to retrieve data instead.",
+                "nl": "Schakel automatisch vernieuwen uit en gebruik een flow-trigger om gegevens op te halen.",
+                "de": "Deaktivieren Sie die automatische Aktualisierung und verwenden Sie stattdessen einen Flow-Trigger zum Abrufen von Daten."
+              },
+              "value": false
+            },
+            {
+              "id": "polling_interval",
+              "type": "number",
+              "label": {
+                "en": "Refresh interval (seconds)",
+                "nl": "Verversingsinterval (seconden)",
+                "de": "Aktualisierungsintervall (Sekunden)"
+              },
+              "hint": {
+                "en": "How often the app should pull data from the Mercedes API. Lower values provide more frequent updates but may drain your car's 12V battery faster. Recommended: 120-300 seconds.",
+                "nl": "Hoe vaak de app gegevens moet ophalen van de Mercedes API. Lagere waarden zorgen voor frequentere updates, maar kunnen de 12V-accu van uw auto sneller leegmaken. Aanbevolen: 120-300 seconden.",
+                "de": "Wie oft die App Daten von der Mercedes-API abrufen soll. Niedrigere Werte bieten häufigere Updates, können aber die 12V-Batterie Ihres Autos schneller entladen. Empfohlen: 120-300 Sekunden."
+              },
+              "value": 1800,
+              "min": 30,
+              "max": 7200,
+              "units": {
+                "en": "seconds",
+                "nl": "seconden",
+                "de": "Sekunden"
+              }
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": {
+            "en": "Security",
+            "nl": "Beveiliging",
+            "de": "Sicherheit"
+          },
+          "children": [
+            {
+              "id": "pin",
+              "type": "password",
+              "label": {
+                "en": "Security PIN",
+                "nl": "Beveiligings-PIN",
+                "de": "Sicherheits-PIN"
+              },
+              "hint": {
+                "en": "Your Mercedes me PIN is required for operations like unlocking the vehicle and starting the engine.",
+                "nl": "Uw Mercedes me PIN is nodig voor handelingen zoals het ontgrendelen van het voertuig en het starten van de motor.",
+                "de": "Ihre Mercedes me PIN wird für Vorgänge wie das Entriegeln des Fahrzeugs und das Starten des Motors benötigt."
+              },
+              "value": ""
+            }
+          ]
+        }
+      ],
       "id": "mercedes-vehicle"
     }
   ],

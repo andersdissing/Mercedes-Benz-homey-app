@@ -343,12 +343,18 @@ class MercedesVehicleDevice extends Homey.Device {
 
       // Start polling for vehicle data (as fallback and for initial data)
       // If WebSocket is working, this will be less critical
-      const pollingInterval = settings.polling_interval || 180;
-      this.log(`Starting polling with ${pollingInterval}s interval (WebSocket fallback)`);
-      this.pollInterval = setInterval(
-        this.pollVehicleData.bind(this),
-        pollingInterval * 1000
-      );
+      const disableAutoRefresh = settings.disable_auto_refresh || false;
+      const pollingInterval = settings.polling_interval || 1800;
+
+      if (!disableAutoRefresh) {
+        this.log(`Starting polling with ${pollingInterval}s interval (WebSocket fallback)`);
+        this.pollInterval = setInterval(
+          this.pollVehicleData.bind(this),
+          pollingInterval * 1000
+        );
+      } else {
+        this.log('Automatic polling disabled - use flow action to refresh data');
+      }
 
       // Do initial poll
       await this.pollVehicleData();
@@ -373,20 +379,27 @@ class MercedesVehicleDevice extends Homey.Device {
    * onSettings is called when the user updates the device's settings.
    */
   async onSettings({ oldSettings, newSettings, changedKeys }) {
-    this.log('Mercedes Vehicle settings where changed');
+    this.log('Mercedes Vehicle settings were changed');
 
-    // Update polling interval if changed
-    if (changedKeys.includes('polling_interval')) {
+    // Handle auto refresh toggle or polling interval changes
+    if (changedKeys.includes('disable_auto_refresh') || changedKeys.includes('polling_interval')) {
+      // Clear existing interval if any
       if (this.pollInterval) {
         clearInterval(this.pollInterval);
+        this.pollInterval = null;
       }
 
-      this.pollInterval = setInterval(
-        this.pollVehicleData.bind(this),
-        newSettings.polling_interval * 1000
-      );
-
-      this.log('Polling interval updated to', newSettings.polling_interval, 'seconds');
+      // Start new interval only if auto refresh is enabled
+      if (!newSettings.disable_auto_refresh) {
+        const pollingInterval = newSettings.polling_interval || 1800;
+        this.pollInterval = setInterval(
+          this.pollVehicleData.bind(this),
+          pollingInterval * 1000
+        );
+        this.log('Polling interval updated to', pollingInterval, 'seconds');
+      } else {
+        this.log('Automatic polling disabled - use flow action to refresh data');
+      }
     }
   }
 
@@ -1344,6 +1357,21 @@ class MercedesVehicleDevice extends Homey.Device {
     } catch (error) {
       this.error('[FLOW] Failed to close windows:', error.message);
       throw new Error(`Failed to close windows: ${error.message}`);
+    }
+  }
+
+  /**
+   * Flow action: Refresh vehicle data
+   */
+  async refreshDataAction() {
+    this.log('[FLOW] Refresh data action triggered');
+    try {
+      await this.pollVehicleData();
+      this.log('[FLOW] Vehicle data refreshed successfully');
+      return true;
+    } catch (error) {
+      this.error('[FLOW] Failed to refresh data:', error.message);
+      throw new Error(`Failed to refresh vehicle data: ${error.message}`);
     }
   }
 
