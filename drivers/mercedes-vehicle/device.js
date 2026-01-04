@@ -28,6 +28,13 @@ class MercedesVehicleDevice extends Homey.Device {
         this.log('OAuth token restored from store');
       }
 
+      // Register callback to persist token updates (fixes disconnection after token refresh)
+      this.oauth.setTokenUpdateCallback(async (newToken) => {
+        this.log('Token refreshed, persisting to store...');
+        await this.setStoreValue('token', newToken);
+        this.log('Refreshed token persisted successfully');
+      });
+
       // Initialize API client
       this.api = new MercedesAPI(this.homey, this.oauth, this.region);
       await this.api.initialize();
