@@ -4,6 +4,11 @@
     "nl": "Stoelverwarming instellen",
     "de": "Sitzheizung konfigurieren"
   },
+  "titleFormatted": {
+    "en": "Configure seat heating (FL: [[front_left]], FR: [[front_right]], RL: [[rear_left]], RR: [[rear_right]])",
+    "nl": "Stoelverwarming instellen (LV: [[front_left]], RV: [[front_right]], LA: [[rear_left]], RA: [[rear_right]])",
+    "de": "Sitzheizung konfigurieren (VL: [[front_left]], VR: [[front_right]], HL: [[rear_left]], HR: [[rear_right]])"
+  },
   "hint": {
     "en": "Enables or disables seat heating for each seat during preconditioning.",
     "nl": "Schakelt stoelverwarming voor elke stoel in of uit tijdens voorklimatisering.",

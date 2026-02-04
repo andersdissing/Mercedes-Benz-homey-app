@@ -7,5 +7,6 @@
   },
   "getable": true,
   "setable": false,
-  "uiComponent": "sensor"
+  "uiComponent": "sensor",
+  "icon": "/assets/icons/charge_program.svg"
 }

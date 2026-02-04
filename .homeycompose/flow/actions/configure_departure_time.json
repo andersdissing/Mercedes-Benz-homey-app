@@ -4,6 +4,11 @@
     "nl": "Stel vertrektijd in",
     "de": "Abfahrtszeit einstellen"
   },
+  "titleFormatted": {
+    "en": "Set departure time to [[hour]]:[[minute]] ([[mode]])",
+    "nl": "Stel vertrektijd in op [[hour]]:[[minute]] ([[mode]])",
+    "de": "Abfahrtszeit auf [[hour]]:[[minute]] einstellen ([[mode]])"
+  },
   "hint": {
     "en": "Configures the departure time for preconditioning. The vehicle will be ready at this time.",
     "nl": "Configureert de vertrektijd voor voorklimatisering. Het voertuig is klaar op dit tijdstip.",

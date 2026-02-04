@@ -4,6 +4,11 @@
     "nl": "Stel cabinetemperatuur in",
     "de": "Innenraumtemperatur einstellen"
   },
+  "titleFormatted": {
+    "en": "Set cabin temperature to [[temperature]]°C",
+    "nl": "Stel cabinetemperatuur in op [[temperature]]°C",
+    "de": "Innenraumtemperatur auf [[temperature]]°C einstellen"
+  },
   "hint": {
     "en": "Sets the target temperature for the vehicle's climate control.",
     "nl": "Stelt de doeltemperatuur in voor de klimaatregeling van het voertuig.",

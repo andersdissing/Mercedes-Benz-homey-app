@@ -4,6 +4,11 @@
     "nl": "Stuur route naar auto",
     "de": "Route an Auto senden"
   },
+  "titleFormatted": {
+    "en": "Send route [[title]] ([[latitude]], [[longitude]])",
+    "nl": "Stuur route [[title]] ([[latitude]], [[longitude]])",
+    "de": "Route [[title]] senden ([[latitude]], [[longitude]])"
+  },
   "hint": {
     "en": "Sends a destination to the vehicle's navigation system.",
     "nl": "Stuurt een bestemming naar het navigatiesysteem van het voertuig.",

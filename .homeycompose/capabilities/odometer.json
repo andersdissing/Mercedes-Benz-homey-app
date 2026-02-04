@@ -13,5 +13,6 @@
   "max": 999999,
   "getable": true,
   "setable": false,
-  "uiComponent": "sensor"
+  "uiComponent": "sensor",
+  "icon": "/assets/icons/odometer.svg"
 }

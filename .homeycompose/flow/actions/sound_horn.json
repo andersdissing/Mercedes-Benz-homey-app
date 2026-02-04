@@ -4,6 +4,11 @@
     "nl": "Claxonneer",
     "de": "Hupe betätigen"
   },
+  "titleFormatted": {
+    "en": "Sound horn ([[mode]])",
+    "nl": "Claxonneer ([[mode]])",
+    "de": "Hupe betätigen ([[mode]])"
+  },
   "hint": {
     "en": "Sounds the vehicle's horn. Use with care as this may disturb others.",
     "nl": "Laat de claxon van het voertuig klinken. Gebruik met zorg, dit kan anderen storen.",

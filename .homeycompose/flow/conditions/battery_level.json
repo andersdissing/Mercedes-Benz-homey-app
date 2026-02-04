@@ -4,6 +4,11 @@
     "nl": "Batterijniveau !{{is boven|is onder}} ...",
     "de": "Batteriestand !{{ist über|ist unter}} ..."
   },
+  "titleFormatted": {
+    "en": "Battery level !{{is above|is below}} [[threshold]]%",
+    "nl": "Batterijniveau !{{is boven|is onder}} [[threshold]]%",
+    "de": "Batteriestand !{{ist über|ist unter}} [[threshold]]%"
+  },
   "hint": {
     "en": "This card checks if the battery level is above or below a specified percentage.",
     "nl": "Deze kaart controleert of het batterijniveau boven of onder een opgegeven percentage is.",

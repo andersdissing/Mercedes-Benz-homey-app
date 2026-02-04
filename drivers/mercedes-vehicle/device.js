@@ -475,7 +475,16 @@ class MercedesVehicleDevice extends Homey.Device {
 
           // Check if this is a new event
           const lastEventTime = this.getCapabilityValue('time_geofence_last_event');
-          const newEventTime = last.time ? new Date(last.time * 1000).toISOString() : null;
+          const newEventTime = last.time ? (() => {
+            const d = new Date(last.time * 1000);
+            const lang = this.homey.i18n.getLanguage();
+            const month = d.toLocaleString(lang, { month: 'short' });
+            const day = String(d.getDate()).padStart(2, '0');
+            const year = d.getFullYear();
+            const hours = String(d.getHours()).padStart(2, '0');
+            const minutes = String(d.getMinutes()).padStart(2, '0');
+            return `${day} ${month} ${year} ${hours}:${minutes}`;
+          })() : null;
           const isNewEvent = newEventTime && newEventTime !== lastEventTime;
 
           if (last.type) {

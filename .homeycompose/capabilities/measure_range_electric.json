@@ -17,5 +17,6 @@
   "chartType": "stepLine",
   "getable": true,
   "setable": false,
-  "uiComponent": "sensor"
+  "uiComponent": "sensor",
+  "icon": "/assets/icons/electric_range.svg"
 }

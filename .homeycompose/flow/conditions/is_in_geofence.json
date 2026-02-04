@@ -4,6 +4,11 @@
     "nl": "Voertuig !{{is|is niet}} in geofence zone ...",
     "de": "Fahrzeug !{{ist|ist nicht}} in Geofence-Zone ..."
   },
+  "titleFormatted": {
+    "en": "Vehicle !{{is|is not}} in geofence zone [[zone_name]]",
+    "nl": "Voertuig !{{is|is niet}} in geofence zone [[zone_name]]",
+    "de": "Fahrzeug !{{ist|ist nicht}} in Geofence-Zone [[zone_name]]"
+  },
   "hint": {
     "en": "This card checks if the vehicle is currently inside a specified geofence zone.",
     "nl": "Deze kaart controleert of het voertuig zich momenteel in een opgegeven geofence zone bevindt.",

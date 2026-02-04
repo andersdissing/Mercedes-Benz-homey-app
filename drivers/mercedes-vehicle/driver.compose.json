@@ -5,6 +5,10 @@
     "de": "Mercedes-Benz Fahrzeug"
   },
   "class": "other",
+  "images": {
+    "small": "/drivers/mercedes-vehicle/assets/images/small.png",
+    "large": "/drivers/mercedes-vehicle/assets/images/large.png"
+  },
   "platforms": [
     "local",
     "cloud"

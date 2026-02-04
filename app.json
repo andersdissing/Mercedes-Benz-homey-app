@@ -14,9 +14,9 @@
     "de": "Mercedes-Benz"
   },
   "description": {
-    "en": "Control your Mercedes-Benz vehicle from Homey",
-    "nl": "Bedien je Mercedes-Benz auto vanuit Homey",
-    "de": "Steuern Sie Ihr Mercedes-Benz Fahrzeug von Homey aus"
+    "en": "Stay connected to your Mercedes-Benz, wherever you are",
+    "nl": "Blijf verbonden met je Mercedes-Benz, waar je ook bent",
+    "de": "Bleiben Sie mit Ihrem Mercedes-Benz verbunden, wo auch immer Sie sind"
   },
   "category": [
     "appliances"
@@ -51,17 +51,20 @@
       "ev"
     ]
   },
-  "permissions": [
-    "homey:manager:geolocation"
-  ],
+  "permissions": [],
   "images": {
     "small": "/assets/images/small.png",
     "large": "/assets/images/large.png",
     "xlarge": "/assets/images/xlarge.png"
   },
+  "brandColor": "#00ADEF",
+  "source": "https://github.com/andersdissing/Mercedes-Benz-homey-app",
+  "bugs": {
+    "url": "https://github.com/andersdissing/Mercedes-Benz-homey-app/issues"
+  },
   "author": {
-    "name": "Mercedes-Benz Homey Integration",
-    "email": "support@example.com"
+    "email": "ameq@ameq.dk",
+    "name": "Anders Dissing"
   },
   "flow": {
     "triggers": [
@@ -458,6 +461,11 @@
           "nl": "Batterijniveau !{{is boven|is onder}} ...",
           "de": "Batteriestand !{{ist über|ist unter}} ..."
         },
+        "titleFormatted": {
+          "en": "Battery level !{{is above|is below}} [[threshold]]%",
+          "nl": "Batterijniveau !{{is boven|is onder}} [[threshold]]%",
+          "de": "Batteriestand !{{ist über|ist unter}} [[threshold]]%"
+        },
         "hint": {
           "en": "This card checks if the battery level is above or below a specified percentage.",
           "nl": "Deze kaart controleert of het batterijniveau boven of onder een opgegeven percentage is.",
@@ -559,6 +567,11 @@
           "en": "Vehicle !{{is|is not}} in geofence zone ...",
           "nl": "Voertuig !{{is|is niet}} in geofence zone ...",
           "de": "Fahrzeug !{{ist|ist nicht}} in Geofence-Zone ..."
+        },
+        "titleFormatted": {
+          "en": "Vehicle !{{is|is not}} in geofence zone [[zone_name]]",
+          "nl": "Voertuig !{{is|is niet}} in geofence zone [[zone_name]]",
+          "de": "Fahrzeug !{{ist|ist nicht}} in Geofence-Zone [[zone_name]]"
         },
         "hint": {
           "en": "This card checks if the vehicle is currently inside a specified geofence zone.",
@@ -786,6 +799,11 @@
           "nl": "Stel vertrektijd in",
           "de": "Abfahrtszeit einstellen"
         },
+        "titleFormatted": {
+          "en": "Set departure time to [[hour]]:[[minute]] ([[mode]])",
+          "nl": "Stel vertrektijd in op [[hour]]:[[minute]] ([[mode]])",
+          "de": "Abfahrtszeit auf [[hour]]:[[minute]] einstellen ([[mode]])"
+        },
         "hint": {
           "en": "Configures the departure time for preconditioning. The vehicle will be ready at this time.",
           "nl": "Configureert de vertrektijd voor voorklimatisering. Het voertuig is klaar op dit tijdstip.",
@@ -865,6 +883,11 @@
           "nl": "Stel maximaal laadniveau in",
           "de": "Maximalen Ladestand einstellen"
         },
+        "titleFormatted": {
+          "en": "Set maximum charge to [[max_soc]]% for [[charge_program]]",
+          "nl": "Stel maximale lading in op [[max_soc]]% voor [[charge_program]]",
+          "de": "Maximale Ladung auf [[max_soc]]% für [[charge_program]] einstellen"
+        },
         "hint": {
           "en": "Sets the maximum battery charge level (state of charge) for the vehicle.",
           "nl": "Stelt het maximale batterij laadniveau in voor het voertuig.",
@@ -932,6 +955,11 @@
           "nl": "Stoelverwarming instellen",
           "de": "Sitzheizung konfigurieren"
         },
+        "titleFormatted": {
+          "en": "Configure seat heating (FL: [[front_left]], FR: [[front_right]], RL: [[rear_left]], RR: [[rear_right]])",
+          "nl": "Stoelverwarming instellen (LV: [[front_left]], RV: [[front_right]], LA: [[rear_left]], RA: [[rear_right]])",
+          "de": "Sitzheizung konfigurieren (VL: [[front_left]], VR: [[front_right]], HL: [[rear_left]], HR: [[rear_right]])"
+        },
         "hint": {
           "en": "Enables or disables seat heating for each seat during preconditioning.",
           "nl": "Schakelt stoelverwarming voor elke stoel in of uit tijdens voorklimatisering.",
@@ -987,6 +1015,11 @@
           "en": "Set cabin temperature",
           "nl": "Stel cabinetemperatuur in",
           "de": "Innenraumtemperatur einstellen"
+        },
+        "titleFormatted": {
+          "en": "Set cabin temperature to [[temperature]]°C",
+          "nl": "Stel cabinetemperatuur in op [[temperature]]°C",
+          "de": "Innenraumtemperatur auf [[temperature]]°C einstellen"
         },
         "hint": {
           "en": "Sets the target temperature for the vehicle's climate control.",
@@ -1120,6 +1153,11 @@
           "nl": "Stuur route naar auto",
           "de": "Route an Auto senden"
         },
+        "titleFormatted": {
+          "en": "Send route [[title]] ([[latitude]], [[longitude]])",
+          "nl": "Stuur route [[title]] ([[latitude]], [[longitude]])",
+          "de": "Route [[title]] senden ([[latitude]], [[longitude]])"
+        },
         "hint": {
           "en": "Sends a destination to the vehicle's navigation system.",
           "nl": "Stuurt een bestemming naar het navigatiesysteem van het voertuig.",
@@ -1181,6 +1219,11 @@
           "en": "Sound horn",
           "nl": "Claxonneer",
           "de": "Hupe betätigen"
+        },
+        "titleFormatted": {
+          "en": "Sound horn ([[mode]])",
+          "nl": "Claxonneer ([[mode]])",
+          "de": "Hupe betätigen ([[mode]])"
         },
         "hint": {
           "en": "Sounds the vehicle's horn. Use with care as this may disturb others.",
@@ -1386,6 +1429,10 @@
         "de": "Mercedes-Benz Fahrzeug"
       },
       "class": "other",
+      "images": {
+        "small": "/drivers/mercedes-vehicle/assets/images/small.png",
+        "large": "/drivers/mercedes-vehicle/assets/images/large.png"
+      },
       "platforms": [
         "local",
         "cloud"
@@ -1769,7 +1816,8 @@
       "chartType": "stepLine",
       "getable": true,
       "setable": false,
-      "uiComponent": "sensor"
+      "uiComponent": "sensor",
+      "icon": "/assets/icons/adblue.svg"
     },
     "measure_battery_temperature": {
       "type": "number",
@@ -1810,7 +1858,8 @@
       "chartType": "stepLine",
       "getable": true,
       "setable": false,
-      "uiComponent": "sensor"
+      "uiComponent": "sensor",
+      "icon": "/assets/icons/fuel.svg"
     },
     "measure_heading": {
       "type": "number",
@@ -1878,7 +1927,8 @@
       "chartType": "stepLine",
       "getable": true,
       "setable": false,
-      "uiComponent": "sensor"
+      "uiComponent": "sensor",
+      "icon": "/assets/icons/max_soc.svg"
     },
     "measure_oil_level": {
       "type": "number",
@@ -1901,7 +1951,8 @@
       "chartType": "stepLine",
       "getable": true,
       "setable": false,
-      "uiComponent": "sensor"
+      "uiComponent": "sensor",
+      "icon": "/assets/icons/oil.svg"
     },
     "measure_range_electric": {
       "type": "number",
@@ -1922,7 +1973,8 @@
       "chartType": "stepLine",
       "getable": true,
       "setable": false,
-      "uiComponent": "sensor"
+      "uiComponent": "sensor",
+      "icon": "/assets/icons/electric_range.svg"
     },
     "measure_range_liquid": {
       "type": "number",
@@ -1943,7 +1995,8 @@
       "chartType": "stepLine",
       "getable": true,
       "setable": false,
-      "uiComponent": "sensor"
+      "uiComponent": "sensor",
+      "icon": "/assets/icons/liquid_range.svg"
     },
     "measure_service_days": {
       "type": "number",
@@ -1978,7 +2031,8 @@
       "max": 999999,
       "getable": true,
       "setable": false,
-      "uiComponent": "sensor"
+      "uiComponent": "sensor",
+      "icon": "/assets/icons/odometer.svg"
     },
     "onoff_auxheat": {
       "type": "boolean",
@@ -2059,7 +2113,8 @@
       },
       "getable": true,
       "setable": false,
-      "uiComponent": "sensor"
+      "uiComponent": "sensor",
+      "icon": "/assets/icons/charge_program.svg"
     },
     "text_charging_status": {
       "type": "string",
@@ -2070,7 +2125,8 @@
       },
       "getable": true,
       "setable": false,
-      "uiComponent": "sensor"
+      "uiComponent": "sensor",
+      "icon": "/assets/icons/charging_status.svg"
     },
     "text_departure_time": {
       "type": "string",
@@ -2105,7 +2161,8 @@
       },
       "getable": true,
       "setable": false,
-      "uiComponent": "sensor"
+      "uiComponent": "sensor",
+      "icon": "/assets/icons/end_charge_time.svg"
     },
     "text_geofence_last_event": {
       "type": "string",
@@ -2241,7 +2298,8 @@
       },
       "getable": true,
       "setable": false,
-      "uiComponent": "sensor"
+      "uiComponent": "sensor",
+      "icon": "/assets/icons/sunroof.svg"
     }
   }
 }

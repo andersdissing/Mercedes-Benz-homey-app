@@ -13,9 +13,9 @@
     "de": "Mercedes-Benz"
   },
   "description": {
-    "en": "Control your Mercedes-Benz vehicle from Homey",
-    "nl": "Bedien je Mercedes-Benz auto vanuit Homey",
-    "de": "Steuern Sie Ihr Mercedes-Benz Fahrzeug von Homey aus"
+    "en": "Stay connected to your Mercedes-Benz, wherever you are",
+    "nl": "Blijf verbonden met je Mercedes-Benz, waar je ook bent",
+    "de": "Bleiben Sie mit Ihrem Mercedes-Benz verbunden, wo auch immer Sie sind"
   },
   "category": [
     "appliances"
@@ -50,16 +50,19 @@
       "ev"
     ]
   },
-  "permissions": [
-    "homey:manager:geolocation"
-  ],
+  "permissions": [],
   "images": {
     "small": "/assets/images/small.png",
     "large": "/assets/images/large.png",
     "xlarge": "/assets/images/xlarge.png"
   },
+  "brandColor": "#00ADEF",
+  "source": "https://github.com/andersdissing/Mercedes-Benz-homey-app",
+  "bugs": {
+    "url": "https://github.com/andersdissing/Mercedes-Benz-homey-app/issues"
+  },
   "author": {
-    "name": "Mercedes-Benz Homey Integration",
-    "email": "support@example.com"
+    "email": "ameq@ameq.dk",
+    "name": "Anders Dissing"
   }
 }
