@@ -1449,8 +1449,7 @@
         "large": "/drivers/mercedes-vehicle/assets/images/large.png"
       },
       "platforms": [
-        "local",
-        "cloud"
+        "local"
       ],
       "capabilities": [
         "locked",
