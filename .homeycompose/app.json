@@ -57,6 +57,21 @@
     "xlarge": "/assets/images/xlarge.png"
   },
   "brandColor": "#00ADEF",
+  "contributing": {
+    "developers": [
+      {
+        "name": "Anders Dissing",
+        "email": "ameq@ameq.dk"
+      }
+    ],
+    "translators": [
+      {
+        "name": "Anders Dissing"
+      }
+    ]
+  },
+  "homepage": "https://github.com/andersdissing/Mercedes-Benz-homey-app",
+  "support": "https://github.com/andersdissing/Mercedes-Benz-homey-app/issues",
   "source": "https://github.com/andersdissing/Mercedes-Benz-homey-app",
   "bugs": {
     "url": "https://github.com/andersdissing/Mercedes-Benz-homey-app/issues"
