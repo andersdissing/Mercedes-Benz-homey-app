@@ -1,8 +1,30 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg width="960" height="960" viewBox="0 0 960 960" xmlns="http://www.w3.org/2000/svg">
-  
-  <circle cx="480" cy="480" r="441.59999999999997" fill="none" stroke="#000000" stroke-width="34.56"/>
-  <line x1="480" y1="480" x2="480.0" y2="105.6" stroke="#000000" stroke-width="53.76" stroke-linecap="round"/>
-  <line x1="480" y1="480" x2="155.8" y2="667.2" stroke="#000000" stroke-width="53.76" stroke-linecap="round"/>
-  <line x1="480" y1="480" x2="804.2" y2="667.2" stroke="#000000" stroke-width="53.76" stroke-linecap="round"/>
+<svg width="1000" height="1000" viewBox="0 0 1000 1000" xmlns="http://www.w3.org/2000/svg">
+  <!-- Mercedes sedan side view -->
+  <!-- Car body lower -->
+  <path d="M160 560 L160 500 C160 485 170 475 185 475 L310 475 L370 375 C380 355 400 345 420 345 L620 345 C640 345 655 355 665 370 L730 475 L815 475 C830 475 840 485 840 500 L840 570 C840 590 830 600 815 600 L760 600"
+        fill="none" stroke="#000000" stroke-width="28" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M530 600 L470 600" fill="none" stroke="#000000" stroke-width="28" stroke-linecap="round"/>
+  <path d="M240 600 L185 600 C170 600 160 590 160 570 L160 560"
+        fill="none" stroke="#000000" stroke-width="28" stroke-linejoin="round" stroke-linecap="round"/>
+  <!-- Front window -->
+  <path d="M545 470 L545 380 C545 370 550 365 560 365 L615 365 C625 365 635 370 640 380 L690 470 Z"
+        fill="none" stroke="#000000" stroke-width="18" stroke-linejoin="round"/>
+  <!-- Rear window -->
+  <path d="M525 470 L525 380 C525 370 520 365 510 365 L440 365 C430 365 420 370 415 385 L385 470 Z"
+        fill="none" stroke="#000000" stroke-width="18" stroke-linejoin="round"/>
+  <!-- Front wheel -->
+  <circle cx="660" cy="600" r="65" fill="none" stroke="#000000" stroke-width="28"/>
+  <circle cx="660" cy="600" r="22" fill="#000000"/>
+  <!-- Rear wheel -->
+  <circle cx="340" cy="600" r="65" fill="none" stroke="#000000" stroke-width="28"/>
+  <circle cx="340" cy="600" r="22" fill="#000000"/>
+  <!-- Door handle -->
+  <line x1="460" y1="490" x2="510" y2="490" stroke="#000000" stroke-width="10" stroke-linecap="round"/>
+  <!-- Headlight -->
+  <line x1="835" y1="495" x2="835" y2="535" stroke="#000000" stroke-width="14" stroke-linecap="round"/>
+  <!-- Taillight -->
+  <line x1="168" y1="495" x2="168" y2="535" stroke="#000000" stroke-width="14" stroke-linecap="round"/>
+  <!-- Side mirror -->
+  <path d="M735 430 L755 420 L755 445 L735 440 Z" fill="#000000"/>
 </svg>

@@ -103,6 +103,94 @@ class MercedesVehicleDriver extends Homey.Driver {
           return true;
         });
 
+      // Open sunroof
+      this.homey.flow.getActionCard('open_sunroof')
+        .registerRunListener(async (args) => {
+          this.log('[FLOW] Open sunroof action triggered');
+          await args.device.openSunroofAction();
+          return true;
+        });
+
+      // Close sunroof
+      this.homey.flow.getActionCard('close_sunroof')
+        .registerRunListener(async (args) => {
+          this.log('[FLOW] Close sunroof action triggered');
+          await args.device.closeSunroofAction();
+          return true;
+        });
+
+      // Tilt sunroof
+      this.homey.flow.getActionCard('tilt_sunroof')
+        .registerRunListener(async (args) => {
+          this.log('[FLOW] Tilt sunroof action triggered');
+          await args.device.tiltSunroofAction();
+          return true;
+        });
+
+      // Start preconditioning
+      this.homey.flow.getActionCard('start_precond')
+        .registerRunListener(async (args) => {
+          this.log('[FLOW] Start preconditioning action triggered');
+          await args.device.startPrecondAction();
+          return true;
+        });
+
+      // Stop preconditioning
+      this.homey.flow.getActionCard('stop_precond')
+        .registerRunListener(async (args) => {
+          this.log('[FLOW] Stop preconditioning action triggered');
+          await args.device.stopPrecondAction();
+          return true;
+        });
+
+      // Send route
+      this.homey.flow.getActionCard('send_route')
+        .registerRunListener(async (args) => {
+          this.log('[FLOW] Send route action triggered');
+          await args.device.sendRouteAction(args.title, args.latitude, args.longitude);
+          return true;
+        });
+
+      // Sound horn
+      this.homey.flow.getActionCard('sound_horn')
+        .registerRunListener(async (args) => {
+          this.log('[FLOW] Sound horn action triggered');
+          await args.device.soundHornAction(args.mode);
+          return true;
+        });
+
+      // Configure departure time
+      this.homey.flow.getActionCard('configure_departure_time')
+        .registerRunListener(async (args) => {
+          this.log('[FLOW] Configure departure time action triggered');
+          await args.device.configureDepartureTimeAction(args.hour, args.minute, args.mode);
+          return true;
+        });
+
+      // Configure max SoC
+      this.homey.flow.getActionCard('configure_max_soc')
+        .registerRunListener(async (args) => {
+          this.log('[FLOW] Configure max SoC action triggered');
+          await args.device.configureMaxSocAction(args.max_soc, args.charge_program);
+          return true;
+        });
+
+      // Configure seat heating
+      this.homey.flow.getActionCard('configure_seat_heating')
+        .registerRunListener(async (args) => {
+          this.log('[FLOW] Configure seat heating action triggered');
+          await args.device.configureSeatHeatingAction(args.front_left, args.front_right, args.rear_left, args.rear_right);
+          return true;
+        });
+
+      // Configure temperature
+      this.homey.flow.getActionCard('configure_temperature')
+        .registerRunListener(async (args) => {
+          this.log('[FLOW] Configure temperature action triggered');
+          await args.device.configureTemperatureAction(args.temperature);
+          return true;
+        });
+
       // ==================== CONDITION CARDS ====================
 
       // Is locked?
@@ -133,6 +221,48 @@ class MercedesVehicleDriver extends Homey.Driver {
       this.homey.flow.getConditionCard('windows_closed')
         .registerRunListener(async (args) => {
           return await args.device.windowsClosed();
+        });
+
+      // Any door open?
+      this.homey.flow.getConditionCard('any_door_open')
+        .registerRunListener(async (args) => {
+          return await args.device.anyDoorOpen();
+        });
+
+      // Is preconditioning active?
+      this.homey.flow.getConditionCard('is_preconditioning')
+        .registerRunListener(async (args) => {
+          return await args.device.isPreconditioning();
+        });
+
+      // Sunroof open?
+      this.homey.flow.getConditionCard('sunroof_open')
+        .registerRunListener(async (args) => {
+          return await args.device.sunroofOpen();
+        });
+
+      // Warning light active?
+      this.homey.flow.getConditionCard('warning_active')
+        .registerRunListener(async (args) => {
+          return await args.device.warningActive();
+        });
+
+      // Battery level above/below threshold?
+      this.homey.flow.getConditionCard('battery_level')
+        .registerRunListener(async (args) => {
+          return await args.device.batteryLevelAbove(args.threshold);
+        });
+
+      // Is auxiliary heating active?
+      this.homey.flow.getConditionCard('is_auxheat_active')
+        .registerRunListener(async (args) => {
+          return await args.device.isAuxHeatActive();
+        });
+
+      // Is in geofence zone?
+      this.homey.flow.getConditionCard('is_in_geofence')
+        .registerRunListener(async (args) => {
+          return await args.device.isInGeofence(args.zone_name);
         });
 
       this.log('Flow cards registered successfully');
