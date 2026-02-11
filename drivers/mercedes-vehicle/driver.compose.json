@@ -5,6 +5,9 @@
     "de": "Mercedes-Benz Fahrzeug"
   },
   "class": "other",
+  "connectivity": [
+    "cloud"
+  ],
   "images": {
     "small": "/drivers/mercedes-vehicle/assets/images/small.png",
     "large": "/drivers/mercedes-vehicle/assets/images/large.png"
