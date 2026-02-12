@@ -2,253 +2,105 @@
 
 ## Prerequisites
 
-- Node.js installed (v18 or higher recommended)
-- Homey CLI installed globally: `npm install -g homey`
-- A Homey Pro (2023) or compatible device
-- Mercedes Me account (without 2FA enabled)
-- Mercedes-Benz vehicle
+- Node.js v18 or higher
+- Homey CLI: `npm install -g homey`
+- Homey Pro (Early 2023) or later, firmware >= 12.3.0
+- Mercedes Me account (2FA must be disabled)
+- Mercedes-Benz vehicle with Mercedes Me connectivity
 
 ## Step 1: Install Dependencies
 
 ```bash
-cd "Homey Repo/com.mercedes.mbapi"
+cd com.mercedes.mbapi
 npm install
 ```
 
-This will install:
-- axios (HTTP client)
-- ws (WebSocket client)
-- homey (SDK dev dependency)
-
-## Step 2: Validate App Structure
+## Step 2: Validate and Build
 
 ```bash
-homey app validate
+npx homey app validate
+npx homey app build
 ```
 
-Expected output: App validation should pass (may warn about missing images)
-
-## Step 3: Create Placeholder Images (Temporary)
-
-Before you can run the app, you need three images. For testing, create simple placeholder images:
-
-**Linux/Mac:**
-```bash
-cd assets/images
-# Create simple colored rectangles as placeholders
-convert -size 250x175 xc:silver small.png
-convert -size 500x350 xc:silver large.png
-convert -size 1000x700 xc:silver xlarge.png
-```
-
-**Windows (using Paint or online tool):**
-- Create 250x175 PNG → save as small.png
-- Create 500x350 PNG → save as large.png
-- Create 1000x700 PNG → save as xlarge.png
-
-Or download Mercedes logo and resize to these dimensions.
-
-## Step 4: Run the App
-
-### Option A: Test on Real Homey Device
+## Step 3: Install to Homey
 
 ```bash
-homey app run
+npx homey app install
 ```
 
-This will:
-1. Bundle the app
-2. Install it on your Homey
-3. Start the app
-4. Show live logs
-
-### Option B: Install to Homey
-
+Or for development with live logs:
 ```bash
-homey app install
+npx homey app run
 ```
 
-Then check the app in:
-- Homey Web App → Apps → Mercedes-Benz
-- Add device via → Devices → Add Device → Mercedes-Benz
+**Note:** After using `homey app run`, you must run `homey app install` again for the app to persist.
 
-## Step 5: Pair Your Vehicle
+## Step 4: Pair Your Vehicle
 
-1. Go to Devices → Add Device
-2. Select "Mercedes-Benz"
-3. Enter your Mercedes Me credentials (email/password)
-4. Select your region (Europe, North America, Asia-Pacific)
-5. Select your vehicle from the list
-6. Complete pairing
+1. Go to **Devices > Add Device > Mercedes-Benz**
+2. Enter your Mercedes Me credentials (email and password)
+3. Select your region (Europe, North America, Asia-Pacific, or China)
+4. Select your vehicle from the list
+5. Complete pairing
 
-## Step 6: Configure PIN (Optional but Recommended)
+## Step 5: Configure Settings
 
-1. Go to the device settings
-2. Enter your Mercedes Me security PIN
-3. Set polling interval (default 180 seconds is good)
+In device settings:
+- **PIN:** Enter your Mercedes Me security PIN (required for unlock, engine start, window/sunroof open)
+- **Polling interval:** Set data refresh interval in seconds (default: 180, range: 60-3600)
 
-The PIN is required for:
-- Unlocking doors
-- Starting engine
-- Opening windows
-- Opening sunroof
+## Step 6: Add the Dashboard Widget
 
-## Troubleshooting First Run
-
-### App Validation Fails
-**Error:** "Missing required images"
-**Fix:** Create placeholder images (see Step 3)
-
-### Authentication Fails
-**Error:** "Login failed" or "2FA not supported"
-**Check:**
-- Credentials are correct
-- Account does NOT have 2FA enabled
-- Try logging into Mercedes Me app first
-- Account is not locked/blocked
-
-### No Vehicles Found
-**Possible causes:**
-- No vehicles associated with account
-- API connection issue
-- Wrong region selected
-
-**Debug:**
-Check Homey logs: `homey app log`
-
-### Device Pairing Hangs
-**Check:**
-- Internet connection
-- Homey can reach Mercedes API (https://id.mercedes-benz.com)
-- Check logs for specific error
-
-## Viewing Logs
-
-```bash
-# Live logs
-homey app log
-
-# Or in Homey Web App
-Apps → Mercedes-Benz → View App → Logs
-```
+1. Go to **Dashboards** in the Homey app
+2. Tap **+ Add Widget**
+3. Go to the **Apps** tab
+4. Select **Car Status**
 
 ## Testing Flow Cards
 
 ### Test 1: Flash Lights (Safest First Test)
-
-Create a test flow:
 ```
 WHEN: This Flow is started
 THEN: Flash lights (select your vehicle)
 ```
 
-Run the flow and check if your vehicle lights flash.
-
-### Test 2: Lock Status
-
-Create a test flow:
+### Test 2: Lock Status Check
 ```
 WHEN: This Flow is started
-AND: Vehicle is locked (condition)
+AND: Vehicle is locked
 THEN: Send notification "Vehicle is locked"
 ```
 
-### Test 3: Lock/Unlock (Requires PIN)
+## Troubleshooting
 
-Create a test flow:
-```
-WHEN: This Flow is started
-THEN: Lock vehicle
-WAIT: 30 seconds
-THEN: Unlock vehicle
-```
+### Authentication Fails
+- Ensure 2FA is disabled on your Mercedes Me account
+- Verify credentials by logging into the Mercedes Me app first
+- Check that your account is not locked or blocked
 
-**⚠️ Warning:** Make sure you have physical access to your vehicle in case unlock fails!
+### No Data After Pairing
+- The app uses WebSocket for real-time updates with REST API polling as fallback
+- Check logs with `homey app log` for connection errors
+- HTTP 418 errors indicate outdated API headers (see CHANGELOG.md)
 
-## Known Issues in First Version
-
-1. **Vehicle data might not update correctly**
-   - Reason: Protobuf parsing not implemented
-   - Workaround: Check if basic data appears
-   - Fix needed: See IMPLEMENTATION_NOTES.md
-
-2. **Real-time updates don't work**
-   - Reason: WebSocket not implemented
-   - Workaround: Use polling (adjust interval in settings)
-   - Fix needed: See IMPLEMENTATION_NOTES.md
-
-3. **Some capabilities might show as "unknown"**
-   - Reason: API response format assumptions
-   - Workaround: Check Homey logs for actual API responses
-   - Fix needed: Adjust data parsing based on real responses
+### Widget Not Visible
+- Widgets require firmware >= 12.3.0
+- Look under **Dashboards > + Add Widget > Apps tab** (not Home screen)
+- After `homey app run`, reinstall with `homey app install`
 
 ## Development Commands
 
 ```bash
-# Validate app structure
-homey app validate
-
-# Run app on Homey (auto-reload on changes)
-homey app run
-
-# Install app to Homey
-homey app install
-
-# View logs
-homey app log
-
-# Build app for distribution
-homey app build
-
-# Run with specific Homey
-homey app run --homey <homey-ip>
+npx homey app validate      # Validate app structure
+npx homey app build         # Build the app
+npx homey app run           # Run with live logs
+npx homey app install       # Install to Homey
+npx homey app log           # View app logs
 ```
-
-## Getting Help
-
-1. **Check logs first:** `homey app log`
-2. **Read documentation:**
-   - IMPLEMENTATION_NOTES.md for technical issues
-   - README.md for user issues
-3. **Check Homey Community:** https://community.homey.app/
-4. **Report bugs:** (GitHub URL - update when repository is created)
-
-## Next Steps After Successful Pairing
-
-1. **Test all capabilities:**
-   - Check device card shows battery, pressure, lock status
-   - Verify data updates after polling interval
-
-2. **Test all commands:**
-   - Lock/Unlock (with PIN configured)
-   - Climate control start/stop
-   - Flash lights
-   - Engine start/stop (if supported by your vehicle)
-
-3. **Create useful flows:**
-   - Auto-lock when leaving home
-   - Preheat before departure
-   - Low battery notifications
-
-4. **Optimize settings:**
-   - Adjust polling interval based on usage
-   - Test with different intervals to find balance
 
 ## Safety Notes
 
-- **Never** rely solely on app for vehicle security
+- Never rely solely on the app for vehicle security
 - Always verify vehicle is locked physically
 - Keep backup key accessible when testing remote start
 - Be aware of API rate limiting (don't poll too frequently)
-- Monitor your Mercedes Me account for blocking warnings
-
-## Support
-
-For issues specific to:
-- **Homey platform:** Homey Community Forum
-- **Mercedes API:** Mercedes Me app support
-- **This app:** GitHub Issues (link to be added)
-
----
-
-**Happy automation!** 🚗⚡

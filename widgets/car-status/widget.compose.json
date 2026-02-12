@@ -1,0 +1,14 @@
+{
+  "name": {
+    "en": "Car Status",
+    "nl": "Auto Status",
+    "de": "Fahrzeugstatus"
+  },
+  "height": 160,
+  "api": {
+    "getStatus": {
+      "method": "GET",
+      "path": "/"
+    }
+  }
+}
