@@ -14,5 +14,8 @@
   },
   "1.0.3": {
     "en": "Ready for publishing, fix icon and flow card + fix HTTP 418 API rejection by updating Mercedes SDK headers, improve   WebSocket error handling"
+  },
+  "1.0.4": {
+    "en": "Translate charging status and charge program codes to readable text, fix WebSocket bug for window status and departure time/mode"
   }
 }
