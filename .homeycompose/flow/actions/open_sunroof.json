@@ -5,9 +5,9 @@
     "de": "Schiebedach öffnen"
   },
   "titleFormatted": {
-    "en": "Open the sunroof of [[device]]",
-    "nl": "Open het schuifdak van [[device]]",
-    "de": "Schiebedach von [[device]] öffnen"
+    "en": "Open the sunroof",
+    "nl": "Open het schuifdak",
+    "de": "Schiebedach öffnen"
   },
   "hint": {
     "en": "Opens the sunroof. Requires PIN configuration in device settings.",

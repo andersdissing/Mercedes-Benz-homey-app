@@ -5,9 +5,9 @@
     "de": "Schiebedach ist !{{offen|geschlossen}}"
   },
   "titleFormatted": {
-    "en": "Sunroof of [[device]] is !{{open|closed}}",
-    "nl": "Schuifdak van [[device]] is !{{open|gesloten}}",
-    "de": "Schiebedach von [[device]] ist !{{offen|geschlossen}}"
+    "en": "Sunroof is !{{open|closed}}",
+    "nl": "Schuifdak is !{{open|gesloten}}",
+    "de": "Schiebedach ist !{{offen|geschlossen}}"
   },
   "hint": {
     "en": "This card checks if the sunroof is open or tilted.",

@@ -5,9 +5,9 @@
     "de": "Schiebedach kippen"
   },
   "titleFormatted": {
-    "en": "Tilt the sunroof of [[device]]",
-    "nl": "Kantel het schuifdak van [[device]]",
-    "de": "Schiebedach von [[device]] kippen"
+    "en": "Tilt the sunroof",
+    "nl": "Kantel het schuifdak",
+    "de": "Schiebedach kippen"
   },
   "hint": {
     "en": "Tilts/lifts the sunroof for ventilation.",

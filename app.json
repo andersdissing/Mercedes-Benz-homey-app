@@ -452,9 +452,9 @@
           "de": "Eine Tür ist !{{offen|geschlossen}}"
         },
         "titleFormatted": {
-          "en": "Any door of [[device]] is !{{open|closed}}",
-          "nl": "Een deur van [[device]] is !{{open|gesloten}}",
-          "de": "Eine Tür von [[device]] ist !{{offen|geschlossen}}"
+          "en": "Any door is !{{open|closed}}",
+          "nl": "Een deur is !{{open|gesloten}}",
+          "de": "Eine Tür ist !{{offen|geschlossen}}"
         },
         "hint": {
           "en": "This card checks if any door (including trunk and hood) is open.",
@@ -534,9 +534,9 @@
           "de": "Fahrzeug !{{lädt|lädt nicht}}"
         },
         "titleFormatted": {
-          "en": "Vehicle [[device]] is !{{charging|not charging}}",
-          "nl": "Voertuig [[device]] is !{{aan het opladen|niet aan het opladen}}",
-          "de": "Fahrzeug [[device]] !{{lädt|lädt nicht}}"
+          "en": "Vehicle is !{{charging|not charging}}",
+          "nl": "Voertuig is !{{aan het opladen|niet aan het opladen}}",
+          "de": "Fahrzeug !{{lädt|lädt nicht}}"
         },
         "hint": {
           "en": "This card checks if the vehicle is currently charging.",
@@ -559,9 +559,9 @@
           "de": "Motor ist !{{an|aus}}"
         },
         "titleFormatted": {
-          "en": "Engine of [[device]] is !{{running|stopped}}",
-          "nl": "Motor van [[device]] is !{{aan|uit}}",
-          "de": "Motor von [[device]] ist !{{an|aus}}"
+          "en": "Engine is !{{running|stopped}}",
+          "nl": "Motor is !{{aan|uit}}",
+          "de": "Motor ist !{{an|aus}}"
         },
         "hint": {
           "en": "This card checks if the vehicle engine is running.",
@@ -623,9 +623,9 @@
           "de": "Fahrzeug ist !{{verriegelt|entriegelt}}"
         },
         "titleFormatted": {
-          "en": "Vehicle [[device]] is !{{locked|unlocked}}",
-          "nl": "Voertuig [[device]] is !{{vergrendeld|ontgrendeld}}",
-          "de": "Fahrzeug [[device]] ist !{{verriegelt|entriegelt}}"
+          "en": "Vehicle is !{{locked|unlocked}}",
+          "nl": "Voertuig is !{{vergrendeld|ontgrendeld}}",
+          "de": "Fahrzeug ist !{{verriegelt|entriegelt}}"
         },
         "hint": {
           "en": "This card checks if the vehicle doors are locked.",
@@ -648,9 +648,9 @@
           "de": "Vorklimatisierung ist !{{aktiv|inaktiv}}"
         },
         "titleFormatted": {
-          "en": "Preconditioning of [[device]] is !{{active|inactive}}",
-          "nl": "Voorconditionering van [[device]] is !{{actief|inactief}}",
-          "de": "Vorklimatisierung von [[device]] ist !{{aktiv|inaktiv}}"
+          "en": "Preconditioning is !{{active|inactive}}",
+          "nl": "Voorconditionering is !{{actief|inactief}}",
+          "de": "Vorklimatisierung ist !{{aktiv|inaktiv}}"
         },
         "hint": {
           "en": "This card checks if the vehicle's preconditioning/climate control is currently active.",
@@ -673,9 +673,9 @@
           "de": "Schiebedach ist !{{offen|geschlossen}}"
         },
         "titleFormatted": {
-          "en": "Sunroof of [[device]] is !{{open|closed}}",
-          "nl": "Schuifdak van [[device]] is !{{open|gesloten}}",
-          "de": "Schiebedach von [[device]] ist !{{offen|geschlossen}}"
+          "en": "Sunroof is !{{open|closed}}",
+          "nl": "Schuifdak is !{{open|gesloten}}",
+          "de": "Schiebedach ist !{{offen|geschlossen}}"
         },
         "hint": {
           "en": "This card checks if the sunroof is open or tilted.",
@@ -698,9 +698,9 @@
           "de": "Reifendruck ist !{{OK|zu niedrig}}"
         },
         "titleFormatted": {
-          "en": "Tire pressure of [[device]] is !{{OK|too low}}",
-          "nl": "Bandenspanning van [[device]] is !{{OK|te laag}}",
-          "de": "Reifendruck von [[device]] ist !{{OK|zu niedrig}}"
+          "en": "Tire pressure is !{{OK|too low}}",
+          "nl": "Bandenspanning is !{{OK|te laag}}",
+          "de": "Reifendruck ist !{{OK|zu niedrig}}"
         },
         "hint": {
           "en": "This card checks if all tire pressures are within acceptable range (>= 2.0 bar).",
@@ -723,9 +723,9 @@
           "de": "Warnleuchte ist !{{aktiv|inaktiv}}"
         },
         "titleFormatted": {
-          "en": "Warning light of [[device]] is !{{active|inactive}}",
-          "nl": "Waarschuwingslampje van [[device]] is !{{actief|inactief}}",
-          "de": "Warnleuchte von [[device]] ist !{{aktiv|inaktiv}}"
+          "en": "Warning light is !{{active|inactive}}",
+          "nl": "Waarschuwingslampje is !{{actief|inactief}}",
+          "de": "Warnleuchte ist !{{aktiv|inaktiv}}"
         },
         "hint": {
           "en": "This card checks if any warning light (washer fluid, coolant, brake fluid, engine) is active.",
@@ -748,9 +748,9 @@
           "de": "Alle Fenster sind !{{geschlossen|offen}}"
         },
         "titleFormatted": {
-          "en": "All windows of [[device]] are !{{closed|open}}",
-          "nl": "Alle ramen van [[device]] zijn !{{gesloten|open}}",
-          "de": "Alle Fenster von [[device]] sind !{{geschlossen|offen}}"
+          "en": "All windows are !{{closed|open}}",
+          "nl": "Alle ramen zijn !{{gesloten|open}}",
+          "de": "Alle Fenster sind !{{geschlossen|offen}}"
         },
         "hint": {
           "en": "This card checks if all vehicle windows are closed.",
@@ -775,9 +775,9 @@
           "de": "Schiebedach schließen"
         },
         "titleFormatted": {
-          "en": "Close the sunroof of [[device]]",
-          "nl": "Sluit het schuifdak van [[device]]",
-          "de": "Schiebedach von [[device]] schließen"
+          "en": "Close the sunroof",
+          "nl": "Sluit het schuifdak",
+          "de": "Schiebedach schließen"
         },
         "hint": {
           "en": "Closes the sunroof.",
@@ -1099,9 +1099,9 @@
           "de": "Schiebedach öffnen"
         },
         "titleFormatted": {
-          "en": "Open the sunroof of [[device]]",
-          "nl": "Open het schuifdak van [[device]]",
-          "de": "Schiebedach von [[device]] öffnen"
+          "en": "Open the sunroof",
+          "nl": "Open het schuifdak",
+          "de": "Schiebedach öffnen"
         },
         "hint": {
           "en": "Opens the sunroof. Requires PIN configuration in device settings.",
@@ -1401,9 +1401,9 @@
           "de": "Schiebedach kippen"
         },
         "titleFormatted": {
-          "en": "Tilt the sunroof of [[device]]",
-          "nl": "Kantel het schuifdak van [[device]]",
-          "de": "Schiebedach von [[device]] kippen"
+          "en": "Tilt the sunroof",
+          "nl": "Kantel het schuifdak",
+          "de": "Schiebedach kippen"
         },
         "hint": {
           "en": "Tilts/lifts the sunroof for ventilation.",
