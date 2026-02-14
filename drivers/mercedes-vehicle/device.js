@@ -833,10 +833,14 @@ class MercedesVehicleDevice extends Homey.Device {
         await this.setCapabilityValue('window_sunroof', sunroofStatus);
       }
 
-      // Departure Time
+      // Departure Time (value is minutes from midnight, convert to HH:MM)
       if (data.departuretime !== undefined) {
-        this.log(`[UPDATE] Setting departure time to: ${data.departuretime}`);
-        await this.setCapabilityValue('text_departure_time', data.departuretime);
+        const minutes = Number(data.departuretime);
+        const hours = Math.floor(minutes / 60);
+        const mins = minutes % 60;
+        const departureTimeStr = `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+        this.log(`[UPDATE] Setting departure time to: ${departureTimeStr} (raw: ${data.departuretime})`);
+        await this.setCapabilityValue('text_departure_time', departureTimeStr);
       }
 
       // Departure Time Mode (check multiple possible field names)
@@ -899,6 +903,7 @@ class MercedesVehicleDevice extends Homey.Device {
             const rawStatus = data[win.key];
             const newStatus = windowStatusMap[rawStatus] || String(rawStatus);
             const oldStatus = this.getCapabilityValue(win.cap);
+            this.log(`[UPDATE] Setting ${win.cap} to: ${newStatus} (raw: ${rawStatus}, old: ${oldStatus})`);
             await this.setCapabilityValue(win.cap, newStatus);
 
             // Trigger flow cards on status change
