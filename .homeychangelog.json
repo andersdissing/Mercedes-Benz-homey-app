@@ -14,5 +14,8 @@
   },
   "1.0.3": {
     "en": "Ready for publishing, fix icon and flow card + fix HTTP 418 API rejection by updating Mercedes SDK headers, improve   WebSocket error handling"
+  },
+  "1.1.0": {
+    "en": "Add new widget"
   }
 }
