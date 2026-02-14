@@ -242,6 +242,7 @@ class MercedesMeApp extends Homey.App {
       sunroof: getValue('window_sunroof'),
       chargingStatus: getValue('text_charging_status'),
       engineRunning: getValue('onoff.engine'),
+      climateOn: getValue('onoff.climate'),
       model: device.getName(),
       pollingInterval: (device.getSetting('polling_interval') || 180) * 1000,
     };
