@@ -5,9 +5,9 @@
     "de": "Schiebedach schließen"
   },
   "titleFormatted": {
-    "en": "Close the sunroof of [[device]]",
-    "nl": "Sluit het schuifdak van [[device]]",
-    "de": "Schiebedach von [[device]] schließen"
+    "en": "Close the sunroof",
+    "nl": "Sluit het schuifdak",
+    "de": "Schiebedach schließen"
   },
   "hint": {
     "en": "Closes the sunroof.",

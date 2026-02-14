@@ -5,9 +5,9 @@
     "de": "Fahrzeug ist !{{verriegelt|entriegelt}}"
   },
   "titleFormatted": {
-    "en": "Vehicle [[device]] is !{{locked|unlocked}}",
-    "nl": "Voertuig [[device]] is !{{vergrendeld|ontgrendeld}}",
-    "de": "Fahrzeug [[device]] ist !{{verriegelt|entriegelt}}"
+    "en": "Vehicle is !{{locked|unlocked}}",
+    "nl": "Voertuig is !{{vergrendeld|ontgrendeld}}",
+    "de": "Fahrzeug ist !{{verriegelt|entriegelt}}"
   },
   "hint": {
     "en": "This card checks if the vehicle doors are locked.",

@@ -376,7 +376,7 @@ class MercedesVehicleDriver extends Homey.Driver {
             id: vin,
             vin: vin
           },
-          icon: '../../../assets/icon.svg',
+          icon: '/drivers/mercedes-vehicle/assets/icon.svg',
           capabilities: [
             'locked',
             'measure_battery',

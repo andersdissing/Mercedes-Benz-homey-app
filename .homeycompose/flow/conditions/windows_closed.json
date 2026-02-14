@@ -5,9 +5,9 @@
     "de": "Alle Fenster sind !{{geschlossen|offen}}"
   },
   "titleFormatted": {
-    "en": "All windows of [[device]] are !{{closed|open}}",
-    "nl": "Alle ramen van [[device]] zijn !{{gesloten|open}}",
-    "de": "Alle Fenster von [[device]] sind !{{geschlossen|offen}}"
+    "en": "All windows are !{{closed|open}}",
+    "nl": "Alle ramen zijn !{{gesloten|open}}",
+    "de": "Alle Fenster sind !{{geschlossen|offen}}"
   },
   "hint": {
     "en": "This card checks if all vehicle windows are closed.",

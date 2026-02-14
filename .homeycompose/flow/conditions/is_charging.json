@@ -5,9 +5,9 @@
     "de": "Fahrzeug !{{lädt|lädt nicht}}"
   },
   "titleFormatted": {
-    "en": "Vehicle [[device]] is !{{charging|not charging}}",
-    "nl": "Voertuig [[device]] is !{{aan het opladen|niet aan het opladen}}",
-    "de": "Fahrzeug [[device]] !{{lädt|lädt nicht}}"
+    "en": "Vehicle is !{{charging|not charging}}",
+    "nl": "Voertuig is !{{aan het opladen|niet aan het opladen}}",
+    "de": "Fahrzeug !{{lädt|lädt nicht}}"
   },
   "hint": {
     "en": "This card checks if the vehicle is currently charging.",
