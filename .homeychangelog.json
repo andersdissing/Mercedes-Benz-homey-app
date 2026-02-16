@@ -17,5 +17,8 @@
   },
   "1.0.4": {
     "en": "Translate charging status and charge program codes to readable text, fix WebSocket bug for window status and departure time/mode"
+  },
+  "1.0.5": {
+    "en": "Added new drive image and change the drive icon + added readme file for nl and de"
   }
 }
