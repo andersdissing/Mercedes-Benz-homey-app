@@ -1,26 +1,8 @@
-<?xml version="1.0" encoding="utf-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="22 238.74 911.019 575.26" width="911.019px" height="575.26px">
-  <g fill="none" fill-rule="evenodd" stroke="#000" transform="matrix(1, 0, 0, 1, 0, 1.4210854715202004e-14)">
-    <ellipse cx="379" cy="702.5" rx="58" ry="101.5" stroke-width="20"/>
-    <path d="M108.224 703c-25.43-8.994-40.839-40.327-46.224-94l-36.54-14.683V399.743h60.334l73.595-161.002h491.15l94.229 190.868 168.457 17.17v19.286h19.794v126.332l-10.55 1.92V695.56l-411.955 61.236-30.514-9.25C471.803 791.849 442.188 814 391.157 814c-51.03 0-77.87-41.868-80.516-125.605l-104.982-35.147c-10.23 20.681-19.555 33.934-27.972 39.76-23.73 16.42-52.864 15.862-69.463 9.992z" stroke-width="40"/>
-    <g stroke-width="20">
-      <path d="M923.02 476.7v106.743l-425 47.033v-127.59z"/>
-      <path d="m339.121 238.74 13.288 233.888 156.76 31.13m0 255.573V626.683"/>
-      <ellipse cx="115.5" cy="609" rx="43.5" ry="84"/>
-      <path d="m210.73 644.798-51.341-17.515M488 740l-55-18m-79-251 439-28M22 418l487.169 85.758"/>
-      <ellipse cx="565" cy="561.5" rx="27" ry="31.5"/>
-      <ellipse cx="872.096" cy="533" rx="22.096" ry="26"/>
-      <path d="M 243.605 238.741 L 185.059 451.888 M 886.407 614.785 L 886.407 664.444 L 537.978 713.788 L 537.978 654.864 L 886.408 614.784 L 886.407 614.785 Z M 811 712 C 802.993 743.333 784.163 759 754.511 759 C 724.859 759 706.03 748.618 698.022 727.853" style=""/>
-      <ellipse cx="379.309" cy="702.5" rx="15.309" ry="31.5"/>
-      <ellipse cx="115.955" cy="609" rx="11.955" ry="26"/>
-    </g>
-  </g>
-  <g transform="matrix(1, 0, 0, 1, -7.197287082672176, 10.95340728759767)">
-    <ellipse cx="731.765" cy="535.043" rx="22" ry="26" style="fill: none; stroke: rgb(0, 0, 0); stroke-width: 14px;"/>
-    <g stroke-width="7" stroke-linecap="round" transform="matrix(1, 0, 0, 1, -115.235596, 2.042646)">
-      <line x1="847" y1="533" x2="847" y2="507" style="stroke: rgb(0, 0, 0); stroke-width: 5px;"/>
-      <line x1="847" y1="533" x2="866" y2="546" style="stroke: rgb(0, 0, 0); stroke-width: 5px;"/>
-      <line x1="847" y1="533" x2="828" y2="546" style="stroke: rgb(0, 0, 0); stroke-width: 5px;"/>
-    </g>
-  </g>
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="960" height="960" viewBox="0 0 960 960" xmlns="http://www.w3.org/2000/svg">
+  
+  <circle cx="480" cy="480" r="441.59999999999997" fill="none" stroke="#000000" stroke-width="34.56"/>
+  <line x1="480" y1="480" x2="480.0" y2="105.6" stroke="#000000" stroke-width="53.76" stroke-linecap="round"/>
+  <line x1="480" y1="480" x2="155.8" y2="667.2" stroke="#000000" stroke-width="53.76" stroke-linecap="round"/>
+  <line x1="480" y1="480" x2="804.2" y2="667.2" stroke="#000000" stroke-width="53.76" stroke-linecap="round"/>
 </svg>

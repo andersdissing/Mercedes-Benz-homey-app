@@ -761,13 +761,23 @@ class MercedesVehicleDevice extends Homey.Device {
       // Charging status (text) with charging completed trigger
       if (data.chargingstatus !== undefined) {
         const oldStatus = this.getCapabilityValue('text_charging_status');
-        this.log(`[UPDATE] Setting charging status to: ${data.chargingstatus}`);
-        await this.setCapabilityValue('text_charging_status', String(data.chargingstatus));
+        // Translate Mercedes charging status codes to readable text
+        const statusMap = {
+          '0': 'Charging',
+          '1': 'Charging error',
+          '2': 'Not available',
+          '3': 'Not charging',
+          '4': 'Completed',
+        };
+        const rawStatus = String(data.chargingstatus);
+        const readableStatus = statusMap[rawStatus] || rawStatus;
+        this.log(`[UPDATE] Setting charging status to: ${rawStatus} (${readableStatus})`);
+        await this.setCapabilityValue('text_charging_status', readableStatus);
 
         // Trigger charging completed when status changes to completed/finished
         const completedStatuses = ['FINISHED', 'COMPLETED', 'END', '4'];
-        const wasCharging = oldStatus && !completedStatuses.includes(String(oldStatus).toUpperCase());
-        const isCompleted = completedStatuses.includes(String(data.chargingstatus).toUpperCase());
+        const wasCharging = oldStatus && oldStatus !== 'Completed' && !completedStatuses.includes(String(oldStatus).toUpperCase());
+        const isCompleted = rawStatus === '4' || completedStatuses.includes(readableStatus.toUpperCase());
 
         if (wasCharging && isCompleted) {
           const batteryLevel = this.getCapabilityValue('measure_battery') || 0;
@@ -778,8 +788,15 @@ class MercedesVehicleDevice extends Homey.Device {
 
       // Selected charge program (text)
       if (data.selectedChargeProgram !== undefined) {
-        this.log(`[UPDATE] Setting selected charge program to: ${data.selectedChargeProgram}`);
-        await this.setCapabilityValue('text_charge_program', String(data.selectedChargeProgram));
+        const programMap = {
+          '0': 'Default',
+          '2': 'Home',
+          '3': 'Work',
+        };
+        const rawProgram = String(data.selectedChargeProgram);
+        const readableProgram = programMap[rawProgram] || rawProgram;
+        this.log(`[UPDATE] Setting selected charge program to: ${rawProgram} (${readableProgram})`);
+        await this.setCapabilityValue('text_charge_program', readableProgram);
       }
 
       // Max SoC (check both maxSoc and max_soc as API may use either)
@@ -816,10 +833,14 @@ class MercedesVehicleDevice extends Homey.Device {
         await this.setCapabilityValue('window_sunroof', sunroofStatus);
       }
 
-      // Departure Time
+      // Departure Time (value is minutes from midnight, convert to HH:MM)
       if (data.departuretime !== undefined) {
-        this.log(`[UPDATE] Setting departure time to: ${data.departuretime}`);
-        await this.setCapabilityValue('text_departure_time', data.departuretime);
+        const minutes = Number(data.departuretime);
+        const hours = Math.floor(minutes / 60);
+        const mins = minutes % 60;
+        const departureTimeStr = `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+        this.log(`[UPDATE] Setting departure time to: ${departureTimeStr} (raw: ${data.departuretime})`);
+        await this.setCapabilityValue('text_departure_time', departureTimeStr);
       }
 
       // Departure Time Mode (check multiple possible field names)
@@ -882,6 +903,7 @@ class MercedesVehicleDevice extends Homey.Device {
             const rawStatus = data[win.key];
             const newStatus = windowStatusMap[rawStatus] || String(rawStatus);
             const oldStatus = this.getCapabilityValue(win.cap);
+            this.log(`[UPDATE] Setting ${win.cap} to: ${newStatus} (raw: ${rawStatus}, old: ${oldStatus})`);
             await this.setCapabilityValue(win.cap, newStatus);
 
             // Trigger flow cards on status change
