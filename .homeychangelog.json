@@ -20,5 +20,8 @@
   },
   "1.0.5": {
     "en": "Added new drive image and change the drive icon + added readme file for nl and de"
+  },
+  "1.1.0": {
+    "en": "Add new widget"
   }
 }

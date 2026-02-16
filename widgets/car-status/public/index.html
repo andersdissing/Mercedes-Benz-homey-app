@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Car Status</title>
+<style>
+  :root {
+    --color-green: #4caf50;
+    --color-red: #f44336;
+    --color-orange: #ff9800;
+    --color-blue: #2196f3;
+    --color-fuel: #ff9800;
+    --color-text-secondary: rgba(255, 255, 255, 0.55);
+    --tile-bg: rgba(128, 128, 128, 0.12);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    height: 100%;
+    min-height: 100%;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    color: #fff;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    background: linear-gradient(to bottom, #1D1D1F, #383C4A);
+  }
+
+  .model-name {
+    font-size: 22px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    letter-spacing: -0.3px;
+    margin-bottom: 8px;
+  }
+
+  .energy-section {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-bottom: 12px;
+  }
+
+  .energy-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .energy-label {
+    font-size: 11px;
+    color: var(--color-text-secondary);
+    width: 28px;
+    flex-shrink: 0;
+  }
+
+  .energy-bar-bg {
+    flex: 1;
+    height: 12px;
+    background: var(--tile-bg);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .energy-bar-fill {
+    height: 100%;
+    border-radius: 6px;
+    transition: width 0.5s ease;
+  }
+
+  .energy-bar-fill.battery { background: var(--color-blue); }
+  .energy-bar-fill.fuel { background: var(--color-fuel); }
+
+  .energy-value {
+    font-size: 11px;
+    color: var(--color-text-secondary);
+    width: 70px;
+    text-align: right;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  .tiles-row {
+    display: flex;
+    gap: 8px;
+  }
+
+  .tile {
+    flex: 1;
+    height: 52px;
+    background: var(--tile-bg);
+    border-radius: 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+  }
+
+  .tile svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  .tile-label {
+    font-size: 9px;
+    font-weight: 500;
+    opacity: 0.8;
+  }
+
+  .hidden { display: none !important; }
+
+  .loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--color-text-secondary);
+    font-size: 13px;
+  }
+</style>
+</head>
+<body class="homey-widget">
+  <div id="loading" class="loading">Loading...</div>
+  <div id="content" class="hidden">
+    <div class="model-name" id="modelName"></div>
+
+    <div class="energy-section" id="energySection">
+      <div class="energy-row" id="batteryRow">
+        <span class="energy-label">EV</span>
+        <div class="energy-bar-bg">
+          <div class="energy-bar-fill battery" id="batteryBar" style="width:0%"></div>
+        </div>
+        <span class="energy-value" id="batteryValue">--%</span>
+      </div>
+      <div class="energy-row" id="fuelRow">
+        <span class="energy-label">Fuel</span>
+        <div class="energy-bar-bg">
+          <div class="energy-bar-fill fuel" id="fuelBar" style="width:0%"></div>
+        </div>
+        <span class="energy-value" id="fuelValue">--</span>
+      </div>
+    </div>
+
+    <div class="tiles-row">
+      <!-- Lock tile -->
+      <div class="tile" id="tileLock">
+        <svg id="tileLockIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <g id="tileIconLocked">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </g>
+          <g id="tileIconUnlocked" class="hidden">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 9.9-1"></path>
+          </g>
+        </svg>
+        <span class="tile-label" id="tileLockLabel">Locked</span>
+      </div>
+
+      <!-- Doors tile -->
+      <div class="tile" id="tileDoors">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 18V8l4-4h7l3 3v11"/>
+          <path d="M5 12V8l3-3h5l2 2v5H5z"/>
+          <line x1="8" y1="15" x2="12" y2="15"/>
+        </svg>
+        <span class="tile-label" id="tileDoorsLabel">Closed</span>
+      </div>
+
+      <!-- Climate tile -->
+      <div class="tile" id="tileClimate">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+          <circle cx="12" cy="12" r="4"/>
+          <path d="M12 8a4 4 0 0 0 0 8" fill="currentColor" opacity="0.3"/>
+        </svg>
+        <span class="tile-label" id="tileClimateLabel">Off</span>
+      </div>
+    </div>
+  </div>
+
+<script type="text/javascript">
+  function isDoorOpen(status) {
+    return status && (status === 'Open' || status === 'OPEN' || status === 'true' || status === true || status === '1');
+  }
+
+  function isWindowOpen(status) {
+    if (!status) return false;
+    if (status === 'Closed' || status === 'CLOSED' || status === '2') return false;
+    return true;
+  }
+
+  function isSunroofOpen(status) {
+    if (!status || status === 'Closed' || status === '0') return false;
+    return true;
+  }
+
+  function setTileColor(tileEl, color) {
+    tileEl.style.color = color;
+  }
+
+  function update(data) {
+    document.getElementById('loading').classList.add('hidden');
+    document.getElementById('content').classList.remove('hidden');
+
+    document.getElementById('modelName').textContent = data.model || 'Mercedes-Benz';
+
+    // Lock tile
+    var locked = data.locked === true;
+    var lockColor = locked ? 'var(--color-green)' : 'var(--color-red)';
+    setTileColor(document.getElementById('tileLock'), lockColor);
+    document.getElementById('tileIconLocked').classList.toggle('hidden', !locked);
+    document.getElementById('tileIconUnlocked').classList.toggle('hidden', locked);
+    document.getElementById('tileLockLabel').textContent = locked ? 'Locked' : 'Unlocked';
+
+    // Doors/Windows tile
+    var openItems = [];
+    if (data.doors) {
+      if (isDoorOpen(data.doors.frontLeft)) openItems.push('FL');
+      if (isDoorOpen(data.doors.frontRight)) openItems.push('FR');
+      if (isDoorOpen(data.doors.rearLeft)) openItems.push('RL');
+      if (isDoorOpen(data.doors.rearRight)) openItems.push('RR');
+      if (isDoorOpen(data.doors.trunk)) openItems.push('Trunk');
+      if (isDoorOpen(data.doors.hood)) openItems.push('Hood');
+    }
+    if (data.windows) {
+      if (isWindowOpen(data.windows.frontLeft)) openItems.push('W-FL');
+      if (isWindowOpen(data.windows.frontRight)) openItems.push('W-FR');
+      if (isWindowOpen(data.windows.rearLeft)) openItems.push('W-RL');
+      if (isWindowOpen(data.windows.rearRight)) openItems.push('W-RR');
+    }
+    if (isSunroofOpen(data.sunroof)) openItems.push('Roof');
+
+    var doorsOk = openItems.length === 0;
+    var doorsColor = doorsOk ? 'var(--color-green)' : 'var(--color-red)';
+    setTileColor(document.getElementById('tileDoors'), doorsColor);
+    document.getElementById('tileDoorsLabel').textContent = doorsOk ? 'Closed' : openItems.length + ' open';
+
+    // Climate tile
+    var climateOn = data.climateOn === true;
+    var climateColor = climateOn ? 'var(--color-green)' : '#fff';
+    setTileColor(document.getElementById('tileClimate'), climateColor);
+    document.getElementById('tileClimateLabel').textContent = climateOn ? 'On' : 'Off';
+
+    // Energy bars
+    var hasBattery = data.battery != null && data.battery > 0;
+    var hasFuel = data.fuel != null && data.fuel > 0;
+    var hasRangeElectric = data.rangeElectric != null && data.rangeElectric > 0;
+    var hasRangeLiquid = data.rangeLiquid != null && data.rangeLiquid > 0;
+
+    var batteryRow = document.getElementById('batteryRow');
+    if (hasBattery || hasRangeElectric) {
+      batteryRow.classList.remove('hidden');
+      var pct = data.battery || 0;
+      document.getElementById('batteryBar').style.width = pct + '%';
+      var batteryText = pct + '%';
+      if (hasRangeElectric) batteryText += ' \u00B7 ' + Math.round(data.rangeElectric) + ' km';
+      document.getElementById('batteryValue').textContent = batteryText;
+    } else {
+      batteryRow.classList.add('hidden');
+    }
+
+    var fuelRow = document.getElementById('fuelRow');
+    if (hasFuel || hasRangeLiquid) {
+      fuelRow.classList.remove('hidden');
+      var fuelPct = data.fuel || 0;
+      document.getElementById('fuelBar').style.width = fuelPct + '%';
+      var fuelText = fuelPct + '%';
+      if (hasRangeLiquid) fuelText += ' \u00B7 ' + Math.round(data.rangeLiquid) + ' km';
+      document.getElementById('fuelValue').textContent = fuelText;
+    } else {
+      fuelRow.classList.add('hidden');
+    }
+
+    if (!hasBattery && !hasFuel && !hasRangeElectric && !hasRangeLiquid) {
+      batteryRow.classList.remove('hidden');
+      document.getElementById('batteryBar').style.width = '0%';
+      document.getElementById('batteryValue').textContent = '--';
+      fuelRow.classList.add('hidden');
+    }
+  }
+
+  async function fetchData() {
+    try {
+      var data = await Homey.api('GET', '/', {});
+      if (data) update(data);
+      return data;
+    } catch(error) {
+      console.error('Failed to fetch data:', error);
+      document.getElementById('loading').textContent = 'Error: ' + (error.message || String(error));
+      return null;
+    }
+  }
+
+  async function onHomeyReady(Homey) {
+    await Homey.ready({ height: 160 });
+    var data = await fetchData();
+    var interval = (data && data.pollingInterval) || 180000;
+    setInterval(fetchData, interval);
+  }
+</script>
+</body>
+</html>
