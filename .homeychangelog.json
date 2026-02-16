@@ -23,5 +23,8 @@
   },
   "1.1.0": {
     "en": "Add new widget"
+  },
+  "1.1.1": {
+    "en": "Include car status widget"
   }
 }
