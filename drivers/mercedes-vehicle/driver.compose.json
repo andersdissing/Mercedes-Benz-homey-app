@@ -10,7 +10,8 @@
   ],
   "images": {
     "small": "/drivers/mercedes-vehicle/assets/images/small.png",
-    "large": "/drivers/mercedes-vehicle/assets/images/large.png"
+    "large": "/drivers/mercedes-vehicle/assets/images/large.png",
+    "xlarge": "/drivers/mercedes-vehicle/assets/images/xlarge.png"
   },
   "platforms": [
     "local"
