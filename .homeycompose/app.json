@@ -19,6 +19,24 @@
   "category": [
     "appliances"
   ],
+  "widgets": {
+    "car-status": {
+      "name": {
+        "en": "Car Status",
+        "nl": "Auto Status",
+        "de": "Fahrzeugstatus"
+      },
+      "height": 160,
+      "api": {
+        "getStatus": {
+          "method": "GET",
+          "path": "/"
+        }
+      },
+      "id": "car-status",
+      "settings": []
+    }
+  },
   "tags": {
     "en": [
       "mercedes",
