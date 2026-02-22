@@ -127,6 +127,22 @@ class MercedesVehicleDriver extends Homey.Driver {
           return true;
         });
 
+      // Start charging (resume)
+      this.homey.flow.getActionCard('start_charging')
+        .registerRunListener(async (args) => {
+          this.log('[FLOW] Start charging action triggered');
+          await args.device.startChargingAction();
+          return true;
+        });
+
+      // Stop charging (pause)
+      this.homey.flow.getActionCard('stop_charging')
+        .registerRunListener(async (args) => {
+          this.log('[FLOW] Stop charging action triggered');
+          await args.device.stopChargingAction();
+          return true;
+        });
+
       // Start preconditioning
       this.homey.flow.getActionCard('start_precond')
         .registerRunListener(async (args) => {

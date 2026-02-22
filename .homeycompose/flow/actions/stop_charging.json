@@ -1,0 +1,15 @@
+{
+  "id": "stop_charging",
+  "title": {
+    "en": "Pause charging",
+    "nl": "Pauzeer opladen",
+    "de": "Laden pausieren"
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=mercedes-vehicle"
+    }
+  ]
+}

@@ -1323,6 +1323,36 @@
         ]
       },
       {
+        "id": "start_charging",
+        "title": {
+          "en": "Resume charging",
+          "nl": "Hervat opladen",
+          "de": "Laden fortsetzen"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle"
+          }
+        ]
+      },
+      {
+        "id": "stop_charging",
+        "title": {
+          "en": "Pause charging",
+          "nl": "Pauzeer opladen",
+          "de": "Laden pausieren"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle"
+          }
+        ]
+      },
+      {
         "id": "start_engine",
         "title": {
           "en": "Start engine",
@@ -1528,7 +1558,8 @@
         "onoff_remote_start",
         "theft_system_armed",
         "onoff.engine",
-        "onoff.climate"
+        "onoff.climate",
+        "onoff_charging"
       ],
       "pair": [
         {
@@ -2092,6 +2123,18 @@
         "nl": "Standverwarming uit",
         "de": "Standheizung aus"
       }
+    },
+    "onoff_charging": {
+      "type": "boolean",
+      "title": {
+        "en": "Charging",
+        "nl": "Opladen",
+        "de": "Laden"
+      },
+      "getable": true,
+      "setable": true,
+      "uiComponent": "toggle",
+      "icon": "/assets/icons/charging_status.svg"
     },
     "onoff_precond": {
       "type": "boolean",
