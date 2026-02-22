@@ -38,5 +38,8 @@
   },
   "1.1.5": {
     "en": "Updated widget preview to match guidelines"
+  },
+  "1.1.6": {
+    "en": "Add charging control action and update icon on actions"
   }
 }

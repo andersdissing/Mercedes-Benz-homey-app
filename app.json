@@ -1,7 +1,7 @@
 {
   "_comment": "This file is generated. Please edit .homeycompose/app.json instead.",
   "id": "com.mercedes.mbapi",
-  "version": "1.1.5",
+  "version": "1.1.6",
   "compatibility": ">=12.3.0",
   "sdk": 3,
   "platforms": [
@@ -464,6 +464,7 @@
     ],
     "conditions": [
       {
+        "icon": "/assets/icon.svg",
         "title": {
           "en": "Any door is !{{open|closed}}",
           "nl": "Een deur is !{{open|gesloten}}",
@@ -489,6 +490,7 @@
         "id": "any_door_open"
       },
       {
+        "icon": "/assets/icon.svg",
         "title": {
           "en": "Battery level !{{is above|is below}} ...",
           "nl": "Batterijniveau !{{is boven|is onder}} ...",
@@ -526,6 +528,7 @@
         "id": "battery_level"
       },
       {
+        "icon": "/assets/icon.svg",
         "title": {
           "en": "Auxiliary heating !{{is|is not}} active",
           "nl": "Standverwarming !{{is|is niet}} actief",
@@ -546,6 +549,7 @@
         "id": "is_auxheat_active"
       },
       {
+        "icon": "/assets/icon.svg",
         "title": {
           "en": "Vehicle is !{{charging|not charging}}",
           "nl": "Voertuig is !{{aan het opladen|niet aan het opladen}}",
@@ -571,6 +575,7 @@
         "id": "is_charging"
       },
       {
+        "icon": "/assets/icon.svg",
         "title": {
           "en": "Engine is !{{running|stopped}}",
           "nl": "Motor is !{{aan|uit}}",
@@ -596,6 +601,7 @@
         "id": "is_engine_running"
       },
       {
+        "icon": "/assets/icon.svg",
         "title": {
           "en": "Vehicle !{{is|is not}} in geofence zone ...",
           "nl": "Voertuig !{{is|is niet}} in geofence zone ...",
@@ -635,6 +641,7 @@
         "id": "is_in_geofence"
       },
       {
+        "icon": "/assets/icon.svg",
         "title": {
           "en": "Vehicle is !{{locked|unlocked}}",
           "nl": "Voertuig is !{{vergrendeld|ontgrendeld}}",
@@ -660,6 +667,7 @@
         "id": "is_locked"
       },
       {
+        "icon": "/assets/icon.svg",
         "title": {
           "en": "Preconditioning is !{{active|inactive}}",
           "nl": "Voorconditionering is !{{actief|inactief}}",
@@ -685,6 +693,7 @@
         "id": "is_preconditioning"
       },
       {
+        "icon": "/assets/icon.svg",
         "title": {
           "en": "Sunroof is !{{open|closed}}",
           "nl": "Schuifdak is !{{open|gesloten}}",
@@ -710,6 +719,7 @@
         "id": "sunroof_open"
       },
       {
+        "icon": "/assets/icon.svg",
         "title": {
           "en": "Tire pressure is !{{OK|too low}}",
           "nl": "Bandenspanning is !{{OK|te laag}}",
@@ -735,6 +745,7 @@
         "id": "tire_pressure_ok"
       },
       {
+        "icon": "/assets/icon.svg",
         "title": {
           "en": "Warning light is !{{active|inactive}}",
           "nl": "Waarschuwingslampje is !{{actief|inactief}}",
@@ -760,6 +771,7 @@
         "id": "warning_active"
       },
       {
+        "icon": "/assets/icon.svg",
         "title": {
           "en": "All windows are !{{closed|open}}",
           "nl": "Alle ramen zijn !{{gesloten|open}}",
@@ -1308,21 +1320,6 @@
         "id": "sound_horn"
       },
       {
-        "id": "start_climate",
-        "title": {
-          "en": "Start climate control",
-          "nl": "Start klimaatregeling",
-          "de": "Klimatisierung starten"
-        },
-        "args": [
-          {
-            "type": "device",
-            "name": "device",
-            "filter": "driver_id=mercedes-vehicle"
-          }
-        ]
-      },
-      {
         "id": "start_charging",
         "title": {
           "en": "Resume charging",
@@ -1338,11 +1335,11 @@
         ]
       },
       {
-        "id": "stop_charging",
+        "id": "start_climate",
         "title": {
-          "en": "Pause charging",
-          "nl": "Pauzeer opladen",
-          "de": "Laden pausieren"
+          "en": "Start climate control",
+          "nl": "Start klimaatregeling",
+          "de": "Klimatisierung starten"
         },
         "args": [
           {
@@ -1391,6 +1388,21 @@
           }
         ],
         "id": "start_precond"
+      },
+      {
+        "id": "stop_charging",
+        "title": {
+          "en": "Pause charging",
+          "nl": "Pauzeer opladen",
+          "de": "Laden pausieren"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle"
+          }
+        ]
       },
       {
         "id": "stop_climate",
@@ -1558,8 +1570,7 @@
         "onoff_remote_start",
         "theft_system_armed",
         "onoff.engine",
-        "onoff.climate",
-        "onoff_charging"
+        "onoff.climate"
       ],
       "pair": [
         {
