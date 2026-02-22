@@ -1,4 +1,5 @@
 {
+  "icon": "/assets/icon.svg",
   "title": {
     "en": "Battery level !{{is above|is below}} ...",
     "nl": "Batterijniveau !{{is boven|is onder}} ...",

@@ -1,4 +1,5 @@
 {
+  "icon": "/assets/icon.svg",
   "title": {
     "en": "Vehicle is !{{locked|unlocked}}",
     "nl": "Voertuig is !{{vergrendeld|ontgrendeld}}",
