@@ -129,7 +129,8 @@ class MercedesVehicleDevice extends Homey.Device {
         'measure_max_soc', 'measure_oil_level',
         'ecoscore_accel', 'ecoscore_const', 'ecoscore_freewhl',
         'distance_start', 'distance_electrical', 'driven_time_start',
-        'odometer', 'meter_power', 'alarm_generic'
+        'odometer', 'meter_power', 'alarm_generic',
+        'text_connector_status'
       ];
       for (const cap of textCaps) {
         if (!this.hasCapability(cap)) {
@@ -795,6 +796,36 @@ class MercedesVehicleDevice extends Homey.Device {
           const batteryLevel = this.getCapabilityValue('measure_battery') || 0;
           await this.homey.flow.getDeviceTriggerCard('charging_completed')
             .trigger(this, { battery_level: batteryLevel });
+        }
+      }
+
+      // Charge coupler / connector status with plugged in/unplugged triggers
+      const couplerValue = data.chargeCouplerACStatus ?? data.chargecoupleracstatus
+        ?? data.chargeCouplerDCStatus ?? data.chargecoupledcstatus;
+      if (couplerValue !== undefined) {
+        const statusMap = {
+          '0': 'Connected (locked)',
+          '1': 'Connected (unlocked)',
+          '2': 'Disconnected',
+          '3': 'Error',
+          '4': 'Charging started',
+        };
+        const rawStatus = String(couplerValue);
+        const readableStatus = statusMap[rawStatus] || rawStatus;
+        const oldStatus = this.getCapabilityValue('text_connector_status');
+        this.log(`[UPDATE] Setting connector status to: ${rawStatus} (${readableStatus})`);
+        await this.setCapabilityValue('text_connector_status', readableStatus);
+
+        // Determine connected state (anything that is not 'Disconnected')
+        const isConnected = readableStatus !== 'Disconnected';
+        const wasConnected = oldStatus !== null && oldStatus !== 'Disconnected';
+
+        if (!wasConnected && isConnected) {
+          await this.homey.flow.getDeviceTriggerCard('connector_connected').trigger(this);
+          this.log('[TRIGGER] Charger connected');
+        } else if (wasConnected && !isConnected) {
+          await this.homey.flow.getDeviceTriggerCard('connector_disconnected').trigger(this);
+          this.log('[TRIGGER] Charger disconnected');
         }
       }
 

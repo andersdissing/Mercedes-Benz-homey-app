@@ -1,0 +1,15 @@
+{
+  "id": "connector_disconnected",
+  "title": {
+    "en": "Charger was disconnected",
+    "nl": "Lader is losgekoppeld",
+    "de": "Ladegerät wurde getrennt"
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=mercedes-vehicle"
+    }
+  ]
+}

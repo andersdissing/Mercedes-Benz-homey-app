@@ -460,6 +460,36 @@
             "example": "front_left"
           }
         ]
+      },
+      {
+        "id": "connector_connected",
+        "title": {
+          "en": "Charger was connected",
+          "nl": "Lader is aangesloten",
+          "de": "Ladegerät wurde angeschlossen"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle"
+          }
+        ]
+      },
+      {
+        "id": "connector_disconnected",
+        "title": {
+          "en": "Charger was disconnected",
+          "nl": "Lader is losgekoppeld",
+          "de": "Ladegerät wurde getrennt"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle"
+          }
+        ]
       }
     ],
     "conditions": [
@@ -1570,7 +1600,9 @@
         "onoff_remote_start",
         "theft_system_armed",
         "onoff.engine",
-        "onoff.climate"
+        "onoff.climate",
+        "onoff_charging",
+        "text_connector_status"
       ],
       "pair": [
         {
