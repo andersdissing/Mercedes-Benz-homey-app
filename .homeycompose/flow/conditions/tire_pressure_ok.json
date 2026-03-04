@@ -1,4 +1,5 @@
 {
+  "icon": "/assets/icon.svg",
   "title": {
     "en": "Tire pressure is !{{OK|too low}}",
     "nl": "Bandenspanning is !{{OK|te laag}}",

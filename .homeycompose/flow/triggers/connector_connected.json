@@ -1,0 +1,15 @@
+{
+  "id": "connector_connected",
+  "title": {
+    "en": "Charger was connected",
+    "nl": "Lader is aangesloten",
+    "de": "Ladegerät wurde angeschlossen"
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=mercedes-vehicle"
+    }
+  ]
+}

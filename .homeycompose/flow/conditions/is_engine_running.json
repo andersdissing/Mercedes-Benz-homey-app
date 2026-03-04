@@ -1,4 +1,5 @@
 {
+  "icon": "/assets/icon.svg",
   "title": {
     "en": "Engine is !{{running|stopped}}",
     "nl": "Motor is !{{aan|uit}}",

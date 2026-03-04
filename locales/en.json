@@ -10,6 +10,7 @@
     "lock_failed": "Failed to change lock state. Please try again.",
     "engine_control_failed": "Failed to control engine. Ensure PIN is set and vehicle supports remote start.",
     "climate_control_failed": "Failed to control climate. Please try again.",
+    "charging_control_failed": "Failed to control charging. Please try again.",
     "flash_lights_failed": "Failed to flash lights. Please try again."
   }
 }
