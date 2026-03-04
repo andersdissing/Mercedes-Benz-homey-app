@@ -1,4 +1,5 @@
 {
+  "icon": "/assets/icon.svg",
   "title": {
     "en": "Sunroof is !{{open|closed}}",
     "nl": "Schuifdak is !{{open|gesloten}}",

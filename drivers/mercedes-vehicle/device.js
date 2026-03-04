@@ -52,6 +52,7 @@ class MercedesVehicleDevice extends Homey.Device {
       this.registerCapabilityListener('locked', this.onCapabilityLocked.bind(this));
       this.registerCapabilityListener('onoff.engine', this.onCapabilityEngine.bind(this));
       this.registerCapabilityListener('onoff.climate', this.onCapabilityClimate.bind(this));
+      this.registerCapabilityListener('onoff_charging', this.onCapabilityCharging.bind(this));
 
       // Add average_speed capability if it doesn't exist (for devices paired before this was added)
       if (!this.hasCapability('average_speed')) {
@@ -128,7 +129,8 @@ class MercedesVehicleDevice extends Homey.Device {
         'measure_max_soc', 'measure_oil_level',
         'ecoscore_accel', 'ecoscore_const', 'ecoscore_freewhl',
         'distance_start', 'distance_electrical', 'driven_time_start',
-        'odometer', 'meter_power', 'alarm_generic'
+        'odometer', 'meter_power', 'alarm_generic',
+        'text_connector_status'
       ];
       for (const cap of textCaps) {
         if (!this.hasCapability(cap)) {
@@ -311,6 +313,12 @@ class MercedesVehicleDevice extends Homey.Device {
       if (!this.hasCapability('theft_system_armed')) {
         this.log('[INIT] Adding missing theft_system_armed capability');
         await this.addCapability('theft_system_armed');
+      }
+
+      // Add charging control capability
+      if (!this.hasCapability('onoff_charging')) {
+        this.log('[INIT] Adding missing onoff_charging capability');
+        await this.addCapability('onoff_charging');
       }
 
       // Add departure time capability
@@ -596,6 +604,11 @@ class MercedesVehicleDevice extends Homey.Device {
 
         await this.setCapabilityValue('meter_power', chargingPower);
 
+        // Update charging on/off capability
+        if (this.hasCapability('onoff_charging')) {
+          await this.setCapabilityValue('onoff_charging', isCharging);
+        }
+
         // Trigger charging flow cards
         if (!wasCharging && isCharging) {
           await this.homey.flow.getDeviceTriggerCard('charging_started')
@@ -783,6 +796,36 @@ class MercedesVehicleDevice extends Homey.Device {
           const batteryLevel = this.getCapabilityValue('measure_battery') || 0;
           await this.homey.flow.getDeviceTriggerCard('charging_completed')
             .trigger(this, { battery_level: batteryLevel });
+        }
+      }
+
+      // Charge coupler / connector status with plugged in/unplugged triggers
+      const couplerValue = data.chargeCouplerACStatus ?? data.chargecoupleracstatus
+        ?? data.chargeCouplerDCStatus ?? data.chargecoupledcstatus;
+      if (couplerValue !== undefined) {
+        const statusMap = {
+          '0': 'Connected (locked)',
+          '1': 'Connected (unlocked)',
+          '2': 'Disconnected',
+          '3': 'Error',
+          '4': 'Charging started',
+        };
+        const rawStatus = String(couplerValue);
+        const readableStatus = statusMap[rawStatus] || rawStatus;
+        const oldStatus = this.getCapabilityValue('text_connector_status');
+        this.log(`[UPDATE] Setting connector status to: ${rawStatus} (${readableStatus})`);
+        await this.setCapabilityValue('text_connector_status', readableStatus);
+
+        // Determine connected state (anything that is not 'Disconnected')
+        const isConnected = readableStatus !== 'Disconnected';
+        const wasConnected = oldStatus !== null && oldStatus !== 'Disconnected';
+
+        if (!wasConnected && isConnected) {
+          await this.homey.flow.getDeviceTriggerCard('connector_connected').trigger(this);
+          this.log('[TRIGGER] Charger connected');
+        } else if (wasConnected && !isConnected) {
+          await this.homey.flow.getDeviceTriggerCard('connector_disconnected').trigger(this);
+          this.log('[TRIGGER] Charger disconnected');
         }
       }
 
@@ -1116,6 +1159,29 @@ class MercedesVehicleDevice extends Homey.Device {
     } catch (error) {
       this.error('Failed to change engine state:', error.message);
       throw new Error(this.homey.__('error.engine_control_failed'));
+    }
+  }
+
+  /**
+   * Handle charging capability changes
+   */
+  async onCapabilityCharging(value) {
+    this.log('Charging capability changed to:', value);
+
+    try {
+      if (value) {
+        await this.api.startCharging(this.vin);
+      } else {
+        await this.api.stopCharging(this.vin);
+      }
+
+      // Poll immediately to update state
+      setTimeout(() => this.pollVehicleData(), 5000);
+
+      return true;
+    } catch (error) {
+      this.error('Failed to change charging state:', error.message);
+      throw new Error(this.homey.__('error.charging_control_failed'));
     }
   }
 
@@ -1654,6 +1720,44 @@ class MercedesVehicleDevice extends Homey.Device {
     } catch (error) {
       this.error('[FLOW] Failed to configure max SOC:', error.message);
       throw new Error(`Failed to configure max SOC: ${error.message}`);
+    }
+  }
+
+  /**
+   * Flow action: Start charging (resume)
+   */
+  async startChargingAction() {
+    this.log('[FLOW] Start charging action triggered');
+    try {
+      await this.api.startCharging(this.vin);
+      this.log('[FLOW] Charging started successfully');
+
+      // Poll after a delay to update state
+      setTimeout(() => this.pollVehicleData(), 5000);
+
+      return true;
+    } catch (error) {
+      this.error('[FLOW] Failed to start charging:', error.message);
+      throw new Error(`Failed to start charging: ${error.message}`);
+    }
+  }
+
+  /**
+   * Flow action: Stop charging (pause)
+   */
+  async stopChargingAction() {
+    this.log('[FLOW] Stop charging action triggered');
+    try {
+      await this.api.stopCharging(this.vin);
+      this.log('[FLOW] Charging stopped successfully');
+
+      // Poll after a delay to update state
+      setTimeout(() => this.pollVehicleData(), 5000);
+
+      return true;
+    } catch (error) {
+      this.error('[FLOW] Failed to stop charging:', error.message);
+      throw new Error(`Failed to stop charging: ${error.message}`);
     }
   }
 

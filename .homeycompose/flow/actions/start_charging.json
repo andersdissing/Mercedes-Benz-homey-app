@@ -1,0 +1,15 @@
+{
+  "id": "start_charging",
+  "title": {
+    "en": "Resume charging",
+    "nl": "Hervat opladen",
+    "de": "Laden fortsetzen"
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=mercedes-vehicle"
+    }
+  ]
+}
