@@ -346,6 +346,23 @@ class MercedesVehicleDevice extends Homey.Device {
         }
       }
 
+      // Initialize numeric capabilities with 0 if not set (prevents UI crashes on null)
+      const numericCapabilities = [
+        'measure_battery',
+        'meter_power',
+        'measure_range_electric',
+        'measure_range_liquid',
+        'measure_fuel',
+        'measure_battery_temperature',
+        'measure_service_days'
+      ];
+
+      for (const cap of numericCapabilities) {
+        if (this.hasCapability(cap) && this.getCapabilityValue(cap) === null) {
+          await this.setCapabilityValue(cap, 0);
+        }
+      }
+
       // Connect to WebSocket for real-time updates
       this.log('[INIT] Connecting to WebSocket for real-time updates...');
       try {
@@ -937,7 +954,7 @@ class MercedesVehicleDevice extends Homey.Device {
               continue;
             }
             const windowStatusMap = {
-              0: 'Intermediate',
+              0: 'Unknown',
               1: 'Open',
               2: 'Closed',
               3: 'Airing',
@@ -951,10 +968,10 @@ class MercedesVehicleDevice extends Homey.Device {
 
             // Trigger flow cards on status change
             if (oldStatus !== newStatus) {
-              if (newStatus === 'Closed' || newStatus === 'CLOSED' || newStatus === '2') {
+              if (newStatus === 'Closed') {
                 await this.homey.flow.getDeviceTriggerCard('window_closed')
                   .trigger(this, { window: win.name });
-              } else if (newStatus === 'Open' || newStatus === 'OPEN' || newStatus === '1' || newStatus === 'Intermediate' || newStatus === 'Airing') {
+              } else if (newStatus === 'Open' || newStatus === 'Airing') {
                 await this.homey.flow.getDeviceTriggerCard('window_opened')
                   .trigger(this, { window: win.name });
               }
@@ -991,10 +1008,10 @@ class MercedesVehicleDevice extends Homey.Device {
 
             // Trigger flow cards on status change
             if (oldStatus !== newStatus) {
-              if (newStatus === 'Closed' || newStatus === 'CLOSED' || newStatus === 'false' || newStatus === '0') {
+              if (newStatus === 'Closed') {
                 await this.homey.flow.getDeviceTriggerCard('door_closed')
                   .trigger(this, { door: door.name });
-              } else if (newStatus === 'Open' || newStatus === 'OPEN' || newStatus === 'true' || newStatus === '1') {
+              } else if (newStatus === 'Open') {
                 await this.homey.flow.getDeviceTriggerCard('door_opened')
                   .trigger(this, { door: door.name });
               }
@@ -1268,14 +1285,20 @@ class MercedesVehicleDevice extends Homey.Device {
    */
   async areWindowsClosed() {
     try {
-      const vehicleData = await this.api.getVehicleData(this.vin);
+      const caps = [
+        'window_front_left',
+        'window_front_right',
+        'window_rear_left',
+        'window_rear_right'
+      ];
 
-      return (
-        vehicleData.windowstatusfrontleft === 'CLOSED' &&
-        vehicleData.windowstatusfrontright === 'CLOSED' &&
-        vehicleData.windowstatusrearleft === 'CLOSED' &&
-        vehicleData.windowstatusrearright === 'CLOSED'
-      );
+      for (const cap of caps) {
+        if (!this.hasCapability(cap)) continue;
+        const status = this.getCapabilityValue(cap);
+        if (status !== 'Closed') return false;
+      }
+
+      return true;
     } catch (error) {
       this.error('Failed to check window status:', error.message);
       return false;
@@ -1633,9 +1656,7 @@ class MercedesVehicleDevice extends Homey.Device {
       this.getCapabilityValue('door_hood')
     ];
 
-    const anyOpen = doors.some(status =>
-      status === 'OPEN' || status === 'true' || status === '1'
-    );
+    const anyOpen = doors.some(status => status === 'Open');
 
     this.log(`[FLOW] Any door open condition checked: ${anyOpen}`);
     return anyOpen;

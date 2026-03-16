@@ -1516,6 +1516,11 @@
           "nl": "Ontgrendel voertuig",
           "de": "Fahrzeug entriegeln"
         },
+        "hint": {
+          "en": "Requires PIN to be configured in device settings",
+          "nl": "Vereist dat PIN is geconfigureerd in apparaatinstellingen",
+          "de": "Erfordert PIN-Konfiguration in den Geräteeinstellungen"
+        },
         "args": [
           {
             "type": "device",
