@@ -12,6 +12,19 @@ class MercedesMeApp extends Homey.App {
   }
 
   /**
+   * Get list of available devices for widget car selector
+   * @returns {Array} List of devices with id and name
+   */
+  async getDeviceList() {
+    const driver = this.homey.drivers.getDriver('mercedes-vehicle');
+    const devices = driver.getDevices();
+    return devices.map(d => ({
+      id: d.getData().id,
+      name: d.getName(),
+    }));
+  }
+
+  /**
    * Get device status for widget API
    * @param {string} deviceId - The device ID to get status for
    * @returns {object} Device status object

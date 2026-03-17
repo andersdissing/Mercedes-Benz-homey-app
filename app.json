@@ -32,6 +32,10 @@
         "getStatus": {
           "method": "GET",
           "path": "/"
+        },
+        "getDevices": {
+          "method": "GET",
+          "path": "/devices"
         }
       },
       "id": "car-status",
