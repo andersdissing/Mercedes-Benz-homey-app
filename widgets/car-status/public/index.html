@@ -332,11 +332,12 @@
   }
 
   var selectedDeviceId = null;
+  var _homey = null;
 
   async function fetchData() {
     try {
       var path = selectedDeviceId ? '/?deviceId=' + encodeURIComponent(selectedDeviceId) : '/';
-      var data = await Homey.api('GET', path, null);
+      var data = await _homey.api('GET', path, null);
       if (data) update(data);
       return data;
     } catch(error) {
@@ -360,7 +361,7 @@
 
     document.getElementById('carConfirmBtn').addEventListener('click', function() {
       selectedDeviceId = dropdown.value;
-      Homey.set('deviceId', selectedDeviceId);
+      _homey.set('deviceId', selectedDeviceId);
       document.getElementById('carSelect').classList.add('hidden');
       document.getElementById('loading').classList.remove('hidden');
       document.getElementById('loading').textContent = 'Loading...';
@@ -375,6 +376,7 @@
   }
 
   async function onHomeyReady(Homey) {
+    _homey = Homey;
     await Homey.ready({ height: 160 });
 
     // Check for previously saved deviceId
@@ -387,7 +389,7 @@
 
     // Fetch available devices
     try {
-      var devices = await Homey.api('GET', '/devices', {});
+      var devices = await _homey.api('GET', '/devices', null);
       if (!devices || devices.length === 0) {
         document.getElementById('loading').textContent = 'No cars found';
         return;
