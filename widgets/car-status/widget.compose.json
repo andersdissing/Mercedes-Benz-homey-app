@@ -5,10 +5,8 @@
     "de": "Fahrzeugstatus"
   },
   "height": 160,
-  "settings": {
-    "devices": {
-      "type": "devices"
-    }
+  "devices": {
+    "singular": false
   },
   "api": {
     "getStatus": {
