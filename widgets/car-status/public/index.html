@@ -335,8 +335,8 @@
 
   async function fetchData() {
     try {
-      var params = selectedDeviceId ? { deviceId: selectedDeviceId } : {};
-      var data = await Homey.api('GET', '/', params);
+      var path = selectedDeviceId ? '/?deviceId=' + encodeURIComponent(selectedDeviceId) : '/';
+      var data = await Homey.api('GET', path, null);
       if (data) update(data);
       return data;
     } catch(error) {
