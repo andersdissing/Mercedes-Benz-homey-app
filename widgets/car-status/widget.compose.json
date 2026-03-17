@@ -6,12 +6,17 @@
   },
   "height": 160,
   "devices": {
+    "type": "app",
     "singular": false
   },
   "api": {
     "getStatus": {
       "method": "GET",
       "path": "/"
+    },
+    "getDeviceStatus": {
+      "method": "GET",
+      "path": "/status/:deviceId"
     },
     "getDevices": {
       "method": "GET",

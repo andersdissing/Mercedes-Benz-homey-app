@@ -26,23 +26,16 @@ class MercedesMeApp extends Homey.App {
 
   /**
    * Get device status for widget API
-   * @param {string} deviceId - The device ID to get status for
+   * @param {string} deviceId - The Homey device ID to get status for
    * @returns {object} Device status object
    */
   async getDeviceStatus(deviceId) {
     const driver = this.homey.drivers.getDriver('mercedes-vehicle');
     const devices = driver.getDevices();
 
-    // Try matching by data.id (VIN), then by any available ID property, then fall back to first device
     let device;
     if (deviceId) {
       device = devices.find(d => d.getData().id === deviceId);
-      if (!device) {
-        // Try matching by Homey internal device ID (from widget device picker)
-        device = devices.find(d => {
-          try { return d.__id === deviceId || d.id === deviceId; } catch (_) { return false; }
-        });
-      }
     }
     if (!device) {
       device = devices[0];

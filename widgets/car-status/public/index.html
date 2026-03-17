@@ -336,8 +336,8 @@
 
   async function fetchData() {
     try {
-      var path = selectedDeviceId ? '/?deviceId=' + encodeURIComponent(selectedDeviceId) : '/';
-      var data = await _homey.api('GET', path, null);
+      var path = selectedDeviceId ? '/status/' + encodeURIComponent(selectedDeviceId) : '/';
+      var data = await _homey.api('GET', path, {});
       if (data) update(data);
       return data;
     } catch(error) {
@@ -359,8 +359,9 @@
       dropdown.appendChild(option);
     });
 
-    document.getElementById('carConfirmBtn').addEventListener('click', function() {
+    document.getElementById('carConfirmBtn').addEventListener('click', async function() {
       selectedDeviceId = dropdown.value;
+      try { await _homey.set('deviceId', selectedDeviceId); } catch(e) { console.log('set failed:', e); }
       document.getElementById('carSelect').classList.add('hidden');
       document.getElementById('loading').classList.remove('hidden');
       document.getElementById('loading').textContent = 'Loading...';
@@ -390,9 +391,21 @@
       console.log('getDeviceIds not available:', e);
     }
 
+    // Check previously saved selection
+    try {
+      var savedId = await _homey.get('deviceId');
+      if (savedId) {
+        selectedDeviceId = savedId;
+        startWidget();
+        return;
+      }
+    } catch(e) {
+      console.log('get deviceId failed:', e);
+    }
+
     // Fallback: show in-widget car selector
     try {
-      var devices = await _homey.api('GET', '/devices', null);
+      var devices = await _homey.api('GET', '/devices', {});
       if (!devices || devices.length === 0) {
         document.getElementById('loading').textContent = 'No cars found';
         return;
