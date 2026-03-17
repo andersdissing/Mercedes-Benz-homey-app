@@ -39,7 +39,11 @@
         }
       },
       "id": "car-status",
-      "settings": []
+      "settings": {
+        "devices": {
+          "type": "devices"
+        }
+      }
     }
   },
   "tags": {

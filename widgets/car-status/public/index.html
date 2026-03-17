@@ -361,7 +361,6 @@
 
     document.getElementById('carConfirmBtn').addEventListener('click', function() {
       selectedDeviceId = dropdown.value;
-      _homey.set('deviceId', selectedDeviceId);
       document.getElementById('carSelect').classList.add('hidden');
       document.getElementById('loading').classList.remove('hidden');
       document.getElementById('loading').textContent = 'Loading...';
@@ -379,26 +378,33 @@
     _homey = Homey;
     await Homey.ready({ height: 160 });
 
-    // Check for previously saved deviceId
-    var settings = Homey.getSettings();
-    if (settings && settings.deviceId) {
-      selectedDeviceId = settings.deviceId;
-      startWidget();
-      return;
+    // Use device selected via Homey widget settings (native device picker)
+    try {
+      var deviceIds = Homey.getDeviceIds();
+      if (deviceIds && deviceIds.length > 0) {
+        selectedDeviceId = deviceIds[0];
+        startWidget();
+        return;
+      }
+    } catch(e) {
+      console.log('getDeviceIds not available:', e);
     }
 
-    // Fetch available devices
+    // Fallback: show in-widget car selector
     try {
       var devices = await _homey.api('GET', '/devices', null);
       if (!devices || devices.length === 0) {
         document.getElementById('loading').textContent = 'No cars found';
         return;
       }
-      // Show car selector regardless of number of cars
+      if (devices.length === 1) {
+        selectedDeviceId = devices[0].id;
+        startWidget();
+        return;
+      }
       showCarSelector(devices);
     } catch(error) {
       console.error('Failed to fetch devices:', error);
-      // Fallback: start without deviceId (will use first device)
       startWidget();
     }
   }

@@ -5,6 +5,11 @@
     "de": "Fahrzeugstatus"
   },
   "height": 160,
+  "settings": {
+    "devices": {
+      "type": "devices"
+    }
+  },
   "api": {
     "getStatus": {
       "method": "GET",
