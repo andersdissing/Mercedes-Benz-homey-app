@@ -392,15 +392,8 @@
         document.getElementById('loading').textContent = 'No cars found';
         return;
       }
-      if (devices.length === 1) {
-        // Only one car, skip selection
-        selectedDeviceId = devices[0].id;
-        Homey.set('deviceId', selectedDeviceId);
-        startWidget();
-      } else {
-        // Multiple cars, show selector
-        showCarSelector(devices);
-      }
+      // Show car selector regardless of number of cars
+      showCarSelector(devices);
     } catch(error) {
       console.error('Failed to fetch devices:', error);
       // Fallback: start without deviceId (will use first device)
