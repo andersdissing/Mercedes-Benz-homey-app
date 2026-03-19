@@ -19,14 +19,14 @@ class MercedesMeApp extends Homey.App {
     const driver = this.homey.drivers.getDriver('mercedes-vehicle');
     const devices = driver.getDevices();
     return devices.map(d => ({
-      id: d.getData().id,
+      id: d.id,
       name: d.getName(),
     }));
   }
 
   /**
    * Get device status for widget API
-   * @param {string} deviceId - The Homey device ID to get status for
+   * @param {string} deviceId - The Homey internal device UUID
    * @returns {object} Device status object
    */
   async getDeviceStatus(deviceId) {
@@ -35,7 +35,7 @@ class MercedesMeApp extends Homey.App {
 
     let device;
     if (deviceId) {
-      device = devices.find(d => d.getData().id === deviceId);
+      device = devices.find(d => d.id === deviceId);
     }
     if (!device) {
       device = devices[0];

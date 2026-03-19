@@ -30,7 +30,7 @@
       "height": 160,
       "devices": {
         "type": "app",
-        "singular": false
+        "singular": true
       },
       "api": {
         "getStatus": {
