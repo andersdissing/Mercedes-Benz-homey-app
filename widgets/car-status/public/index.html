@@ -126,51 +126,38 @@
     font-size: 13px;
   }
 
-  .car-select-screen {
+  .not-configured {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     height: 100%;
-    gap: 12px;
+    gap: 8px;
     padding: 16px;
+    text-align: center;
   }
 
-  .car-select-screen label {
-    font-size: 14px;
-    font-weight: 600;
+  .not-configured svg {
+    opacity: 0.5;
   }
 
-  .car-select-screen select {
-    width: 100%;
-    max-width: 260px;
-    padding: 8px 12px;
-    border-radius: 10px;
-    border: 1px solid rgba(255,255,255,0.2);
-    background: rgba(128,128,128,0.2);
-    color: #fff;
-    font-size: 14px;
-    appearance: auto;
+  .not-configured p {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    line-height: 1.4;
   }
 
-  .car-select-screen button {
-    padding: 8px 24px;
-    border-radius: 10px;
-    border: none;
-    background: var(--color-blue);
-    color: #fff;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-  }
 </style>
 </head>
 <body class="homey-widget">
   <div id="loading" class="loading">Loading...</div>
-  <div id="carSelect" class="car-select-screen hidden">
-    <label>Select your car</label>
-    <select id="carDropdown"></select>
-    <button id="carConfirmBtn">Confirm</button>
+  <div id="notConfigured" class="not-configured hidden">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/>
+      <line x1="12" y1="8" x2="12" y2="12"/>
+      <line x1="12" y1="16" x2="12.01" y2="16"/>
+    </svg>
+    <p>Edit the widget and select a car to display.</p>
   </div>
   <div id="content" class="hidden">
     <div class="model-name" id="modelName"></div>
@@ -338,6 +325,12 @@
     try {
       var path = selectedDeviceId ? '/status/' + encodeURIComponent(selectedDeviceId) : '/';
       var data = await _homey.api('GET', path, {});
+      if (data && data.error === 'not_configured') {
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('content').classList.add('hidden');
+        document.getElementById('notConfigured').classList.remove('hidden');
+        return null;
+      }
       if (data) update(data);
       return data;
     } catch(error) {
@@ -345,28 +338,6 @@
       document.getElementById('loading').textContent = 'Error: ' + (error.message || String(error));
       return null;
     }
-  }
-
-  function showCarSelector(devices) {
-    document.getElementById('loading').classList.add('hidden');
-    document.getElementById('carSelect').classList.remove('hidden');
-    var dropdown = document.getElementById('carDropdown');
-    dropdown.innerHTML = '';
-    devices.forEach(function(device) {
-      var option = document.createElement('option');
-      option.value = device.id;
-      option.textContent = device.name;
-      dropdown.appendChild(option);
-    });
-
-    document.getElementById('carConfirmBtn').addEventListener('click', async function() {
-      selectedDeviceId = dropdown.value;
-      try { await _homey.set('deviceId', selectedDeviceId); } catch(e) { console.log('set failed:', e); }
-      document.getElementById('carSelect').classList.add('hidden');
-      document.getElementById('loading').classList.remove('hidden');
-      document.getElementById('loading').textContent = 'Loading...';
-      startWidget();
-    });
   }
 
   async function startWidget() {
@@ -379,47 +350,12 @@
     _homey = Homey;
     await Homey.ready({ height: 160 });
 
-    // Use device selected via Homey widget settings (native device picker)
-    try {
-      var deviceIds = Homey.getDeviceIds();
-      if (deviceIds && deviceIds.length > 0) {
-        selectedDeviceId = deviceIds[0];
-        startWidget();
-        return;
-      }
-    } catch(e) {
-      console.log('getDeviceIds not available:', e);
+    var deviceIds = Homey.getDeviceIds();
+    if (deviceIds && deviceIds.length > 0) {
+      selectedDeviceId = deviceIds[0];
     }
 
-    // Check previously saved selection
-    try {
-      var savedId = await _homey.get('deviceId');
-      if (savedId) {
-        selectedDeviceId = savedId;
-        startWidget();
-        return;
-      }
-    } catch(e) {
-      console.log('get deviceId failed:', e);
-    }
-
-    // Fallback: show in-widget car selector
-    try {
-      var devices = await _homey.api('GET', '/devices', {});
-      if (!devices || devices.length === 0) {
-        document.getElementById('loading').textContent = 'No cars found';
-        return;
-      }
-      if (devices.length === 1) {
-        selectedDeviceId = devices[0].id;
-        startWidget();
-        return;
-      }
-      showCarSelector(devices);
-    } catch(error) {
-      console.error('Failed to fetch devices:', error);
-      startWidget();
-    }
+    startWidget();
   }
 </script>
 </body>
