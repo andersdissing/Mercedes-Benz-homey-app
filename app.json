@@ -607,6 +607,30 @@
       {
         "icon": "/assets/icon.svg",
         "title": {
+          "en": "Connector is !{{connected|not connected}}",
+          "nl": "Connector is !{{aangesloten|niet aangesloten}}",
+          "de": "Stecker ist !{{verbunden|nicht verbunden}}"
+        },
+        "titleFormatted": {
+          "en": "Connector is !{{connected|not connected}}",
+          "nl": "Connector is !{{aangesloten|niet aangesloten}}",
+          "de": "Stecker ist !{{verbunden|nicht verbunden}}"
+        },
+        "hint": {
+          "en": "Checks if the charge connector is currently plugged in."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle"
+          }
+        ],
+        "id": "is_connector_connected"
+      },
+      {
+        "icon": "/assets/icon.svg",
+        "title": {
           "en": "Engine is !{{running|stopped}}",
           "nl": "Motor is !{{aan|uit}}",
           "de": "Motor ist !{{an|aus}}"
@@ -2197,6 +2221,18 @@
       "setable": true,
       "uiComponent": "toggle",
       "icon": "/assets/icons/charging_status.svg"
+    },
+    "onoff_connector": {
+      "type": "boolean",
+      "title": {
+        "en": "Connector Connected",
+        "nl": "Connector aangesloten",
+        "de": "Stecker verbunden"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/icons/charge_flap.svg"
     },
     "onoff_precond": {
       "type": "boolean",

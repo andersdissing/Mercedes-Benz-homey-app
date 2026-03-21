@@ -1,0 +1,23 @@
+{
+  "icon": "/assets/icon.svg",
+  "title": {
+    "en": "Connector is !{{connected|not connected}}",
+    "nl": "Connector is !{{aangesloten|niet aangesloten}}",
+    "de": "Stecker ist !{{verbunden|nicht verbunden}}"
+  },
+  "titleFormatted": {
+    "en": "Connector is !{{connected|not connected}}",
+    "nl": "Connector is !{{aangesloten|niet aangesloten}}",
+    "de": "Stecker ist !{{verbunden|nicht verbunden}}"
+  },
+  "hint": {
+    "en": "Checks if the charge connector is currently plugged in."
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=mercedes-vehicle"
+    }
+  ]
+}
