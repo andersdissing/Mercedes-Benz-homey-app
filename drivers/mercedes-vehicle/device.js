@@ -129,7 +129,7 @@ class MercedesVehicleDevice extends Homey.Device {
         'measure_max_soc', 'measure_oil_level',
         'ecoscore_accel', 'ecoscore_const', 'ecoscore_freewhl',
         'distance_start', 'distance_electrical', 'driven_time_start',
-        'odometer', 'meter_power', 'alarm_generic',
+        'odometer', 'measure_charge_power', 'alarm_generic',
         'text_connector_status'
       ];
       for (const cap of textCaps) {
@@ -137,6 +137,11 @@ class MercedesVehicleDevice extends Homey.Device {
           this.log(`[INIT] Adding missing ${cap} capability`);
           await this.addCapability(cap);
         }
+      }
+
+      // Force-update measure_charge_power capability options in case Homey cached a stale definition
+      if (this.hasCapability('measure_charge_power')) {
+        await this.setCapabilityOptions('measure_charge_power', { units: 'kW' });
       }
 
       // Add tire pressure capabilities
@@ -599,10 +604,10 @@ class MercedesVehicleDevice extends Homey.Device {
       const chargingPowerValue = data.chargingpower ?? data.chargingPower;
       if (chargingPowerValue !== undefined) {
         const chargingPower = parseFloat(chargingPowerValue);
-        const wasCharging = this.getCapabilityValue('meter_power') > 0;
+        const wasCharging = this.getCapabilityValue('measure_charge_power') > 0;
         const isCharging = chargingPower > 0;
 
-        await this.setCapabilityValue('meter_power', chargingPower);
+        await this.setCapabilityValue('measure_charge_power', chargingPower);
 
         // Update charging on/off capability
         if (this.hasCapability('onoff_charging')) {
@@ -849,14 +854,14 @@ class MercedesVehicleDevice extends Homey.Device {
         await this.setCapabilityValue('measure_max_soc', parseInt(maxSocValue));
       }
 
-      // End of charge time (timestamp)
+      // End of charge time — API sends minutes since midnight (e.g. 825 = 13:45)
       if (data.endofchargetime !== undefined) {
-        this.log(`[UPDATE] Setting end of charge time to: ${data.endofchargetime}`);
-        // Format: "13:45" or timestamp? Parser says 'display_value' usually
-        // If it's a time string, we might need to combine with today's date
-        // For now, just store as string if we make a text capability, but date capability needs Date object
-        // Let's assume it's a string for now and we'll use a text capability 'text_end_charge_time'
-        await this.setCapabilityValue('text_end_charge_time', String(data.endofchargetime));
+        const totalMinutes = parseInt(data.endofchargetime);
+        const hh = String(Math.floor(totalMinutes / 60)).padStart(2, '0');
+        const mm = String(totalMinutes % 60).padStart(2, '0');
+        const timeStr = `${hh}:${mm}`;
+        this.log(`[UPDATE] Setting end of charge time to: ${timeStr} (raw: ${data.endofchargetime})`);
+        await this.setCapabilityValue('text_end_charge_time', timeStr);
       }
 
       // Sunroof status (text)
@@ -1555,7 +1560,7 @@ class MercedesVehicleDevice extends Homey.Device {
    * Flow condition: Is vehicle charging?
    */
   async isCharging() {
-    const chargingPower = this.getCapabilityValue('meter_power');
+    const chargingPower = this.getCapabilityValue('measure_charge_power');
     const isCharging = chargingPower > 0;
     this.log(`[FLOW] Is charging condition checked: ${isCharging} (power: ${chargingPower} kW)`);
     return isCharging;

@@ -396,7 +396,7 @@ class MercedesVehicleDriver extends Homey.Driver {
           capabilities: [
             'locked',
             'measure_battery',
-            'meter_power',
+            'measure_charge_power',
             'odometer',
             'distance_start',
             'distance_electrical',
