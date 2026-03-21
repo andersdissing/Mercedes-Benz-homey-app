@@ -56,6 +56,7 @@ Find the widget under **Dashboards > + Add Widget > Apps tab > "Car Status"**.
 - Homey firmware >= 12.3.0
 - Mercedes Me account (2FA must be disabled)
 - Mercedes-Benz vehicle with Mercedes Me connectivity
+- **The Mercedes Me account used to log in must be an admin/owner of the vehicle.** Non-admin accounts have restricted access and many features will not work, including geofence triggers, remote commands, and real-time status updates.
 
 ## Installation
 

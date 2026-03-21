@@ -141,7 +141,7 @@ class MercedesVehicleDevice extends Homey.Device {
 
       // Force-update measure_charge_power capability options in case Homey cached a stale definition
       if (this.hasCapability('measure_charge_power')) {
-        await this.setCapabilityOptions('measure_charge_power', { units: 'khW' });
+        await this.setCapabilityOptions('measure_charge_power', { units: 'kW' });
       }
 
       // Add tire pressure capabilities
@@ -1562,7 +1562,7 @@ class MercedesVehicleDevice extends Homey.Device {
   async isCharging() {
     const chargingPower = this.getCapabilityValue('measure_charge_power');
     const isCharging = chargingPower > 0;
-    this.log(`[FLOW] Is charging condition checked: ${isCharging} (power: ${chargingPower} khW)`);
+    this.log(`[FLOW] Is charging condition checked: ${isCharging} (power: ${chargingPower} kW)`);
     return isCharging;
   }
 
