@@ -98,6 +98,27 @@
         "nl": "Bandenspanning, Rechts Achter",
         "de": "Reifendruck, Hinten Rechts"
       }
+    },
+    "onoff.ignition": {
+      "title": {
+        "en": "Ignition On",
+        "nl": "Ontsteking aan",
+        "de": "Zündung an"
+      }
+    },
+    "onoff.engine": {
+      "title": {
+        "en": "Engine Running",
+        "nl": "Motor draait",
+        "de": "Motor läuft"
+      }
+    },
+    "onoff.climate": {
+      "title": {
+        "en": "Climate Active",
+        "nl": "Klimaat actief",
+        "de": "Klimaanlage aktiv"
+      }
     }
   },
   "pair": [

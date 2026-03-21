@@ -326,6 +326,12 @@ class MercedesVehicleDevice extends Homey.Device {
         await this.addCapability('onoff_charging');
       }
 
+      // Add connector connected boolean capability
+      if (!this.hasCapability('onoff_connector')) {
+        this.log('[INIT] Adding missing onoff_connector capability');
+        await this.addCapability('onoff_connector');
+      }
+
       // Add departure time capability
       if (!this.hasCapability('text_departure_time')) {
         await this.addCapability('text_departure_time');
@@ -782,20 +788,32 @@ class MercedesVehicleDevice extends Homey.Device {
         // Translate Mercedes charging status codes to readable text
         const statusMap = {
           '0': 'Charging',
-          '1': 'Charging error',
-          '2': 'Not available',
-          '3': 'Not charging',
-          '4': 'Completed',
+          '1': 'Charging ends',
+          '2': 'Charge break',
+          '3': 'Unplugged',
+          '4': 'Failure',
+          '5': 'Slow charging',
+          '6': 'Fast charging',
+          '7': 'Discharging',
+          '8': 'Not charging',
+          '9': 'Slow charging (after trip target)',
+          '10': 'Charging (after trip target)',
+          '11': 'Fast charging (after trip target)',
+          '12': 'Connected',
+          '13': 'AC charging',
+          '14': 'DC charging',
+          '15': 'Battery calibration active',
+          '16': 'Unknown',
         };
         const rawStatus = String(data.chargingstatus);
         const readableStatus = statusMap[rawStatus] || rawStatus;
         this.log(`[UPDATE] Setting charging status to: ${rawStatus} (${readableStatus})`);
         await this.setCapabilityValue('text_charging_status', readableStatus);
 
-        // Trigger charging completed when status changes to completed/finished
-        const completedStatuses = ['FINISHED', 'COMPLETED', 'END', '4'];
-        const wasCharging = oldStatus && oldStatus !== 'Completed' && !completedStatuses.includes(String(oldStatus).toUpperCase());
-        const isCompleted = rawStatus === '4' || completedStatuses.includes(readableStatus.toUpperCase());
+        // Trigger charging completed when status changes to "charging ends" (1)
+        const completedStatuses = ['CHARGING ENDS', 'FINISHED', 'COMPLETED', 'END'];
+        const wasCharging = oldStatus && !completedStatuses.includes(String(oldStatus).toUpperCase());
+        const isCompleted = rawStatus === '1' || completedStatuses.includes(readableStatus.toUpperCase());
 
         if (wasCharging && isCompleted) {
           const batteryLevel = this.getCapabilityValue('measure_battery') || 0;
@@ -807,7 +825,9 @@ class MercedesVehicleDevice extends Homey.Device {
       // Charge coupler / connector status with plugged in/unplugged triggers
       const couplerValue = data.chargeCouplerACStatus ?? data.chargecoupleracstatus
         ?? data.chargeCouplerDCStatus ?? data.chargecoupledcstatus;
-      if (couplerValue !== undefined) {
+      if (couplerValue === null) {
+        await this.setCapabilityValue('text_connector_status', 'Unknown');
+      } else if (couplerValue !== undefined) {
         const statusMap = {
           '0': 'Connected (locked)',
           '1': 'Connected (unlocked)',
@@ -820,6 +840,7 @@ class MercedesVehicleDevice extends Homey.Device {
         const oldStatus = this.getCapabilityValue('text_connector_status');
         this.log(`[UPDATE] Setting connector status to: ${rawStatus} (${readableStatus})`);
         await this.setCapabilityValue('text_connector_status', readableStatus);
+        await this.setCapabilityValue('onoff_connector', readableStatus !== 'Disconnected');
 
         // Determine connected state (anything that is not 'Disconnected')
         const isConnected = readableStatus !== 'Disconnected';
@@ -1564,6 +1585,15 @@ class MercedesVehicleDevice extends Homey.Device {
     const isCharging = chargingPower > 0;
     this.log(`[FLOW] Is charging condition checked: ${isCharging} (power: ${chargingPower} kW)`);
     return isCharging;
+  }
+
+  /**
+   * Flow condition: Is charge connector plugged in?
+   */
+  async isConnectorConnected() {
+    const connected = this.getCapabilityValue('onoff_connector') === true;
+    this.log(`[FLOW] Is connector connected condition checked: ${connected}`);
+    return connected;
   }
 
   /**
