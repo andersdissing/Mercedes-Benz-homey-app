@@ -1212,16 +1212,46 @@ class MercedesVehicleDevice extends Homey.Device {
   }
 
   /**
+   * Detect whether this vehicle uses ZEV preconditioning (EV/PHEV) or auxheat (ICE).
+   *
+   * Mercedes reports `precondactive` in vehicle data for ZEV-capable vehicles and
+   * `auxheatactive` for vehicles with a fossil-fuel auxiliary heater. These attributes
+   * are reflected in the onoff_precond and onoff_auxheat capabilities. If a capability
+   * has a non-null value the vehicle has reported that attribute at least once, meaning
+   * it supports that feature.
+   *
+   * Falls back to ZEV if neither has been reported yet (e.g. on first boot before any
+   * full vehicle update has arrived).
+   */
+  _supportsZevPrecond() {
+    const precond = this.getCapabilityValue('onoff_precond');
+    const auxheat = this.getCapabilityValue('onoff_auxheat');
+    if (precond !== null) {
+      this.log('[CLIMATE] Vehicle reports precondactive → using ZEV preconditioning');
+      return true;
+    }
+    if (auxheat !== null) {
+      this.log('[CLIMATE] Vehicle reports auxheatactive → using auxheat');
+      return false;
+    }
+    // No data yet — default to ZEV (covers most modern Mercedes)
+    this.log('[CLIMATE] No climate feature data yet, defaulting to ZEV preconditioning');
+    return true;
+  }
+
+  /**
    * Handle climate control capability changes
    */
   async onCapabilityClimate(value) {
     this.log('Climate capability changed to:', value);
 
     try {
-      if (value) {
-        await this.api.startClimate(this.vin);
+      if (this._supportsZevPrecond()) {
+        if (value) await this.api.startClimate(this.vin);
+        else await this.api.stopClimate(this.vin);
       } else {
-        await this.api.stopClimate(this.vin);
+        if (value) await this.api.startAuxheat(this.vin);
+        else await this.api.stopAuxheat(this.vin);
       }
 
       // Poll immediately to update state
@@ -1293,19 +1323,12 @@ class MercedesVehicleDevice extends Homey.Device {
    * Check if all windows are closed
    */
   async areWindowsClosed() {
-    try {
-      const vehicleData = await this.api.getVehicleData(this.vin);
-
-      return (
-        vehicleData.windowstatusfrontleft === 'CLOSED' &&
-        vehicleData.windowstatusfrontright === 'CLOSED' &&
-        vehicleData.windowstatusrearleft === 'CLOSED' &&
-        vehicleData.windowstatusrearright === 'CLOSED'
-      );
-    } catch (error) {
-      this.error('Failed to check window status:', error.message);
-      return false;
+    const caps = ['window_front_left', 'window_front_right', 'window_rear_left', 'window_rear_right'];
+    for (const cap of caps) {
+      if (!this.hasCapability(cap)) continue;
+      if (this.getCapabilityValue(cap) !== 'Closed') return false;
     }
+    return true;
   }
 
   // ==================== Flow Card Action Handlers ====================
@@ -1361,7 +1384,8 @@ class MercedesVehicleDevice extends Homey.Device {
   async startClimateAction() {
     this.log('[FLOW] Start climate action triggered');
     try {
-      await this.api.startClimate(this.vin);
+      if (this._supportsZevPrecond()) await this.api.startClimate(this.vin);
+      else await this.api.startAuxheat(this.vin);
       this.log('[FLOW] Climate control started successfully');
 
       // Update capability immediately
@@ -1380,7 +1404,8 @@ class MercedesVehicleDevice extends Homey.Device {
   async stopClimateAction() {
     this.log('[FLOW] Stop climate action triggered');
     try {
-      await this.api.stopClimate(this.vin);
+      if (this._supportsZevPrecond()) await this.api.stopClimate(this.vin);
+      else await this.api.stopAuxheat(this.vin);
       this.log('[FLOW] Climate control stopped successfully');
 
       // Update capability immediately

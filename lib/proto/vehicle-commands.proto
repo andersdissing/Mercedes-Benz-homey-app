@@ -62,16 +62,22 @@ message SunroofLift {
 }
 
 // ZEV (Zero Emission Vehicle) Preconditioning - Electric climate control
+// Type must be set — sending type=0 (UNKNOWN) causes RIS_INACTIVE_SERVICES
+enum ZEVPreconditioningType {
+  UNKNOWN_ZEV_PRECONDITIONING_COMMAND_TYPE = 0;
+  IMMEDIATE = 1;
+  DEPARTURE = 2;
+  NOW = 3;
+  DEPARTURE_WEEKLY = 4;
+}
+
 message ZevPrecondStart {
+  int32 departure_time = 1;  // Minutes from midnight (0 for immediate/now)
+  ZEVPreconditioningType type = 2;  // NOW=3 for immediate, DEPARTURE=2 for scheduled
 }
 
 message ZevPrecondStop {
-}
-
-// Configure preconditioning with departure time
-message ZevPrecondConfigure {
-  int32 departure_time = 1;  // Minutes from midnight
-  int32 departure_time_mode = 2;  // 0=disabled, 1=single, 2=weekly
+  ZEVPreconditioningType type = 1;  // NOW=3 for immediate stop
 }
 
 // Temperature zone configuration
@@ -141,16 +147,15 @@ message CommandRequest {
     AuxheatStop auxheat_stop = 3;
     WindowsOpen windows_open = 12;
     WindowsClose windows_close = 13;
-    SunroofOpen sunroof_open = 14;
-    SunroofClose sunroof_close = 15;
-    SunroofLift sunroof_lift = 16;
+    SunroofOpen sunroof_open = 9;
+    SunroofClose sunroof_close = 10;
+    SunroofLift sunroof_lift = 11;
     SigPosStart sigpos_start = 35;
-    ZevPrecondStart zev_precond_start = 17;
-    ZevPrecondStop zev_precond_stop = 18;
-    ZevPrecondConfigure zev_precond_configure = 21;
-    TemperatureConfigure temperature_configure = 22;
-    PrecondSeatConfigure precond_seat_configure = 23;
-    ChargeStart charge_start = 24;
-    ChargeStop charge_stop = 25;
+    ZevPrecondStart zev_precond_start = 21;
+    ZevPrecondStop zev_precond_stop = 22;
+    TemperatureConfigure temperature_configure = 32;
+    PrecondSeatConfigure precond_seat_configure = 26;
+    ChargeStart charge_start = 30;
+    ChargeStop charge_stop = 31;
   }
 }
