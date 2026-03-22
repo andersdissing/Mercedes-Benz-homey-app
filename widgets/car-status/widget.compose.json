@@ -5,10 +5,22 @@
     "de": "Fahrzeugstatus"
   },
   "height": 160,
+  "devices": {
+    "type": "app",
+    "singular": true
+  },
   "api": {
     "getStatus": {
       "method": "GET",
       "path": "/"
+    },
+    "getDeviceStatus": {
+      "method": "GET",
+      "path": "/status/:deviceId"
+    },
+    "getDevices": {
+      "method": "GET",
+      "path": "/devices"
     }
   }
 }

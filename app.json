@@ -28,10 +28,22 @@
         "de": "Fahrzeugstatus"
       },
       "height": 160,
+      "devices": {
+        "type": "app",
+        "singular": true
+      },
       "api": {
         "getStatus": {
           "method": "GET",
           "path": "/"
+        },
+        "getDeviceStatus": {
+          "method": "GET",
+          "path": "/status/:deviceId"
+        },
+        "getDevices": {
+          "method": "GET",
+          "path": "/devices"
         }
       },
       "id": "car-status",
@@ -68,7 +80,9 @@
       "ev"
     ]
   },
-  "permissions": [],
+  "permissions": [
+    "homey:manager:api"
+  ],
   "images": {
     "small": "/assets/images/small.png",
     "large": "/assets/images/large.png",

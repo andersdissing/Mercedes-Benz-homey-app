@@ -1,44 +1,59 @@
 'use strict';
 
 const Homey = require('homey');
+const axios = require('axios');
 
 class MercedesMeApp extends Homey.App {
-  /**
-   * onInit is called when the app is initialized.
-   */
+
   async onInit() {
     this.log('Mercedes-Benz app has been initialized');
-    // Flow cards are registered in driver.js (SDK3 best practice)
+    this._uuidToDataId = {};
+    await this._buildUuidMap();
   }
 
-  /**
-   * Get device status for widget API
-   * @param {string} deviceId - The device ID to get status for
-   * @returns {object} Device status object
-   */
+  async _buildUuidMap() {
+    try {
+      const token = await this.homey.api.getOwnerApiToken();
+      const baseUrl = await this.homey.api.getLocalUrl();
+      const response = await axios.get(`${baseUrl}/api/manager/devices/device/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const devices = response.data;
+      this._uuidToDataId = {};
+      for (const device of Object.values(devices)) {
+        if (device.driverId?.includes('com.mercedes.mbapi')) {
+          this._uuidToDataId[device.id] = device.data.id;
+          this.log(`[uuid-map] ${device.id} → ${device.data.id} (${device.name})`);
+        }
+      }
+    } catch (e) {
+      this.log(`[uuid-map] failed: ${e.message}`);
+    }
+  }
+
+  _getDevices() {
+    const devices = [];
+    for (const driverId of ['mercedes-vehicle']) {
+      try { devices.push(...this.homey.drivers.getDriver(driverId).getDevices()); } catch (e) {}
+    }
+    return devices;
+  }
+
+  async getDeviceList() {
+    return this._getDevices().map(d => ({ id: d.getData().id, name: d.getName() }));
+  }
+
   async getDeviceStatus(deviceId) {
-    const driver = this.homey.drivers.getDriver('mercedes-vehicle');
-    const devices = driver.getDevices();
+    if (!deviceId) return { error: 'not_configured' };
 
-    // Try matching by data.id, then fall back to first available device
-    let device;
-    if (deviceId) {
-      device = devices.find(d => d.getData().id === deviceId);
-    }
-    if (!device) {
-      device = devices[0];
-    }
+    // Resolve Homey UUID → pairing data ID (VIN / dummy ID)
+    const dataId = this._uuidToDataId[deviceId] || deviceId;
 
-    if (!device) {
-      throw new Error('Device not found');
-    }
+    const device = this._getDevices().find(d => d.getData().id === dataId);
+    if (!device) return { error: 'not_configured' };
 
     const getValue = (cap) => {
-      try {
-        return device.getCapabilityValue(cap);
-      } catch (e) {
-        return null;
-      }
+      try { return device.getCapabilityValue(cap); } catch (e) { return null; }
     };
 
     return {
