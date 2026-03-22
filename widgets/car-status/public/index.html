@@ -125,10 +125,40 @@
     color: var(--color-text-secondary);
     font-size: 13px;
   }
+
+  .not-configured {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    gap: 8px;
+    padding: 16px;
+    text-align: center;
+  }
+
+  .not-configured svg {
+    opacity: 0.5;
+  }
+
+  .not-configured p {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    line-height: 1.4;
+  }
+
 </style>
 </head>
 <body class="homey-widget">
   <div id="loading" class="loading">Loading...</div>
+  <div id="notConfigured" class="not-configured hidden">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/>
+      <line x1="12" y1="8" x2="12" y2="12"/>
+      <line x1="12" y1="16" x2="12.01" y2="16"/>
+    </svg>
+    <p>Edit the widget and select a car to display.</p>
+  </div>
   <div id="content" class="hidden">
     <div class="model-name" id="modelName"></div>
 
@@ -288,9 +318,19 @@
     }
   }
 
+  var selectedDeviceId = null;
+  var _homey = null;
+
   async function fetchData() {
     try {
-      var data = await Homey.api('GET', '/', {});
+      var path = selectedDeviceId ? '/status/' + encodeURIComponent(selectedDeviceId) : '/';
+      var data = await _homey.api('GET', path, {});
+      if (data && data.error === 'not_configured') {
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('content').classList.add('hidden');
+        document.getElementById('notConfigured').classList.remove('hidden');
+        return null;
+      }
       if (data) update(data);
       return data;
     } catch(error) {
@@ -300,11 +340,22 @@
     }
   }
 
-  async function onHomeyReady(Homey) {
-    await Homey.ready({ height: 160 });
+  async function startWidget() {
     var data = await fetchData();
     var interval = (data && data.pollingInterval) || 180000;
     setInterval(fetchData, interval);
+  }
+
+  async function onHomeyReady(Homey) {
+    _homey = Homey;
+    await Homey.ready({ height: 160 });
+
+    var deviceIds = Homey.getDeviceIds();
+    if (deviceIds && deviceIds.length > 0) {
+      selectedDeviceId = deviceIds[0];
+    }
+
+    startWidget();
   }
 </script>
 </body>

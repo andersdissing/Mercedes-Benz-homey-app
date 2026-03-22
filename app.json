@@ -1,7 +1,7 @@
 {
   "_comment": "This file is generated. Please edit .homeycompose/app.json instead.",
   "id": "com.mercedes.mbapi",
-  "version": "1.1.7",
+  "version": "1.1.9",
   "compatibility": ">=12.3.0",
   "sdk": 3,
   "platforms": [
@@ -28,10 +28,22 @@
         "de": "Fahrzeugstatus"
       },
       "height": 160,
+      "devices": {
+        "type": "app",
+        "singular": true
+      },
       "api": {
         "getStatus": {
           "method": "GET",
           "path": "/"
+        },
+        "getDeviceStatus": {
+          "method": "GET",
+          "path": "/status/:deviceId"
+        },
+        "getDevices": {
+          "method": "GET",
+          "path": "/devices"
         }
       },
       "id": "car-status",
@@ -68,7 +80,9 @@
       "ev"
     ]
   },
-  "permissions": [],
+  "permissions": [
+    "homey:manager:api"
+  ],
   "images": {
     "small": "/assets/images/small.png",
     "large": "/assets/images/large.png",
@@ -603,6 +617,30 @@
           }
         ],
         "id": "is_charging"
+      },
+      {
+        "icon": "/assets/icon.svg",
+        "title": {
+          "en": "Connector is !{{connected|not connected}}",
+          "nl": "Connector is !{{aangesloten|niet aangesloten}}",
+          "de": "Stecker ist !{{verbunden|nicht verbunden}}"
+        },
+        "titleFormatted": {
+          "en": "Connector is !{{connected|not connected}}",
+          "nl": "Connector is !{{aangesloten|niet aangesloten}}",
+          "de": "Stecker ist !{{verbunden|nicht verbunden}}"
+        },
+        "hint": {
+          "en": "Checks if the charge connector is currently plugged in."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle"
+          }
+        ],
+        "id": "is_connector_connected"
       },
       {
         "icon": "/assets/icon.svg",
@@ -1516,6 +1554,11 @@
           "nl": "Ontgrendel voertuig",
           "de": "Fahrzeug entriegeln"
         },
+        "hint": {
+          "en": "Requires PIN to be configured in device settings",
+          "nl": "Vereist dat PIN is geconfigureerd in apparaatinstellingen",
+          "de": "Erfordert PIN-Konfiguration in den Geräteeinstellungen"
+        },
         "args": [
           {
             "type": "device",
@@ -2197,6 +2240,18 @@
       "setable": true,
       "uiComponent": "toggle",
       "icon": "/assets/icons/charging_status.svg"
+    },
+    "onoff_connector": {
+      "type": "boolean",
+      "title": {
+        "en": "Connector Connected",
+        "nl": "Connector aangesloten",
+        "de": "Stecker verbunden"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/icons/charge_flap.svg"
     },
     "onoff_precond": {
       "type": "boolean",

@@ -1,0 +1,12 @@
+{
+  "type": "boolean",
+  "title": {
+    "en": "Connector Connected",
+    "nl": "Connector aangesloten",
+    "de": "Stecker verbunden"
+  },
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/icons/charge_flap.svg"
+}
