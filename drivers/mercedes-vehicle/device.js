@@ -493,9 +493,13 @@ class MercedesVehicleDevice extends Homey.Device {
       // Poll geofencing violations
       try {
         const geofenceEvents = await this.api.getGeofencingViolations(this.vin);
+        this.log(`[POLL] Geofence result: isArray=${Array.isArray(geofenceEvents)}, length=${geofenceEvents ? geofenceEvents.length : 'null'}`);
+        if (!geofenceEvents || geofenceEvents.length === 0) {
+          this.log('[POLL] Geofence: EMPTY — no violations returned (no geofences configured, or no boundary crossings, or API error swallowed)');
+        }
         if (geofenceEvents && geofenceEvents.length > 0) {
           const last = geofenceEvents[geofenceEvents.length - 1];
-          this.log('[POLL] Last geofence event:', last);
+          this.log(`[POLL] Geofence: ${geofenceEvents.length} event(s). Last event raw: ${JSON.stringify(last).substring(0, 800)}`);
 
           // Extract location from geofence event (this is where lat/long come from!)
           if (last.coordinate) {
@@ -527,9 +531,15 @@ class MercedesVehicleDevice extends Homey.Device {
             await this.setCapabilityValue('text_geofence_last_event', last.type);
           }
           if (last.snapshot && last.snapshot.name) {
+            this.log(`[POLL] Geofence zone found via snapshot.name: "${last.snapshot.name}"`);
             await this.setCapabilityValue('text_geofence_last_zone', last.snapshot.name);
           } else if (last.fence && last.fence.name) {
+            this.log(`[POLL] Geofence zone found via fence.name: "${last.fence.name}"`);
             await this.setCapabilityValue('text_geofence_last_zone', last.fence.name);
+          } else {
+            this.log(`[POLL] Geofence zone: NEITHER snapshot.name nor fence.name found. Has snapshot: ${!!last.snapshot}, has fence: ${!!last.fence}`);
+            if (last.snapshot) this.log(`[POLL] snapshot keys: ${Object.keys(last.snapshot).join(', ')}`);
+            if (last.fence) this.log(`[POLL] fence keys: ${Object.keys(last.fence).join(', ')}`);
           }
           if (newEventTime) {
             await this.setCapabilityValue('time_geofence_last_event', newEventTime);
@@ -574,6 +584,15 @@ class MercedesVehicleDevice extends Homey.Device {
 
       this.log(`[WEBSOCKET] Received ${isFullUpdate ? 'FULL' : 'PARTIAL'} update for vehicle`);
       this.log(`[WEBSOCKET] Data keys: ${Object.keys(vehicleData).slice(0, 20).join(', ')}`);
+
+      // One-time verbose log: dump ALL data keys to identify geofence-related fields
+      if (!this._wsKeysLogged) {
+        this._wsKeysLogged = true;
+        const allKeys = Object.keys(vehicleData);
+        this.log(`[WEBSOCKET] FULL data keys (one-time, ${allKeys.length} total): ${allKeys.join(', ')}`);
+        const geoKeys = allKeys.filter(k => /geo|fence|zone|location|position/i.test(k));
+        this.log(`[WEBSOCKET] Geofence-related keys: ${geoKeys.length > 0 ? geoKeys.join(', ') : 'NONE FOUND'}`);
+      }
 
       // Update capabilities with the new data
       await this.updateCapabilities(vehicleData);
