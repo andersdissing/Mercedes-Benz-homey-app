@@ -138,9 +138,4 @@
       "template": "add_devices"
     }
   ],
-  "energy": {
-    "batteries": [
-      "OTHER"
-    ]
-  }
 }

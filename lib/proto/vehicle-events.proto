@@ -164,13 +164,18 @@ message AppTwinCommandStatus {
   int64 process_id = 1;
   string request_id = 2;
   int64 timestamp_in_ms = 3;
-  VehicleAPIError errors = 4;
+  repeated VehicleAPIError errors = 4;
+  int64 blocking_time_seconds = 5;
+  int32 pin_attempts = 6;
+  int32 type = 7;
   int32 state = 8;
 }
 
 message VehicleAPIError {
   string code = 1;
   string message = 2;
+  map<string, string> attributes = 3;
+  repeated VehicleAPIError sub_errors = 4;
 }
 
 // ServiceStatusUpdate - service status updates
@@ -192,16 +197,7 @@ message PushMessage {
     VEPUpdate vepUpdate = 1;
     VEPUpdatesByVIN vepUpdates = 2;
     DebugMessage debugMessage = 3;
-    ServiceStatusUpdate service_status_updates = 6; // HA has 9 for ServiceStatusUpdatesByVIN? Keeping 6 if HA code I saw was old or I misread.
-    // Actually, let's use the ones I saw in the file: 
-    // vepUpdate=1, vepUpdates=2, debugMessage=3
-    // service_status_updates=9 (ServiceStatusUpdatesByVIN), service_status_update=13 (ServiceStatusUpdate)
-    // user_data_update=10
-    // apptwin_command_status_updates_by_vin=17
-    // apptwin_pending_command_request=18
-    // assigned_vehicles=19
-    
-    // Updating to match HA exactly:
+    ServiceStatusUpdate service_status_updates = 9;
     UserDataUpdate user_data_update = 10;
     AppTwinCommandStatusUpdatesByVIN apptwin_command_status_updates_by_vin = 17;
     bytes apptwin_pending_command_request = 18;
@@ -232,11 +228,12 @@ message AcknowledgeUserDataUpdate {
 }
 
 // ClientMessage - outgoing messages from client
+// Field numbers MUST match the real Mercedes ClientMessage (from mbapi2020 client_pb2.py)
 message ClientMessage {
   oneof msg {
-    AcknowledgeVEPUpdatesByVIN acknowledge_vep_updates_by_vin = 1;
-    AcknowledgeAppTwinCommandStatusUpdateByVIN acknowledge_apptwin_command_status_update_by_vin = 2;
-    AcknowledgeServiceStatusUpdate acknowledge_service_status_update = 3;
-    AcknowledgeUserDataUpdate acknowledge_user_data_update = 4;
+    AcknowledgeServiceStatusUpdate acknowledge_service_status_update = 13;
+    AcknowledgeUserDataUpdate acknowledge_user_data_update = 10;
+    AcknowledgeAppTwinCommandStatusUpdateByVIN acknowledge_apptwin_command_status_update_by_vin = 19;
+    AcknowledgeVEPUpdatesByVIN acknowledge_vep_updates_by_vin = 22;
   }
 }
