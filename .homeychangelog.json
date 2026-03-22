@@ -50,5 +50,8 @@
   },
   "1.1.9": {
     "en": "Bug fix: Open/close window and underlying websocket bug"
+  },
+  "1.1.10": {
+    "en": "Charging pause/resume, multi-car widget, geofencing, connector status, vehicle command and capability fixes"
   }
 }
