@@ -16,7 +16,7 @@
   "capabilities": [
     "locked",
     "measure_battery",
-    "meter_power",
+    "measure_charge_power",
     "odometer",
     "distance_start",
     "distance_electrical",
@@ -98,6 +98,27 @@
         "nl": "Bandenspanning, Rechts Achter",
         "de": "Reifendruck, Hinten Rechts"
       }
+    },
+    "onoff.ignition": {
+      "title": {
+        "en": "Ignition On",
+        "nl": "Ontsteking aan",
+        "de": "Zündung an"
+      }
+    },
+    "onoff.engine": {
+      "title": {
+        "en": "Engine Running",
+        "nl": "Motor draait",
+        "de": "Motor läuft"
+      }
+    },
+    "onoff.climate": {
+      "title": {
+        "en": "Climate Active",
+        "nl": "Klimaat actief",
+        "de": "Klimaanlage aktiv"
+      }
     }
   },
   "pair": [
@@ -117,9 +138,4 @@
       "template": "add_devices"
     }
   ],
-  "energy": {
-    "batteries": [
-      "OTHER"
-    ]
-  }
 }

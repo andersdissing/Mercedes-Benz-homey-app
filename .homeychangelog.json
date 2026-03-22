@@ -46,6 +46,9 @@
     "en": "Add charging control action and update icon on actions"
   },
   "1.1.8": {
-    "en": "Bug fix geofencing"
+    "en": "Bug fix: Open/close window bug"
+  },
+  "1.1.9": {
+    "en": "Bug fix: Open/close window and underlying websocket bug"
   }
 }

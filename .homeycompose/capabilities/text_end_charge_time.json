@@ -5,6 +5,7 @@
     "nl": "Eindtijd Laden",
     "de": "Ladeende Zeit"
   },
+  "label": { "en": "End of Charge", "nl": "Eindtijd Laden", "de": "Ladeende" },
   "getable": true,
   "setable": false,
   "uiComponent": "sensor",

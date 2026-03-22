@@ -129,7 +129,7 @@ class MercedesVehicleDevice extends Homey.Device {
         'measure_max_soc', 'measure_oil_level',
         'ecoscore_accel', 'ecoscore_const', 'ecoscore_freewhl',
         'distance_start', 'distance_electrical', 'driven_time_start',
-        'odometer', 'meter_power', 'alarm_generic',
+        'odometer', 'measure_charge_power', 'alarm_generic',
         'text_connector_status'
       ];
       for (const cap of textCaps) {
@@ -137,6 +137,11 @@ class MercedesVehicleDevice extends Homey.Device {
           this.log(`[INIT] Adding missing ${cap} capability`);
           await this.addCapability(cap);
         }
+      }
+
+      // Force-update measure_charge_power capability options in case Homey cached a stale definition
+      if (this.hasCapability('measure_charge_power')) {
+        await this.setCapabilityOptions('measure_charge_power', { units: 'kW' });
       }
 
       // Add tire pressure capabilities
@@ -321,6 +326,12 @@ class MercedesVehicleDevice extends Homey.Device {
         await this.addCapability('onoff_charging');
       }
 
+      // Add connector connected boolean capability
+      if (!this.hasCapability('onoff_connector')) {
+        this.log('[INIT] Adding missing onoff_connector capability');
+        await this.addCapability('onoff_connector');
+      }
+
       // Add departure time capability
       if (!this.hasCapability('text_departure_time')) {
         await this.addCapability('text_departure_time');
@@ -343,6 +354,23 @@ class MercedesVehicleDevice extends Homey.Device {
       for (const cap of textCapabilities) {
         if (this.hasCapability(cap) && this.getCapabilityValue(cap) === null) {
           await this.setCapabilityValue(cap, '-');
+        }
+      }
+
+      // Initialize numeric capabilities with 0 if not set (prevents UI crashes on null)
+      const numericCapabilities = [
+        'measure_battery',
+        'meter_power',
+        'measure_range_electric',
+        'measure_range_liquid',
+        'measure_fuel',
+        'measure_battery_temperature',
+        'measure_service_days'
+      ];
+
+      for (const cap of numericCapabilities) {
+        if (this.hasCapability(cap) && this.getCapabilityValue(cap) === null) {
+          await this.setCapabilityValue(cap, 0);
         }
       }
 
@@ -618,10 +646,10 @@ class MercedesVehicleDevice extends Homey.Device {
       const chargingPowerValue = data.chargingpower ?? data.chargingPower;
       if (chargingPowerValue !== undefined) {
         const chargingPower = parseFloat(chargingPowerValue);
-        const wasCharging = this.getCapabilityValue('meter_power') > 0;
+        const wasCharging = this.getCapabilityValue('measure_charge_power') > 0;
         const isCharging = chargingPower > 0;
 
-        await this.setCapabilityValue('meter_power', chargingPower);
+        await this.setCapabilityValue('measure_charge_power', chargingPower);
 
         // Update charging on/off capability
         if (this.hasCapability('onoff_charging')) {
@@ -796,20 +824,32 @@ class MercedesVehicleDevice extends Homey.Device {
         // Translate Mercedes charging status codes to readable text
         const statusMap = {
           '0': 'Charging',
-          '1': 'Charging error',
-          '2': 'Not available',
-          '3': 'Not charging',
-          '4': 'Completed',
+          '1': 'Charging ends',
+          '2': 'Charge break',
+          '3': 'Unplugged',
+          '4': 'Failure',
+          '5': 'Slow charging',
+          '6': 'Fast charging',
+          '7': 'Discharging',
+          '8': 'Not charging',
+          '9': 'Slow charging (after trip target)',
+          '10': 'Charging (after trip target)',
+          '11': 'Fast charging (after trip target)',
+          '12': 'Connected',
+          '13': 'AC charging',
+          '14': 'DC charging',
+          '15': 'Battery calibration active',
+          '16': 'Unknown',
         };
         const rawStatus = String(data.chargingstatus);
         const readableStatus = statusMap[rawStatus] || rawStatus;
         this.log(`[UPDATE] Setting charging status to: ${rawStatus} (${readableStatus})`);
         await this.setCapabilityValue('text_charging_status', readableStatus);
 
-        // Trigger charging completed when status changes to completed/finished
-        const completedStatuses = ['FINISHED', 'COMPLETED', 'END', '4'];
-        const wasCharging = oldStatus && oldStatus !== 'Completed' && !completedStatuses.includes(String(oldStatus).toUpperCase());
-        const isCompleted = rawStatus === '4' || completedStatuses.includes(readableStatus.toUpperCase());
+        // Trigger charging completed when status changes to "charging ends" (1)
+        const completedStatuses = ['CHARGING ENDS', 'FINISHED', 'COMPLETED', 'END'];
+        const wasCharging = oldStatus && !completedStatuses.includes(String(oldStatus).toUpperCase());
+        const isCompleted = rawStatus === '1' || completedStatuses.includes(readableStatus.toUpperCase());
 
         if (wasCharging && isCompleted) {
           const batteryLevel = this.getCapabilityValue('measure_battery') || 0;
@@ -821,7 +861,9 @@ class MercedesVehicleDevice extends Homey.Device {
       // Charge coupler / connector status with plugged in/unplugged triggers
       const couplerValue = data.chargeCouplerACStatus ?? data.chargecoupleracstatus
         ?? data.chargeCouplerDCStatus ?? data.chargecoupledcstatus;
-      if (couplerValue !== undefined) {
+      if (couplerValue === null) {
+        await this.setCapabilityValue('text_connector_status', 'Unknown');
+      } else if (couplerValue !== undefined) {
         const statusMap = {
           '0': 'Connected (locked)',
           '1': 'Connected (unlocked)',
@@ -834,6 +876,7 @@ class MercedesVehicleDevice extends Homey.Device {
         const oldStatus = this.getCapabilityValue('text_connector_status');
         this.log(`[UPDATE] Setting connector status to: ${rawStatus} (${readableStatus})`);
         await this.setCapabilityValue('text_connector_status', readableStatus);
+        await this.setCapabilityValue('onoff_connector', readableStatus !== 'Disconnected');
 
         // Determine connected state (anything that is not 'Disconnected')
         const isConnected = readableStatus !== 'Disconnected';
@@ -868,14 +911,14 @@ class MercedesVehicleDevice extends Homey.Device {
         await this.setCapabilityValue('measure_max_soc', parseInt(maxSocValue));
       }
 
-      // End of charge time (timestamp)
+      // End of charge time — API sends minutes since midnight (e.g. 825 = 13:45)
       if (data.endofchargetime !== undefined) {
-        this.log(`[UPDATE] Setting end of charge time to: ${data.endofchargetime}`);
-        // Format: "13:45" or timestamp? Parser says 'display_value' usually
-        // If it's a time string, we might need to combine with today's date
-        // For now, just store as string if we make a text capability, but date capability needs Date object
-        // Let's assume it's a string for now and we'll use a text capability 'text_end_charge_time'
-        await this.setCapabilityValue('text_end_charge_time', String(data.endofchargetime));
+        const totalMinutes = parseInt(data.endofchargetime);
+        const hh = String(Math.floor(totalMinutes / 60)).padStart(2, '0');
+        const mm = String(totalMinutes % 60).padStart(2, '0');
+        const timeStr = `${hh}:${mm}`;
+        this.log(`[UPDATE] Setting end of charge time to: ${timeStr} (raw: ${data.endofchargetime})`);
+        await this.setCapabilityValue('text_end_charge_time', timeStr);
       }
 
       // Sunroof status (text)
@@ -956,7 +999,7 @@ class MercedesVehicleDevice extends Homey.Device {
               continue;
             }
             const windowStatusMap = {
-              0: 'Intermediate',
+              0: 'Unknown',
               1: 'Open',
               2: 'Closed',
               3: 'Airing',
@@ -970,10 +1013,10 @@ class MercedesVehicleDevice extends Homey.Device {
 
             // Trigger flow cards on status change
             if (oldStatus !== newStatus) {
-              if (newStatus === 'Closed' || newStatus === 'CLOSED' || newStatus === '2') {
+              if (newStatus === 'Closed') {
                 await this.homey.flow.getDeviceTriggerCard('window_closed')
                   .trigger(this, { window: win.name });
-              } else if (newStatus === 'Open' || newStatus === 'OPEN' || newStatus === '1' || newStatus === 'Intermediate' || newStatus === 'Airing') {
+              } else if (newStatus === 'Open' || newStatus === 'Airing') {
                 await this.homey.flow.getDeviceTriggerCard('window_opened')
                   .trigger(this, { window: win.name });
               }
@@ -1010,10 +1053,10 @@ class MercedesVehicleDevice extends Homey.Device {
 
             // Trigger flow cards on status change
             if (oldStatus !== newStatus) {
-              if (newStatus === 'Closed' || newStatus === 'CLOSED' || newStatus === 'false' || newStatus === '0') {
+              if (newStatus === 'Closed') {
                 await this.homey.flow.getDeviceTriggerCard('door_closed')
                   .trigger(this, { door: door.name });
-              } else if (newStatus === 'Open' || newStatus === 'OPEN' || newStatus === 'true' || newStatus === '1') {
+              } else if (newStatus === 'Open') {
                 await this.homey.flow.getDeviceTriggerCard('door_opened')
                   .trigger(this, { door: door.name });
               }
@@ -1205,16 +1248,46 @@ class MercedesVehicleDevice extends Homey.Device {
   }
 
   /**
+   * Detect whether this vehicle uses ZEV preconditioning (EV/PHEV) or auxheat (ICE).
+   *
+   * Mercedes reports `precondactive` in vehicle data for ZEV-capable vehicles and
+   * `auxheatactive` for vehicles with a fossil-fuel auxiliary heater. These attributes
+   * are reflected in the onoff_precond and onoff_auxheat capabilities. If a capability
+   * has a non-null value the vehicle has reported that attribute at least once, meaning
+   * it supports that feature.
+   *
+   * Falls back to ZEV if neither has been reported yet (e.g. on first boot before any
+   * full vehicle update has arrived).
+   */
+  _supportsZevPrecond() {
+    const precond = this.getCapabilityValue('onoff_precond');
+    const auxheat = this.getCapabilityValue('onoff_auxheat');
+    if (precond !== null) {
+      this.log('[CLIMATE] Vehicle reports precondactive → using ZEV preconditioning');
+      return true;
+    }
+    if (auxheat !== null) {
+      this.log('[CLIMATE] Vehicle reports auxheatactive → using auxheat');
+      return false;
+    }
+    // No data yet — default to ZEV (covers most modern Mercedes)
+    this.log('[CLIMATE] No climate feature data yet, defaulting to ZEV preconditioning');
+    return true;
+  }
+
+  /**
    * Handle climate control capability changes
    */
   async onCapabilityClimate(value) {
     this.log('Climate capability changed to:', value);
 
     try {
-      if (value) {
-        await this.api.startClimate(this.vin);
+      if (this._supportsZevPrecond()) {
+        if (value) await this.api.startClimate(this.vin);
+        else await this.api.stopClimate(this.vin);
       } else {
-        await this.api.stopClimate(this.vin);
+        if (value) await this.api.startAuxheat(this.vin);
+        else await this.api.stopAuxheat(this.vin);
       }
 
       // Poll immediately to update state
@@ -1287,18 +1360,25 @@ class MercedesVehicleDevice extends Homey.Device {
    */
   async areWindowsClosed() {
     try {
-      const vehicleData = await this.api.getVehicleData(this.vin);
+      const caps = [
+        'window_front_left',
+        'window_front_right',
+        'window_rear_left',
+        'window_rear_right'
+      ];
 
-      return (
-        vehicleData.windowstatusfrontleft === 'CLOSED' &&
-        vehicleData.windowstatusfrontright === 'CLOSED' &&
-        vehicleData.windowstatusrearleft === 'CLOSED' &&
-        vehicleData.windowstatusrearright === 'CLOSED'
-      );
+      for (const cap of caps) {
+        if (!this.hasCapability(cap)) continue;
+        const status = this.getCapabilityValue(cap);
+        if (status !== 'Closed') return false;
+      }
+
+      return true;
     } catch (error) {
       this.error('Failed to check window status:', error.message);
       return false;
     }
+    return true;
   }
 
   // ==================== Flow Card Action Handlers ====================
@@ -1354,7 +1434,8 @@ class MercedesVehicleDevice extends Homey.Device {
   async startClimateAction() {
     this.log('[FLOW] Start climate action triggered');
     try {
-      await this.api.startClimate(this.vin);
+      if (this._supportsZevPrecond()) await this.api.startClimate(this.vin);
+      else await this.api.startAuxheat(this.vin);
       this.log('[FLOW] Climate control started successfully');
 
       // Update capability immediately
@@ -1373,7 +1454,8 @@ class MercedesVehicleDevice extends Homey.Device {
   async stopClimateAction() {
     this.log('[FLOW] Stop climate action triggered');
     try {
-      await this.api.stopClimate(this.vin);
+      if (this._supportsZevPrecond()) await this.api.stopClimate(this.vin);
+      else await this.api.stopAuxheat(this.vin);
       this.log('[FLOW] Climate control stopped successfully');
 
       // Update capability immediately
@@ -1574,10 +1656,19 @@ class MercedesVehicleDevice extends Homey.Device {
    * Flow condition: Is vehicle charging?
    */
   async isCharging() {
-    const chargingPower = this.getCapabilityValue('meter_power');
+    const chargingPower = this.getCapabilityValue('measure_charge_power');
     const isCharging = chargingPower > 0;
     this.log(`[FLOW] Is charging condition checked: ${isCharging} (power: ${chargingPower} kW)`);
     return isCharging;
+  }
+
+  /**
+   * Flow condition: Is charge connector plugged in?
+   */
+  async isConnectorConnected() {
+    const connected = this.getCapabilityValue('onoff_connector') === true;
+    this.log(`[FLOW] Is connector connected condition checked: ${connected}`);
+    return connected;
   }
 
   /**
@@ -1652,9 +1743,7 @@ class MercedesVehicleDevice extends Homey.Device {
       this.getCapabilityValue('door_hood')
     ];
 
-    const anyOpen = doors.some(status =>
-      status === 'OPEN' || status === 'true' || status === '1'
-    );
+    const anyOpen = doors.some(status => status === 'Open');
 
     this.log(`[FLOW] Any door open condition checked: ${anyOpen}`);
     return anyOpen;

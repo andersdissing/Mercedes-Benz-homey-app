@@ -1,0 +1,21 @@
+{
+  "type": "number",
+  "title": {
+    "en": "Charge Power",
+    "nl": "Laadvermogen",
+    "de": "Ladeleistung"
+  },
+  "label": {
+    "en": "Charge Power",
+    "nl": "Laadvermogen",
+    "de": "Ladeleistung"
+  },
+  "units": {
+    "en": "kW"
+  },
+  "decimals": 1,
+  "chartType": "stepLine",
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor"
+}
