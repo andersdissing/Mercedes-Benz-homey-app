@@ -227,6 +227,12 @@ class MercedesVehicleDriver extends Homey.Driver {
           return await args.device.isCharging();
         });
 
+      // Is connector connected?
+      this.homey.flow.getConditionCard('is_connector_connected')
+        .registerRunListener(async (args) => {
+          return await args.device.isConnectorConnected();
+        });
+
       // Tire pressure OK?
       this.homey.flow.getConditionCard('tire_pressure_ok')
         .registerRunListener(async (args) => {
@@ -396,7 +402,7 @@ class MercedesVehicleDriver extends Homey.Driver {
           capabilities: [
             'locked',
             'measure_battery',
-            'meter_power',
+            'measure_charge_power',
             'odometer',
             'distance_start',
             'distance_electrical',
