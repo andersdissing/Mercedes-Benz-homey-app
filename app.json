@@ -2007,7 +2007,8 @@
       "chartType": "stepLine",
       "getable": true,
       "setable": false,
-      "uiComponent": "sensor"
+      "uiComponent": "sensor",
+      "icon": "/assets/energy.svg"
     },
     "measure_fuel": {
       "type": "number",
