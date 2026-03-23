@@ -803,11 +803,7 @@ class MercedesVehicleDevice extends Homey.Device {
 
       // Ignition state (onoff.ignition)
       if (data.ignitionstate !== undefined) {
-        const ignitionOn = data.ignitionstate === '0' || data.ignitionstate === '1' || data.ignitionstate === '2' || data.ignitionstate === '4'; // 0: lock, 1: radio, 2: ignition, 4: start
-        // HA logic: 0=lock, 1=off, 2=accessory, 4=on, 5=start?
-        // Let's check car.py logic if possible, but for now assume any active state is 'on'
-        // Actually, let's just store the raw value if we can, but onoff needs boolean.
-        // Better logic: if it's not 0 (lock), it's "on" (some activity)
+        const ignitionOn = data.ignitionstate === '1' || data.ignitionstate === '2' || data.ignitionstate === '4'; // 0: lock/off, 1: radio, 2: ignition, 4: start
         this.log(`[UPDATE] Setting ignition state to: ${ignitionOn} (raw: ${data.ignitionstate})`);
         await this.setCapabilityValue('onoff.ignition', ignitionOn);
       }
