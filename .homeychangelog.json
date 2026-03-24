@@ -53,5 +53,8 @@
   },
   "1.1.10": {
     "en": "Charging pause/resume, multi-car widget, geofencing, connector status, vehicle command and capability fixes"
+  },
+  "1.1.11": {
+    "en": "Fix widget"
   }
 }
