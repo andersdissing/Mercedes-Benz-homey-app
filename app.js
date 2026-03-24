@@ -33,7 +33,7 @@ class MercedesMeApp extends Homey.App {
 
   _getDevices() {
     const devices = [];
-    for (const driverId of ['mercedes-vehicle']) {
+    for (const driverId of ['mercedes-vehicle', 'mercedes-demo']) {
       try { devices.push(...this.homey.drivers.getDriver(driverId).getDevices()); } catch (e) {}
     }
     return devices;
@@ -47,9 +47,16 @@ class MercedesMeApp extends Homey.App {
     if (!deviceId) return { error: 'not_configured' };
 
     // Resolve Homey UUID → pairing data ID (VIN / dummy ID)
-    const dataId = this._uuidToDataId[deviceId] || deviceId;
+    let dataId = this._uuidToDataId[deviceId] || deviceId;
+    let device = this._getDevices().find(d => d.getData().id === dataId);
 
-    const device = this._getDevices().find(d => d.getData().id === dataId);
+    // If not found, the map may be stale (device added after app init) — rebuild and retry
+    if (!device) {
+      await this._buildUuidMap();
+      dataId = this._uuidToDataId[deviceId] || deviceId;
+      device = this._getDevices().find(d => d.getData().id === dataId);
+    }
+
     if (!device) return { error: 'not_configured' };
 
     const getValue = (cap) => {

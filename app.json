@@ -1572,6 +1572,125 @@
   "drivers": [
     {
       "name": {
+        "en": "Mercedes-Benz Demo Vehicle"
+      },
+      "class": "other",
+      "connectivity": [
+        "cloud"
+      ],
+      "images": {
+        "small": "/drivers/mercedes-demo/assets/images/small.png",
+        "large": "/drivers/mercedes-demo/assets/images/large.png",
+        "xlarge": "/drivers/mercedes-demo/assets/images/xlarge.png"
+      },
+      "platforms": [
+        "local"
+      ],
+      "capabilities": [
+        "locked",
+        "measure_battery",
+        "measure_charge_power",
+        "odometer",
+        "distance_start",
+        "distance_electrical",
+        "driven_time_start",
+        "average_speed",
+        "ecoscore_accel",
+        "ecoscore_const",
+        "ecoscore_freewhl",
+        "alarm_generic",
+        "measure_range_electric",
+        "measure_range_liquid",
+        "measure_fuel",
+        "measure_adblue_level",
+        "onoff.ignition",
+        "measure_oil_level",
+        "text_charging_status",
+        "text_charge_program",
+        "measure_max_soc",
+        "text_end_charge_time",
+        "window_sunroof",
+        "text_departure_time",
+        "text_departure_time_mode",
+        "measure_latitude",
+        "measure_longitude",
+        "measure_heading",
+        "text_geofence_last_event",
+        "text_geofence_last_zone",
+        "time_geofence_last_event",
+        "tire_pressure_bar.tire_fl",
+        "tire_pressure_bar.tire_fr",
+        "tire_pressure_bar.tire_rl",
+        "tire_pressure_bar.tire_rr",
+        "window_front_left",
+        "window_front_right",
+        "window_rear_left",
+        "window_rear_right",
+        "door_front_left",
+        "door_front_right",
+        "door_rear_left",
+        "door_rear_right",
+        "door_trunk",
+        "door_hood",
+        "parking_brake_engaged",
+        "alarm_theft",
+        "measure_service_days",
+        "measure_battery_temperature",
+        "onoff_precond",
+        "onoff_auxheat",
+        "onoff_remote_start",
+        "theft_system_armed",
+        "onoff.engine",
+        "onoff.climate"
+      ],
+      "pair": [
+        {
+          "id": "list_devices",
+          "template": "list_devices",
+          "navigation": {
+            "next": "add_devices"
+          }
+        },
+        {
+          "id": "add_devices",
+          "template": "add_devices"
+        }
+      ],
+      "energy": {
+        "batteries": [
+          "OTHER"
+        ]
+      },
+      "settings": [
+        {
+          "type": "group",
+          "label": {
+            "en": "Demo Settings"
+          },
+          "children": [
+            {
+              "id": "polling_interval",
+              "type": "number",
+              "label": {
+                "en": "Refresh interval (seconds)"
+              },
+              "hint": {
+                "en": "How often the demo device randomizes values. Set to 0 to disable."
+              },
+              "value": 0,
+              "min": 0,
+              "max": 7200,
+              "units": {
+                "en": "seconds"
+              }
+            }
+          ]
+        }
+      ],
+      "id": "mercedes-demo"
+    },
+    {
+      "name": {
         "en": "Mercedes-Benz Vehicle",
         "nl": "Mercedes-Benz Voertuig",
         "de": "Mercedes-Benz Fahrzeug"
