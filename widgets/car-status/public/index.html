@@ -28,17 +28,16 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    background: linear-gradient(to bottom, #1D1D1F, #383C4A);
+    background: #1D1D1F;
   }
 
-  .model-name {
-    font-size: 22px;
-    font-weight: 700;
+ .model-name {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     letter-spacing: -0.3px;
     margin-bottom: 8px;
+}
   }
 
   .energy-section {
@@ -160,8 +159,7 @@
     <p>Edit the widget and select a car to display.</p>
   </div>
   <div id="content" class="hidden">
-    <div class="model-name" id="modelName"></div>
-
+    <div class="model-name homey-text-bold homey-font-size-default" id="modelName"></div>
     <div class="energy-section" id="energySection">
       <div class="energy-row" id="batteryRow">
         <span class="energy-label">EV</span>
