@@ -2566,7 +2566,7 @@
       "units": {
         "en": "bar"
       },
-      "decimals": 2,
+      "decimals": 1,
       "min": 0,
       "max": 5,
       "getable": true,
