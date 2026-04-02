@@ -148,6 +148,25 @@ npx homey app run           # Run on Homey (live logs)
 npx homey app install       # Install to Homey
 ```
 
+## Mercedes-Benz Data Explorer
+
+A companion browser-based tool that lets you log in with your Mercedes Me credentials and inspect the raw vehicle data returned by the Mercedes-Benz backend API. Useful for debugging, verifying capability mappings, and understanding what data your vehicle exposes.
+
+**Live version:** https://stmercedesexplore01.z6.web.core.windows.net/
+
+**Source code:** https://github.com/andersdissing/mercedes-explore
+
+### What it does
+
+- Log in with your Mercedes Me credentials (OAuth2 PKCE, same as the Homey app)
+- Select your vehicle and fetch data (protobuf) from the Mercedes-Benz API
+- View data in two tables:
+  - **Capabilities** — vehicle data points mapped to Homey capabilities, showing the processed value and the raw API key/value
+  - **Logic Flows** — Homey flow cards (actions, conditions, triggers) available for your vehicle
+- Copy the capabilities table or raw key/value data to clipboard
+- Refresh data without re-logging in
+- Progress log showing each step of the login and data fetch process
+
 ## Credits
 
 - Based on the [mbapi2020](https://github.com/ReneNulschDE/mbapi2020) Home Assistant integration by ReneNulschDE
