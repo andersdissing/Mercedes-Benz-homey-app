@@ -407,6 +407,7 @@
         ]
       },
       {
+        "deprecated": true,
         "id": "vehicle_locked",
         "title": {
           "en": "Vehicle was locked",
@@ -422,6 +423,7 @@
         ]
       },
       {
+        "deprecated": true,
         "id": "vehicle_unlocked",
         "title": {
           "en": "Vehicle was unlocked",

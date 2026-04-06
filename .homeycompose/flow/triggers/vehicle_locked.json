@@ -1,4 +1,5 @@
 {
+  "deprecated": true,
   "id": "vehicle_locked",
   "title": {
     "en": "Vehicle was locked",
