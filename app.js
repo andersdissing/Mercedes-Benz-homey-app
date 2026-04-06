@@ -33,7 +33,7 @@ class MercedesMeApp extends Homey.App {
 
   _getDevices() {
     const devices = [];
-    for (const driverId of ['mercedes-vehicle', 'mercedes-demo']) {
+    for (const driverId of ['mercedes-vehicle']) {
       try { devices.push(...this.homey.drivers.getDriver(driverId).getDevices()); } catch (e) {}
     }
     return devices;
