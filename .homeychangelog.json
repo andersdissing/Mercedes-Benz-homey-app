@@ -59,5 +59,8 @@
   },
   "1.1.12": {
     "en": "Fix widget and tier values"
+  },
+  "1.1.13": {
+    "en": " Fix widget, tier values and deprecated custom trigger for vehicle_locked/vehicle_unlocked"
   }
 }
