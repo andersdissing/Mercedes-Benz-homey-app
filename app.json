@@ -80,9 +80,6 @@
       "ev"
     ]
   },
-  "permissions": [
-    "homey:manager:api"
-  ],
   "images": {
     "small": "/assets/images/small.png",
     "large": "/assets/images/large.png",
