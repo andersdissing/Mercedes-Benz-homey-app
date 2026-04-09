@@ -62,5 +62,8 @@
   },
   "1.1.13": {
     "en": " Fix widget, tier values and deprecated custom trigger for vehicle_locked/vehicle_unlocked"
+  },
+  "1.1.14": {
+    "en": "Remove the need for the homey:manager:api permission, previous used in the widget"
   }
 }
