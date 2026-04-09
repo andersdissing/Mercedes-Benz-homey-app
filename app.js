@@ -24,7 +24,7 @@ class MercedesMeApp extends Homey.App {
     if (!deviceId) return { error: 'not_configured' };
 
     // Match by Homey UUID (widget device picker) or VIN/data.id (backward compat)
-    let device = this._getDevices().find(d => d.id === deviceId || d.getData().id === deviceId);
+    let device = this._getDevices().find(d => d.__id === deviceId || d.getData().id === deviceId);
 
     if (!device) return { error: 'not_configured' };
 
