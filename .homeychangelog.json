@@ -65,5 +65,8 @@
   },
   "1.1.14": {
     "en": "Remove the need for the homey:manager:api permission, previous used in the widget"
+  },
+  "1.1.16": {
+    "en": "Fix auth issue due to outdated ris-sdk-version header"
   }
 }
