@@ -1,0 +1,23 @@
+{
+  "type": "boolean",
+  "title": {
+    "en": "Climate active",
+    "nl": "Klimaat actief",
+    "de": "Klimaanlage aktiv"
+  },
+  "getable": true,
+  "setable": true,
+  "uiComponent": "toggle",
+  "icon": "/assets/icons/precond.svg",
+  "insights": true,
+  "insightsTitleTrue": {
+    "en": "Climate turned on",
+    "nl": "Klimaat aan",
+    "de": "Klimaanlage an"
+  },
+  "insightsTitleFalse": {
+    "en": "Climate turned off",
+    "nl": "Klimaat uit",
+    "de": "Klimaanlage aus"
+  }
+}

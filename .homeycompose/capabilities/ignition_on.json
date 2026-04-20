@@ -1,0 +1,22 @@
+{
+  "type": "boolean",
+  "title": {
+    "en": "Ignition on",
+    "nl": "Ontsteking aan",
+    "de": "Zündung an"
+  },
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "insights": true,
+  "insightsTitleTrue": {
+    "en": "Ignition turned on",
+    "nl": "Ontsteking aan",
+    "de": "Zündung eingeschaltet"
+  },
+  "insightsTitleFalse": {
+    "en": "Ignition turned off",
+    "nl": "Ontsteking uit",
+    "de": "Zündung ausgeschaltet"
+  }
+}

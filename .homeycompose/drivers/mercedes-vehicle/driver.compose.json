@@ -30,7 +30,7 @@
     "measure_range_liquid",
     "measure_fuel",
     "measure_adblue_level",
-    "onoff.ignition",
+    "ignition_on",
     "measure_oil_level",
     "text_charging_status",
     "text_charge_program",
@@ -67,8 +67,8 @@
     "onoff_auxheat",
     "onoff_remote_start",
     "theft_system_armed",
-    "onoff.engine",
-    "onoff.climate"
+    "engine_running",
+    "climate_active"
   ],
   "capabilitiesOptions": {
     "tire_pressure_bar.tire_fl": {
@@ -98,27 +98,6 @@
         "nl": "Bandenspanning, Rechts Achter",
         "de": "Reifendruck, Hinten Rechts"
       }
-    },
-    "onoff.ignition": {
-      "title": {
-        "en": "Ignition On",
-        "nl": "Ontsteking aan",
-        "de": "Zündung an"
-      }
-    },
-    "onoff.engine": {
-      "title": {
-        "en": "Engine Running",
-        "nl": "Motor draait",
-        "de": "Motor läuft"
-      }
-    },
-    "onoff.climate": {
-      "title": {
-        "en": "Climate Active",
-        "nl": "Klimaat actief",
-        "de": "Klimaanlage aktiv"
-      }
     }
   },
   "pair": [
@@ -138,4 +117,10 @@
       "template": "add_devices"
     }
   ],
+  "repair": [
+    {
+      "id": "login_credentials",
+      "template": "login_credentials"
+    }
+  ]
 }

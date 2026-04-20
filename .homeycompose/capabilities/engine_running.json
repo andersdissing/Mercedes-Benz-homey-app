@@ -1,0 +1,23 @@
+{
+  "type": "boolean",
+  "title": {
+    "en": "Engine running",
+    "nl": "Motor draait",
+    "de": "Motor läuft"
+  },
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/icons/remote_start.svg",
+  "insights": true,
+  "insightsTitleTrue": {
+    "en": "Engine started",
+    "nl": "Motor gestart",
+    "de": "Motor gestartet"
+  },
+  "insightsTitleFalse": {
+    "en": "Engine stopped",
+    "nl": "Motor gestopt",
+    "de": "Motor gestoppt"
+  }
+}
