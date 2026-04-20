@@ -71,5 +71,8 @@
   },
   "1.1.17": {
     "en": "Fix engine started/stopped triggers on electric vehicles, restore device repair flow, and migrate engine/ignition/climate capabilities for flow tag support"
+  },
+  "1.1.18": {
+    "en": "Fix engine started/stopped triggers on electric vehicles, restore device repair flow, and migrate engine/ignition/climate capabilities for flow tag support"
   }
 }
