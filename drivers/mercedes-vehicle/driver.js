@@ -415,8 +415,8 @@ class MercedesVehicleDriver extends Homey.Driver {
             'tire_pressure_bar.tire_fr',
             'tire_pressure_bar.tire_rl',
             'tire_pressure_bar.tire_rr',
-            'onoff.engine',
-            'onoff.climate'
+            'engine_running',
+            'climate_active'
           ],
           store: {
             username: credentials.username,
@@ -438,6 +438,98 @@ class MercedesVehicleDriver extends Homey.Driver {
         return deviceObj;
       });
     });
+  }
+
+  /**
+   * onRepair is called when a user starts the repair flow for a device.
+   * Re-authenticates credentials, refreshes the stored token, and purges
+   * obsolete onoff.* / onoff_* subcapabilities so flow tags render correctly.
+   */
+  async onRepair(session, device) {
+    this.log('Repair flow started for device:', device.getName());
+
+    session.setHandler('login', async (data) => {
+      this.log('Repair login attempt for:', data.username);
+
+      const region = device.getStoreValue('region') || 'Europe';
+      const existingDeviceGuid = device.getStoreValue('deviceGuid') || null;
+
+      try {
+        const oauth = new MercedesOAuth(this.homey, region, existingDeviceGuid);
+        await oauth.login(data.username, data.password);
+        this.log('Repair login successful');
+
+        await device.setStoreValue('username', data.username);
+        await device.setStoreValue('password', data.password);
+        await device.setStoreValue('token', oauth.token);
+        if (!existingDeviceGuid) {
+          await device.setStoreValue('deviceGuid', oauth.deviceGuid);
+        }
+
+        await this._migrateVehicleCapabilities(device);
+
+        if (device.pollInterval) {
+          clearInterval(device.pollInterval);
+          device.pollInterval = null;
+        }
+        if (device.api && typeof device.api.disconnectWebSocket === 'function') {
+          try {
+            await device.api.disconnectWebSocket();
+          } catch (wsError) {
+            this.error('WebSocket disconnect during repair failed (non-fatal):', wsError.message);
+          }
+        }
+
+        if (typeof device.onInit === 'function') {
+          try {
+            await device.onInit();
+          } catch (reinitError) {
+            this.error('Device re-init after repair failed (non-fatal):', reinitError.message);
+          }
+        }
+
+        await device.setAvailable().catch(() => {});
+
+        return true;
+      } catch (error) {
+        this.error('Repair login failed:', error.message);
+
+        if (error.message && (error.message.includes('418') || error.message.includes('status code 418'))) {
+          throw new Error('Too many requests. Please wait 15-30 minutes and try again.');
+        } else if (error.message && (error.message.includes('403') || error.message.includes('status code 403'))) {
+          throw new Error('Access denied. Please check your credentials.');
+        } else if (error.message && error.message.includes('2FA')) {
+          throw new Error('Two-factor authentication is not supported. Please disable 2FA.');
+        }
+        throw new Error(error.message || this.homey.__('pair.login_failed'));
+      }
+    });
+  }
+
+  /**
+   * Drop deprecated onoff.engine/ignition/climate subcapabilities and
+   * onoff_engine/ignition/climate intermediates, then ensure the new
+   * top-level capabilities exist.
+   */
+  async _migrateVehicleCapabilities(device) {
+    const migrations = [
+      { deprecated: ['onoff.ignition', 'onoff_ignition'], current: 'ignition_on' },
+      { deprecated: ['onoff.engine', 'onoff_engine'], current: 'engine_running' },
+      { deprecated: ['onoff.climate', 'onoff_climate'], current: 'climate_active' },
+    ];
+
+    for (const { deprecated, current } of migrations) {
+      for (const old of deprecated) {
+        if (device.hasCapability(old)) {
+          this.log(`[REPAIR] Removing deprecated capability ${old}`);
+          await device.removeCapability(old);
+        }
+      }
+      if (!device.hasCapability(current)) {
+        this.log(`[REPAIR] Adding capability ${current}`);
+        await device.addCapability(current);
+      }
+    }
   }
 }
 

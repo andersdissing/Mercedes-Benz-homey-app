@@ -33,7 +33,7 @@
     "measure_range_liquid",
     "measure_fuel",
     "measure_adblue_level",
-    "onoff.ignition",
+    "ignition_on",
     "measure_oil_level",
     "text_charging_status",
     "text_charge_program",
@@ -70,8 +70,8 @@
     "onoff_auxheat",
     "onoff_remote_start",
     "theft_system_armed",
-    "onoff.engine",
-    "onoff.climate"
+    "engine_running",
+    "climate_active"
   ],
   "pair": [
     {
@@ -88,6 +88,12 @@
     {
       "id": "add_devices",
       "template": "add_devices"
+    }
+  ],
+  "repair": [
+    {
+      "id": "login_credentials",
+      "template": "login_credentials"
     }
   ],
   "energy": {

@@ -50,8 +50,8 @@ class MercedesVehicleDevice extends Homey.Device {
 
       // Register capability listeners
       this.registerCapabilityListener('locked', this.onCapabilityLocked.bind(this));
-      this.registerCapabilityListener('onoff.engine', this.onCapabilityEngine.bind(this));
-      this.registerCapabilityListener('onoff.climate', this.onCapabilityClimate.bind(this));
+      this.registerCapabilityListener('engine_running', this.onCapabilityEngine.bind(this));
+      this.registerCapabilityListener('climate_active', this.onCapabilityClimate.bind(this));
       this.registerCapabilityListener('onoff_charging', this.onCapabilityCharging.bind(this));
 
       // Add average_speed capability if it doesn't exist (for devices paired before this was added)
@@ -292,22 +292,40 @@ class MercedesVehicleDevice extends Homey.Device {
         await this.addCapability('onoff_remote_start');
       }
 
-      // Add onoff.ignition capability
-      if (!this.hasCapability('onoff.ignition')) {
-        this.log('[INIT] Adding missing onoff.ignition capability');
-        await this.addCapability('onoff.ignition');
+      // Migrate to ignition_on (top-level capability so flow tags pick up the title)
+      for (const old of ['onoff.ignition', 'onoff_ignition']) {
+        if (this.hasCapability(old)) {
+          this.log(`[INIT] Removing deprecated ${old} capability`);
+          await this.removeCapability(old);
+        }
+      }
+      if (!this.hasCapability('ignition_on')) {
+        this.log('[INIT] Adding ignition_on capability');
+        await this.addCapability('ignition_on');
       }
 
-      // Add onoff.engine capability
-      if (!this.hasCapability('onoff.engine')) {
-        this.log('[INIT] Adding missing onoff.engine capability');
-        await this.addCapability('onoff.engine');
+      // Migrate to engine_running
+      for (const old of ['onoff.engine', 'onoff_engine']) {
+        if (this.hasCapability(old)) {
+          this.log(`[INIT] Removing deprecated ${old} capability`);
+          await this.removeCapability(old);
+        }
+      }
+      if (!this.hasCapability('engine_running')) {
+        this.log('[INIT] Adding engine_running capability');
+        await this.addCapability('engine_running');
       }
 
-      // Add onoff.climate capability
-      if (!this.hasCapability('onoff.climate')) {
-        this.log('[INIT] Adding missing onoff.climate capability');
-        await this.addCapability('onoff.climate');
+      // Migrate to climate_active
+      for (const old of ['onoff.climate', 'onoff_climate']) {
+        if (this.hasCapability(old)) {
+          this.log(`[INIT] Removing deprecated ${old} capability`);
+          await this.removeCapability(old);
+        }
+      }
+      if (!this.hasCapability('climate_active')) {
+        this.log('[INIT] Adding climate_active capability');
+        await this.addCapability('climate_active');
       }
 
       // Migrate theft system armed capability from alarm_theft_system to theft_system_armed
@@ -667,27 +685,51 @@ class MercedesVehicleDevice extends Homey.Device {
         }
       }
 
-      // Engine state - check both lowercase and camelCase variants
+      // Engine state — Mercedes sends `enginestate` for ICE cars; EVs don't
+      // include that key, so fall back to `ignitionstate` (4 = engine on / ready).
       const engineStateValue = data.enginestate ?? data.engineState;
+      const ignitionValue = data.ignitionstate;
+      let engineRunning = null;
+      let engineSource = null;
+
       if (engineStateValue !== undefined) {
-        const engineRunning = engineStateValue === true || engineStateValue === 'RUNNING';
-        const wasRunning = this.getCapabilityValue('onoff.engine');
+        engineSource = 'enginestate';
+        if (typeof engineStateValue === 'boolean') {
+          engineRunning = engineStateValue;
+        } else if (typeof engineStateValue === 'string') {
+          const s = engineStateValue.toUpperCase();
+          engineRunning = s === 'RUNNING' || s === 'ON' || s === '1' || s === 'TRUE';
+        } else {
+          engineRunning = Number(engineStateValue) === 1;
+        }
+      } else if (ignitionValue !== undefined) {
+        engineSource = 'ignitionstate';
+        engineRunning = Number(ignitionValue) === 4; // 4 = start (engine/EV ready to drive)
+      }
+
+      if (engineRunning !== null) {
+        const wasRunning = this.getCapabilityValue('engine_running');
+        this.log(`[UPDATE] Engine state from ${engineSource}=${engineSource === 'enginestate' ? engineStateValue : ignitionValue} -> running=${engineRunning}, was=${wasRunning}`);
 
         if (wasRunning !== engineRunning) {
-          await this.setCapabilityValue('onoff.engine', engineRunning);
+          await this.setCapabilityValue('engine_running', engineRunning);
 
-          // Trigger flow cards
-          if (engineRunning) {
-            await this.homey.flow.getDeviceTriggerCard('engine_started').trigger(this);
-          } else {
-            await this.homey.flow.getDeviceTriggerCard('engine_stopped').trigger(this);
+          // Skip triggers on initial read (capability was null/unset before)
+          if (wasRunning !== null && wasRunning !== undefined) {
+            if (engineRunning) {
+              this.log('[TRIGGER] Firing engine_started');
+              await this.homey.flow.getDeviceTriggerCard('engine_started').trigger(this);
+            } else {
+              this.log('[TRIGGER] Firing engine_stopped');
+              await this.homey.flow.getDeviceTriggerCard('engine_stopped').trigger(this);
+            }
           }
         }
       }
 
       // Climate control status
       if (data.precondActive !== undefined) {
-        await this.setCapabilityValue('onoff.climate', data.precondActive === true);
+        await this.setCapabilityValue('climate_active', data.precondActive === true);
       }
 
       // Tire pressures (already converted from kPa to bar in parser)
@@ -801,11 +843,12 @@ class MercedesVehicleDevice extends Homey.Device {
       }
 
 
-      // Ignition state (onoff.ignition)
+      // Ignition state
       if (data.ignitionstate !== undefined) {
-        const ignitionOn = data.ignitionstate === '1' || data.ignitionstate === '2' || data.ignitionstate === '4'; // 0: lock/off, 1: radio, 2: ignition, 4: start
+        const raw = Number(data.ignitionstate);
+        const ignitionOn = raw === 1 || raw === 2 || raw === 4; // 0: lock/off, 1: radio, 2: ignition, 4: start
         this.log(`[UPDATE] Setting ignition state to: ${ignitionOn} (raw: ${data.ignitionstate})`);
-        await this.setCapabilityValue('onoff.ignition', ignitionOn);
+        await this.setCapabilityValue('ignition_on', ignitionOn);
       }
 
       // Oil level (percent)
@@ -1314,14 +1357,14 @@ class MercedesVehicleDevice extends Homey.Device {
    * Start climate control
    */
   async startClimate() {
-    await this.setCapabilityValue('onoff.climate', true);
+    await this.setCapabilityValue('climate_active', true);
   }
 
   /**
    * Stop climate control
    */
   async stopClimate() {
-    await this.setCapabilityValue('onoff.climate', false);
+    await this.setCapabilityValue('climate_active', false);
   }
 
   /**
@@ -1341,14 +1384,14 @@ class MercedesVehicleDevice extends Homey.Device {
    * Start engine
    */
   async startEngine() {
-    await this.setCapabilityValue('onoff.engine', true);
+    await this.setCapabilityValue('engine_running', true);
   }
 
   /**
    * Stop engine
    */
   async stopEngine() {
-    await this.setCapabilityValue('onoff.engine', false);
+    await this.setCapabilityValue('engine_running', false);
   }
 
   /**
@@ -1435,7 +1478,7 @@ class MercedesVehicleDevice extends Homey.Device {
       this.log('[FLOW] Climate control started successfully');
 
       // Update capability immediately
-      await this.setCapabilityValue('onoff.climate', true);
+      await this.setCapabilityValue('climate_active', true);
 
       return true;
     } catch (error) {
@@ -1455,7 +1498,7 @@ class MercedesVehicleDevice extends Homey.Device {
       this.log('[FLOW] Climate control stopped successfully');
 
       // Update capability immediately
-      await this.setCapabilityValue('onoff.climate', false);
+      await this.setCapabilityValue('climate_active', false);
 
       return true;
     } catch (error) {
@@ -1496,7 +1539,7 @@ class MercedesVehicleDevice extends Homey.Device {
       this.log('[FLOW] Engine started successfully');
 
       // Update capability immediately
-      await this.setCapabilityValue('onoff.engine', true);
+      await this.setCapabilityValue('engine_running', true);
 
       return true;
     } catch (error) {
@@ -1515,7 +1558,7 @@ class MercedesVehicleDevice extends Homey.Device {
       this.log('[FLOW] Engine stopped successfully');
 
       // Update capability immediately
-      await this.setCapabilityValue('onoff.engine', false);
+      await this.setCapabilityValue('engine_running', false);
 
       return true;
     } catch (error) {
@@ -1643,7 +1686,7 @@ class MercedesVehicleDevice extends Homey.Device {
    * Flow condition: Is engine running?
    */
   async isEngineRunning() {
-    const running = this.getCapabilityValue('onoff.engine');
+    const running = this.getCapabilityValue('engine_running');
     this.log(`[FLOW] Is engine running condition checked: ${running}`);
     return running === true;
   }
