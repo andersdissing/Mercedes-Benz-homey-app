@@ -1409,7 +1409,6 @@ class MercedesVehicleDevice extends Homey.Device {
       for (const cap of caps) {
         if (!this.hasCapability(cap)) continue;
         const status = this.getCapabilityValue(cap);
-        if (status === null || status === undefined) continue; // not reported by this vehicle
         if (status !== 'Closed') return false;
       }
 
@@ -1803,7 +1802,7 @@ class MercedesVehicleDevice extends Homey.Device {
    */
   async sunroofOpen() {
     const status = this.getCapabilityValue('window_sunroof');
-    const isOpen = status !== null && status !== undefined && status !== '-' && status !== 'Closed';
+    const isOpen = status !== 'CLOSED' && status !== '0' && status !== null && status !== '-';
     this.log(`[FLOW] Sunroof open condition checked: ${isOpen} (status: ${status})`);
     return isOpen;
   }
