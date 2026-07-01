@@ -1,4 +1,5 @@
 {
+  "deprecated": true,
   "id": "stop_charging",
   "title": {
     "en": "Pause charging",

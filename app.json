@@ -1387,6 +1387,7 @@
         "id": "sound_horn"
       },
       {
+        "deprecated": true,
         "id": "start_charging",
         "title": {
           "en": "Resume charging",
@@ -1457,6 +1458,7 @@
         "id": "start_precond"
       },
       {
+        "deprecated": true,
         "id": "stop_charging",
         "title": {
           "en": "Pause charging",

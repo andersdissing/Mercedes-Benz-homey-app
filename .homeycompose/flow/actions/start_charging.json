@@ -1,4 +1,5 @@
 {
+  "deprecated": true,
   "id": "start_charging",
   "title": {
     "en": "Resume charging",
