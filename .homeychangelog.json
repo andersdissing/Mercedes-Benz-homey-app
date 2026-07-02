@@ -74,5 +74,8 @@
   },
   "1.1.18": {
     "en": "Fix engine started/stopped triggers on electric vehicles, restore device repair flow, and migrate engine/ignition/climate capabilities for flow tag support"
+  },
+  "1.1.19": {
+    "en": "Deprecate non-functional start/stop charging cards (#32); fix window/sunroof status detection for vehicles that don't report rear windows, e.g. V-Klasse (#31)"
   }
 }
