@@ -1856,13 +1856,12 @@ class MercedesVehicleDevice extends Homey.Device {
 
   /**
    * Flow action: Configure maximum state of charge
-   * @param {number} maxSoc - Maximum state of charge percentage (50-100)
-   * @param {string} chargeProgram - Charge program ID (0=Default, 2=Home, 3=Work)
+   * @param {number} maxSoc - Maximum state of charge percentage
    */
-  async configureMaxSocAction(maxSoc, chargeProgram) {
-    this.log(`[FLOW] Configure max SOC action: ${maxSoc}%, program=${chargeProgram}`);
+  async configureMaxSocAction(maxSoc) {
+    this.log(`[FLOW] Configure max SOC action: ${maxSoc}%`);
     try {
-      await this.api.configureBatteryMaxSoc(this.vin, maxSoc, parseInt(chargeProgram, 10));
+      await this.api.configureBatteryMaxSoc(this.vin, maxSoc);
       this.log('[FLOW] Max SOC configured successfully');
       return true;
     } catch (error) {
