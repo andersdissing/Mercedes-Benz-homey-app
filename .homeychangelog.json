@@ -80,5 +80,8 @@
   },
   "1.1.20": {
     "en": "Fix 'Set maximum charge level' flow card failing with 'API Error: Not Found' (#34) by sending it over the vehicle command channel; remove the unsupported charge program requirement"
+  },
+  "1.1.21": {
+    "en": "Fix region selection during pairing for non-European accounts"
   }
 }
