@@ -295,14 +295,34 @@ class MercedesVehicleDriver extends Homey.Driver {
   }
 
   /**
+   * Pre-select a likely Mercedes me account region from the Homey's timezone.
+   * This is only a starting point for the pair view's dropdown — the account
+   * region is where the Mercedes me account was registered, not where the
+   * Homey physically sits, so the user must be able to override it.
+   */
+  _defaultRegionFromTimezone(tz) {
+    if (tz === 'Asia/Shanghai' || tz === 'Asia/Urumqi') return 'China';
+    if (tz && tz.startsWith('America/')) return 'North America';
+    if (tz && (tz.startsWith('Australia/') || tz.startsWith('Pacific/') || tz.startsWith('Asia/'))) {
+      return 'Asia-Pacific';
+    }
+    return 'Europe'; // Europe/*, Africa/*, Atlantic/*, and fallback
+  }
+
+  /**
    * onPair is called when a user starts pairing
    */
   async onPair(session) {
     let credentials = {};
-    const region = 'Europe'; // Default to Europe region
+    let region = 'Europe';
     let oauth = null;
     let vehicles = [];
     let deviceGuid = null;
+
+    // Provide a sensible default for the pair view's region dropdown
+    session.setHandler('get_default_region', async () => {
+      return this._defaultRegionFromTimezone(this.homey.clock.getTimezone());
+    });
 
     // Handle login credentials
     session.setHandler('login', async (data) => {
@@ -313,8 +333,10 @@ class MercedesVehicleDriver extends Homey.Driver {
         password: data.password
       };
 
+      region = Object.keys(MercedesOAuth.ENDPOINTS).includes(data.region) ? data.region : 'Europe';
+
       try {
-        // Initialize OAuth with Europe region and generate persistent deviceGuid
+        // Initialize OAuth with the selected region and generate a persistent deviceGuid
         oauth = new MercedesOAuth(this.homey, region);
         deviceGuid = oauth.deviceGuid; // Store for later use
 
@@ -331,6 +353,11 @@ class MercedesVehicleDriver extends Homey.Driver {
           if (vehicleError.message && (vehicleError.message.includes('418') || vehicleError.message.includes('status code 418'))) {
             this.error('Rate limited by Mercedes API');
             throw new Error('Too many requests. Please wait 15-30 minutes and try again.');
+          }
+          // A 404 here means login succeeded but the region's backend has
+          // no record of this account — almost always a region mismatch.
+          if (vehicleError.message && (vehicleError.message.includes('404') || vehicleError.message.includes('status code 404'))) {
+            throw new Error(this.homey.__('pair.vehicles_region_mismatch', { region }));
           }
           throw vehicleError;
         }
@@ -357,7 +384,7 @@ class MercedesVehicleDriver extends Homey.Driver {
       this.log('list_devices called, returning', vehicles.length, 'vehicles');
 
       if (!vehicles || vehicles.length === 0) {
-        throw new Error(this.homey.__('pair.no_vehicles_found'));
+        throw new Error(this.homey.__('pair.no_vehicles_found', { region }));
       }
 
       return vehicles.map(vehicle => {
