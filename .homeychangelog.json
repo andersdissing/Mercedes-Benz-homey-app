@@ -77,5 +77,8 @@
   },
   "1.1.19": {
     "en": "Deprecate non-functional start/stop charging cards (#32); fix window/sunroof status detection for vehicles that don't report rear windows, e.g. V-Klasse (#31)"
+  },
+  "1.1.20": {
+    "en": "Fix 'Set maximum charge level' flow card failing with 'API Error: Not Found' (#34) by sending it over the vehicle command channel; remove the unsupported charge program requirement"
   }
 }

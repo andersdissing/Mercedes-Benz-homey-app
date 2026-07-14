@@ -1,7 +1,7 @@
 {
   "_comment": "This file is generated. Please edit .homeycompose/app.json instead.",
   "id": "com.mercedes.mbapi",
-  "version": "1.1.19",
+  "version": "1.1.20",
   "compatibility": ">=12.3.0",
   "sdk": 3,
   "platforms": [
@@ -996,9 +996,9 @@
           "de": "Maximalen Ladestand einstellen"
         },
         "titleFormatted": {
-          "en": "Set maximum charge to [[max_soc]]% for [[charge_program]]",
-          "nl": "Stel maximale lading in op [[max_soc]]% voor [[charge_program]]",
-          "de": "Maximale Ladung auf [[max_soc]]% für [[charge_program]] einstellen"
+          "en": "Set maximum charge to [[max_soc]]%",
+          "nl": "Stel maximale lading in op [[max_soc]]%",
+          "de": "Maximale Ladung auf [[max_soc]]% einstellen"
         },
         "hint": {
           "en": "Sets the maximum battery charge level (state of charge) for the vehicle.",
@@ -1019,44 +1019,9 @@
               "nl": "Maximaal laden %",
               "de": "Maximale Ladung %"
             },
-            "min": 50,
+            "min": 30,
             "max": 100,
             "step": 10
-          },
-          {
-            "type": "dropdown",
-            "name": "charge_program",
-            "title": {
-              "en": "Charge program",
-              "nl": "Laadprogramma",
-              "de": "Ladeprogramm"
-            },
-            "values": [
-              {
-                "id": "0",
-                "label": {
-                  "en": "Default",
-                  "nl": "Standaard",
-                  "de": "Standard"
-                }
-              },
-              {
-                "id": "2",
-                "label": {
-                  "en": "Home",
-                  "nl": "Thuis",
-                  "de": "Zuhause"
-                }
-              },
-              {
-                "id": "3",
-                "label": {
-                  "en": "Work",
-                  "nl": "Werk",
-                  "de": "Arbeit"
-                }
-              }
-            ]
           }
         ],
         "id": "configure_max_soc"

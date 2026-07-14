@@ -97,6 +97,11 @@ message ChargeStart {
 message ChargeStop {
 }
 
+// Battery max state-of-charge configuration
+message BatteryMaxSocConfigure {
+  int32 max_soc = 1;
+}
+
 // Seat heating configuration
 message PrecondSeatConfigure {
   bool front_left = 1;
@@ -157,5 +162,6 @@ message CommandRequest {
     PrecondSeatConfigure precond_seat_configure = 26;
     ChargeStart charge_start = 30;
     ChargeStop charge_stop = 31;
+    BatteryMaxSocConfigure battery_max_soc = 28;
   }
 }

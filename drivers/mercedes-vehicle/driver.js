@@ -187,7 +187,7 @@ class MercedesVehicleDriver extends Homey.Driver {
       this.homey.flow.getActionCard('configure_max_soc')
         .registerRunListener(async (args) => {
           this.log('[FLOW] Configure max SoC action triggered');
-          await args.device.configureMaxSocAction(args.max_soc, args.charge_program);
+          await args.device.configureMaxSocAction(args.max_soc);
           return true;
         });
 
