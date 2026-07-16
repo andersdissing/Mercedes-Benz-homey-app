@@ -83,5 +83,8 @@
   },
   "1.1.21": {
     "en": "Fix region selection during pairing for non-European accounts"
+  },
+  "1.1.22": {
+    "en": "Fix max SOC flow card actually changing the charge limit on the vehicle (was silently ignored by Mercedes' backend)"
   }
 }
