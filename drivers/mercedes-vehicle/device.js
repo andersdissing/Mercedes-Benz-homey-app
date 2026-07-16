@@ -941,6 +941,7 @@ class MercedesVehicleDevice extends Homey.Device {
         const readableProgram = programMap[rawProgram] || rawProgram;
         this.log(`[UPDATE] Setting selected charge program to: ${rawProgram} (${readableProgram})`);
         await this.setCapabilityValue('text_charge_program', readableProgram);
+        await this.setStoreValue('selectedChargeProgramRaw', data.selectedChargeProgram);
       }
 
       // Max SoC (check both maxSoc and max_soc as API may use either)
@@ -1861,7 +1862,8 @@ class MercedesVehicleDevice extends Homey.Device {
   async configureMaxSocAction(maxSoc) {
     this.log(`[FLOW] Configure max SOC action: ${maxSoc}%`);
     try {
-      await this.api.configureBatteryMaxSoc(this.vin, maxSoc);
+      const chargeProgram = this.getStoreValue('selectedChargeProgramRaw') ?? 0;
+      await this.api.configureBatteryMaxSoc(this.vin, maxSoc, chargeProgram);
       this.log('[FLOW] Max SOC configured successfully');
       return true;
     } catch (error) {

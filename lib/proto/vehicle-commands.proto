@@ -98,8 +98,29 @@ message ChargeStop {
 }
 
 // Battery max state-of-charge configuration
+// NOTE: Mercedes' backend accepts this message (ACKs it) but does not act on it.
+// Real max-SOC changes go through ChargeProgramConfigure or ChargingConfigure below.
 message BatteryMaxSocConfigure {
   int32 max_soc = 1;
+}
+
+// Wire-compatible stand-in for google.protobuf.Int32Value (same single int32 field 1)
+message Int32Value {
+  int32 value = 1;
+}
+
+// Configure the max SOC for a charge program (Default/Home/Work) — used on vehicles
+// without the newer CHARGING_CONFIGURE capability. Mercedes' backend clamps this to
+// a minimum of 50%.
+message ChargeProgramConfigure {
+  int32 charge_program = 1;
+  Int32Value max_soc = 2;
+}
+
+// Configure charging directly (max SOC, independent of charge program) — used on
+// vehicles with the CHARGING_CONFIGURE capability, which allows lower minimums.
+message ChargingConfigure {
+  Int32Value max_soc = 5;
 }
 
 // Seat heating configuration
@@ -163,5 +184,7 @@ message CommandRequest {
     ChargeStart charge_start = 30;
     ChargeStop charge_stop = 31;
     BatteryMaxSocConfigure battery_max_soc = 28;
+    ChargeProgramConfigure charge_program_configure = 34;
+    ChargingConfigure charging_configure = 72;
   }
 }
