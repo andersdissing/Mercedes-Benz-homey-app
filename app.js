@@ -53,6 +53,7 @@ class MercedesMeApp extends Homey.App {
         rearRight: getValue('window_rear_right'),
       },
       sunroof: getValue('window_sunroof'),
+      charging: getValue('onoff_charging'),
       chargingStatus: getValue('text_charging_status'),
       engineRunning: getValue('engine_running'),
       climateOn: getValue('climate_active'),
