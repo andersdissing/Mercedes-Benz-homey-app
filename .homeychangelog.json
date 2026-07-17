@@ -86,5 +86,8 @@
   },
   "1.1.22": {
     "en": "Fix max SOC flow card actually changing the charge limit on the vehicle (was silently ignored by Mercedes' backend)"
+  },
+  "1.1.23": {
+    "en": "Add charging animation sweep to battery bar in car-status widget"
   }
 }
