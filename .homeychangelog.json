@@ -89,5 +89,8 @@
   },
   "1.1.23": {
     "en": "Add charging animation sweep to battery bar in car-status widget"
+  },
+  "1.1.24": {
+    "en": "Fix login failing with 'Unexpected login result: undefined' by handling Mercedes' passkey/biometric setup prompt during login"
   }
 }
