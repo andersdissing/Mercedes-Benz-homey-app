@@ -326,14 +326,13 @@ class MercedesVehicleDriver extends Homey.Driver {
 
     // Handle login credentials
     session.setHandler('login', async (data) => {
-      this.log('Login attempt with email:', data.username);
+      region = Object.keys(MercedesOAuth.ENDPOINTS).includes(data.region) ? data.region : 'Europe';
+      this.log(`Login attempt with email: ${data.username} (selected region: ${data.region}, using: ${region})`);
 
       credentials = {
         username: data.username,
         password: data.password
       };
-
-      region = Object.keys(MercedesOAuth.ENDPOINTS).includes(data.region) ? data.region : 'Europe';
 
       try {
         // Initialize OAuth with the selected region and generate a persistent deviceGuid
