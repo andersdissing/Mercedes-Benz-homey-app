@@ -95,5 +95,8 @@
   },
   "1.1.25": {
     "en": "Fixed vehicle data not updating for North America, Asia-Pacific, and China accounts after pairing (live data polling was hitting the wrong regional server)."
+  },
+  "1.1.26": {
+    "en": "Improved login diagnostics: when sign-in fails, the app now logs exactly which step failed and the underlying cause (HTTP status, network/timeout codes, and the server's response), making regional login problems much easier to troubleshoot."
   }
 }
