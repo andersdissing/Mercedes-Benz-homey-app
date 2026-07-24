@@ -364,6 +364,7 @@ class MercedesVehicleDriver extends Homey.Driver {
         return true;
       } catch (error) {
         this.error('Login or vehicle fetch failed:', error.message);
+        this._persistLoginDiagnostic('pair', region, credentials.username, oauth, error);
 
         // Provide better error messages
         if (error.message && (error.message.includes('418') || error.message.includes('status code 418'))) {
@@ -480,8 +481,9 @@ class MercedesVehicleDriver extends Homey.Driver {
       const region = device.getStoreValue('region') || 'Europe';
       const existingDeviceGuid = device.getStoreValue('deviceGuid') || null;
 
+      let oauth = null;
       try {
-        const oauth = new MercedesOAuth(this.homey, region, existingDeviceGuid);
+        oauth = new MercedesOAuth(this.homey, region, existingDeviceGuid);
         await oauth.login(data.username, data.password);
         this.log('Repair login successful');
 
@@ -519,6 +521,7 @@ class MercedesVehicleDriver extends Homey.Driver {
         return true;
       } catch (error) {
         this.error('Repair login failed:', error.message);
+        this._persistLoginDiagnostic('repair', region, data.username, oauth, error);
 
         if (error.message && (error.message.includes('418') || error.message.includes('status code 418'))) {
           throw new Error('Too many requests. Please wait 15-30 minutes and try again.');
@@ -530,6 +533,31 @@ class MercedesVehicleDriver extends Homey.Driver {
         throw new Error(error.message || this.homey.__('pair.login_failed'));
       }
     });
+  }
+
+  /**
+   * Persist the last login attempt's step-by-step trace to app settings.
+   *
+   * Diagnostic reports from failing logins have repeatedly contained only
+   * post-startup lines — the app appears to re-initialise around a failed
+   * pairing attempt, discarding the stdout that held the login logging. By
+   * saving the trace here it survives that restart, and MercedesMeApp re-logs
+   * it on the next init so it shows up in the following diagnostic report.
+   * No password is stored.
+   */
+  _persistLoginDiagnostic(flow, region, email, oauth, error) {
+    try {
+      this.homey.settings.set('lastLoginDiagnostic', {
+        at: new Date().toISOString(),
+        flow,
+        region,
+        email,
+        steps: oauth && typeof oauth.getTrace === 'function' ? oauth.getTrace() : [],
+        error: error && error.message ? error.message : String(error),
+      });
+    } catch (e) {
+      this.error('Failed to persist login diagnostic (non-fatal):', e.message);
+    }
   }
 
   /**
