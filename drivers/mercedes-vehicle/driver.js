@@ -365,17 +365,7 @@ class MercedesVehicleDriver extends Homey.Driver {
       } catch (error) {
         this.error('Login or vehicle fetch failed:', error.message);
         this._persistLoginDiagnostic('pair', region, credentials.username, oauth, error);
-
-        // Provide better error messages
-        if (error.message && (error.message.includes('418') || error.message.includes('status code 418'))) {
-          throw new Error('Too many requests. Please wait 15-30 minutes and try again.');
-        } else if (error.message && (error.message.includes('403') || error.message.includes('status code 403'))) {
-          throw new Error('Access denied. Please check your credentials.');
-        } else if (error.message && error.message.includes('2FA')) {
-          throw new Error('Two-factor authentication is not supported. Please disable 2FA.');
-        } else {
-          throw new Error(error.message || this.homey.__('pair.login_failed'));
-        }
+        throw new Error(this._buildLoginErrorMessage(region, oauth, error));
       }
     });
 
@@ -522,17 +512,42 @@ class MercedesVehicleDriver extends Homey.Driver {
       } catch (error) {
         this.error('Repair login failed:', error.message);
         this._persistLoginDiagnostic('repair', region, data.username, oauth, error);
-
-        if (error.message && (error.message.includes('418') || error.message.includes('status code 418'))) {
-          throw new Error('Too many requests. Please wait 15-30 minutes and try again.');
-        } else if (error.message && (error.message.includes('403') || error.message.includes('status code 403'))) {
-          throw new Error('Access denied. Please check your credentials.');
-        } else if (error.message && error.message.includes('2FA')) {
-          throw new Error('Two-factor authentication is not supported. Please disable 2FA.');
-        }
-        throw new Error(error.message || this.homey.__('pair.login_failed'));
+        throw new Error(this._buildLoginErrorMessage(region, oauth, error));
       }
     });
+  }
+
+  /**
+   * Build the message shown to the user in the pairing/repair error dialog.
+   *
+   * Diagnostic reports have repeatedly failed to capture any login logging, so
+   * the error dialog is the one channel guaranteed to reach the user. This puts
+   * the actionable facts right in front of them: a friendly hint for known
+   * failures, plus which step the login reached and the underlying cause
+   * (which already carries the HTTP status / network code from the OAuth layer).
+   * The user can screenshot this popup instead of relying on a diagnostic report.
+   */
+  _buildLoginErrorMessage(region, oauth, error) {
+    const rawMessage = error && error.message ? error.message : String(error);
+
+    let hint;
+    if (rawMessage.includes('418') || rawMessage.includes('status code 418')) {
+      hint = 'Too many requests. Please wait 15-30 minutes and try again.';
+    } else if (rawMessage.includes('403') || rawMessage.includes('status code 403')) {
+      hint = 'Access denied. Please check your credentials.';
+    } else if (rawMessage.includes('2FA')) {
+      hint = 'Two-factor authentication is not supported. Please disable 2FA.';
+    } else {
+      hint = 'Login failed.';
+    }
+
+    const trace = oauth && typeof oauth.getTrace === 'function' ? oauth.getTrace() : [];
+    const steps = trace
+      .map((line) => line.replace(/^\S+\s/, '')) // drop the ISO timestamp prefix
+      .filter((line) => line.startsWith('[Login'));
+    const reached = steps.length ? steps[steps.length - 1] : 'no request was sent';
+
+    return `${hint}\n\n— Diagnostic (please screenshot) —\nRegion: ${region}\nReached: ${reached}\nCause: ${rawMessage}`;
   }
 
   /**

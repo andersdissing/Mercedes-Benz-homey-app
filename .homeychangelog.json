@@ -101,5 +101,8 @@
   },
   "1.1.27": {
     "en": "Login troubleshooting: a failed sign-in attempt's step-by-step details are now saved and re-shown in the app log on the next start, so they reliably appear in a diagnostic report even when the app restarts around the failure."
+  },
+  "1.1.28": {
+    "en": "The login error popup now shows exactly which step failed and the underlying cause (HTTP status / network error), so a failed sign-in can be diagnosed straight from a screenshot of the error message."
   }
 }
