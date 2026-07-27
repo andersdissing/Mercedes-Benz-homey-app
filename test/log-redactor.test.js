@@ -133,23 +133,26 @@ test('redactValue leaves Error instances untouched and tolerates circular refs',
   assert.doesNotThrow(() => redactValue(circular));
 });
 
-test('installRedactedLogging does not crash on a non-writable log/error property', () => {
-  // Mirrors the Homey SDK App/Device instance: `log`/`error` are defined
-  // as non-writable own properties, so `instance.log = fn` throws
-  // "Cannot assign to read only property" under strict mode (the crash
-  // reported against v1.1.33).
+test('installRedactedLogging works against a non-writable AND non-configurable log/error property', () => {
+  // Mirrors the real Homey SDK App/Driver/Device instance. Two separate
+  // production crashes proved `log`/`error` can't be touched at all:
+  // `instance.log = fn` throws "Cannot assign to read only property"
+  // (non-writable, v1.1.33), and `Object.defineProperty(instance, 'log',
+  // ...)` throws "Cannot redefine property" (non-configurable, v1.1.34).
+  // installRedactedLogging must not go anywhere near the instance
+  // property at all - it patches the global console instead.
   class FakeHomeyBase {
     constructor() {
       Object.defineProperty(this, 'log', {
-        value: (...args) => { this.lastLog = args; },
+        value: (...args) => console.log(...args),
         writable: false,
-        configurable: true,
+        configurable: false,
         enumerable: false,
       });
       Object.defineProperty(this, 'error', {
-        value: (...args) => { this.lastError = args; },
+        value: (...args) => console.error(...args),
         writable: false,
-        configurable: true,
+        configurable: false,
         enumerable: false,
       });
     }
@@ -157,11 +160,26 @@ test('installRedactedLogging does not crash on a non-writable log/error property
   const instance = new FakeHomeyBase();
 
   assert.throws(() => { instance.log = () => {}; }, TypeError);
-  assert.doesNotThrow(() => installRedactedLogging(instance));
+  assert.throws(() => {
+    Object.defineProperty(instance, 'log', { value: () => {}, configurable: true });
+  }, TypeError);
 
-  instance.log('VIN: WDD2050461R123456');
-  assert.deepEqual(instance.lastLog, ['VIN: [VIN_REDACTED]']);
+  const originalConsoleLog = console.log;
+  const originalConsoleError = console.error;
+  const seenLog = [];
+  const seenError = [];
+  console.log = (...args) => seenLog.push(args);
+  console.error = (...args) => seenError.push(args);
+  try {
+    assert.doesNotThrow(() => installRedactedLogging());
 
-  instance.error('failed:', 'VIN: WDD2050461R123456');
-  assert.deepEqual(instance.lastError, ['failed:', 'VIN: [VIN_REDACTED]']);
+    instance.log('VIN: WDD2050461R123456');
+    instance.error('failed:', 'VIN: WDD2050461R123456');
+  } finally {
+    console.log = originalConsoleLog;
+    console.error = originalConsoleError;
+  }
+
+  assert.deepEqual(seenLog[0], ['VIN: [VIN_REDACTED]']);
+  assert.deepEqual(seenError[0], ['failed:', 'VIN: [VIN_REDACTED]']);
 });
