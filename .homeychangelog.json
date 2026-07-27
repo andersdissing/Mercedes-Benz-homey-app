@@ -119,5 +119,8 @@
   },
   "1.1.33": {
     "en": "Fixed some vehicle status fields (including door state) silently failing to update after certain data pushes, and removed remaining personal data (account password/token, PIN, precise location, VIN) from diagnostic logs."
+  },
+  "1.1.34": {
+    "en": "Fixed some vehicle status fields (including door state) silently failing to update after certain data pushes, and removed remaining personal data (account password/token, PIN, precise location, VIN) from diagnostic logs."
   }
 }
