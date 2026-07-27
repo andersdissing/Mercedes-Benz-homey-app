@@ -2,12 +2,14 @@
 
 const Homey = require('homey');
 const MercedesOAuth = require('../../lib/oauth');
+const { installRedactedLogging } = require('../../lib/log-redactor');
 
 class MercedesVehicleDriver extends Homey.Driver {
   /**
    * onInit is called when the driver is initialized.
    */
   async onInit() {
+    installRedactedLogging(this);
     this.log('Mercedes Vehicle Driver has been initialized');
 
     // Register flow card handlers
@@ -378,8 +380,9 @@ class MercedesVehicleDriver extends Homey.Driver {
       }
 
       return vehicles.map(vehicle => {
-        // Log the vehicle object to see what fields are available
-        this.log('Vehicle data:', JSON.stringify(vehicle, null, 2));
+        // Log the available field names only - the vehicle object itself
+        // carries VIN/license plate and possibly other account-linked data.
+        this.log('Vehicle data keys:', Object.keys(vehicle).join(', '));
 
         // Use vin or fin (matches HA implementation)
         const vin = vehicle.vin || vehicle.fin || 'UNKNOWN';
@@ -450,7 +453,9 @@ class MercedesVehicleDriver extends Homey.Driver {
           }
         };
 
-        this.log('Device object created:', JSON.stringify(deviceObj, null, 2));
+        // Deliberately not logging the full deviceObj: its `store` carries
+        // the plaintext account password and OAuth token.
+        this.log('Device object created:', deviceObj.name, 'capabilities:', deviceObj.capabilities.length);
         return deviceObj;
       });
     });
