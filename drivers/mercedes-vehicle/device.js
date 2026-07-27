@@ -3,12 +3,14 @@
 const Homey = require('homey');
 const MercedesOAuth = require('../../lib/oauth');
 const MercedesAPI = require('../../lib/api');
+const { installRedactedLogging } = require('../../lib/log-redactor');
 
 class MercedesVehicleDevice extends Homey.Device {
   /**
    * onInit is called when the device is initialized.
    */
   async onInit() {
+    installRedactedLogging(this);
     this.log('Mercedes Vehicle device initializing...');
 
     const settings = this.getSettings();
