@@ -1,10 +1,12 @@
 'use strict';
 
 const Homey = require('homey');
+const { installRedactedLogging } = require('./lib/log-redactor');
 
 class MercedesMeApp extends Homey.App {
 
   async onInit() {
+    installRedactedLogging(this);
     this.log('Mercedes-Benz app has been initialized');
     this._installCrashHandlers();
     this._logLastCrash();
