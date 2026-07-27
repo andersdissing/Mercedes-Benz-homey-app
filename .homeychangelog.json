@@ -95,5 +95,26 @@
   },
   "1.1.25": {
     "en": "Fixed vehicle data not updating for North America, Asia-Pacific, and China accounts after pairing (live data polling was hitting the wrong regional server)."
+  },
+  "1.1.26": {
+    "en": "Improved login diagnostics: when sign-in fails, the app now logs exactly which step failed and the underlying cause (HTTP status, network/timeout codes, and the server's response), making regional login problems much easier to troubleshoot."
+  },
+  "1.1.27": {
+    "en": "Login troubleshooting: a failed sign-in attempt's step-by-step details are now saved and re-shown in the app log on the next start, so they reliably appear in a diagnostic report even when the app restarts around the failure."
+  },
+  "1.1.28": {
+    "en": "The login error popup now shows exactly which step failed and the underlying cause (HTTP status / network error), so a failed sign-in can be diagnosed straight from a screenshot of the error message."
+  },
+  "1.1.29": {
+    "en": "Login stability: the app no longer restarts when an unexpected error occurs during sign-in (which could bounce you back to the login page repeatedly), and it now records the reason so login problems can finally be diagnosed."
+  },
+  "1.1.30": {
+    "en": "The device repair screen now includes the region selector (previously missing), pre-filled with the device's current region, so you can fix a mismatched region without having to remove and re-add the device."
+  },
+  "1.1.31": {
+    "en": "Fixed the login/repair form not responding when you clicked 'Log in' (the page would silently blink and clear instead of signing you in). Also fixed a missing icon on the device-selection screen during pairing."
+  },
+  "1.1.32": {
+    "en": "Fixed a rare crash (ReferenceError) when sending a vehicle command while the live connection was reconnecting."
   }
 }

@@ -326,14 +326,13 @@ class MercedesVehicleDriver extends Homey.Driver {
 
     // Handle login credentials
     session.setHandler('login', async (data) => {
-      this.log('Login attempt with email:', data.username);
+      region = Object.keys(MercedesOAuth.ENDPOINTS).includes(data.region) ? data.region : 'Europe';
+      this.log(`Login attempt with email: ${data.username} (selected region: ${data.region}, using: ${region})`);
 
       credentials = {
         username: data.username,
         password: data.password
       };
-
-      region = Object.keys(MercedesOAuth.ENDPOINTS).includes(data.region) ? data.region : 'Europe';
 
       try {
         // Initialize OAuth with the selected region and generate a persistent deviceGuid
@@ -365,17 +364,8 @@ class MercedesVehicleDriver extends Homey.Driver {
         return true;
       } catch (error) {
         this.error('Login or vehicle fetch failed:', error.message);
-
-        // Provide better error messages
-        if (error.message && (error.message.includes('418') || error.message.includes('status code 418'))) {
-          throw new Error('Too many requests. Please wait 15-30 minutes and try again.');
-        } else if (error.message && (error.message.includes('403') || error.message.includes('status code 403'))) {
-          throw new Error('Access denied. Please check your credentials.');
-        } else if (error.message && error.message.includes('2FA')) {
-          throw new Error('Two-factor authentication is not supported. Please disable 2FA.');
-        } else {
-          throw new Error(error.message || this.homey.__('pair.login_failed'));
-        }
+        this._persistLoginDiagnostic('pair', region, credentials.username, oauth, error);
+        throw new Error(this._buildLoginErrorMessage(region, oauth, error));
       }
     });
 
@@ -425,7 +415,6 @@ class MercedesVehicleDriver extends Homey.Driver {
             id: vin,
             vin: vin
           },
-          icon: '/drivers/mercedes-vehicle/assets/icon.svg',
           capabilities: [
             'locked',
             'measure_battery',
@@ -475,19 +464,30 @@ class MercedesVehicleDriver extends Homey.Driver {
   async onRepair(session, device) {
     this.log('Repair flow started for device:', device.getName());
 
+    const storedRegion = device.getStoreValue('region') || 'Europe';
+
+    // The repair view is the same custom login_credentials.html used for pairing
+    // (it includes the region dropdown), so pre-select the device's current
+    // region rather than guessing from the Homey's timezone.
+    session.setHandler('get_default_region', async () => storedRegion);
+
     session.setHandler('login', async (data) => {
       this.log('Repair login attempt for:', data.username);
 
-      const region = device.getStoreValue('region') || 'Europe';
+      // Allow the user to correct the region during repair (e.g. the account
+      // was actually registered in a different region than originally stored).
+      const region = Object.keys(MercedesOAuth.ENDPOINTS).includes(data.region) ? data.region : storedRegion;
       const existingDeviceGuid = device.getStoreValue('deviceGuid') || null;
 
+      let oauth = null;
       try {
-        const oauth = new MercedesOAuth(this.homey, region, existingDeviceGuid);
+        oauth = new MercedesOAuth(this.homey, region, existingDeviceGuid);
         await oauth.login(data.username, data.password);
         this.log('Repair login successful');
 
         await device.setStoreValue('username', data.username);
         await device.setStoreValue('password', data.password);
+        await device.setStoreValue('region', region);
         await device.setStoreValue('token', oauth.token);
         if (!existingDeviceGuid) {
           await device.setStoreValue('deviceGuid', oauth.deviceGuid);
@@ -520,17 +520,68 @@ class MercedesVehicleDriver extends Homey.Driver {
         return true;
       } catch (error) {
         this.error('Repair login failed:', error.message);
-
-        if (error.message && (error.message.includes('418') || error.message.includes('status code 418'))) {
-          throw new Error('Too many requests. Please wait 15-30 minutes and try again.');
-        } else if (error.message && (error.message.includes('403') || error.message.includes('status code 403'))) {
-          throw new Error('Access denied. Please check your credentials.');
-        } else if (error.message && error.message.includes('2FA')) {
-          throw new Error('Two-factor authentication is not supported. Please disable 2FA.');
-        }
-        throw new Error(error.message || this.homey.__('pair.login_failed'));
+        this._persistLoginDiagnostic('repair', region, data.username, oauth, error);
+        throw new Error(this._buildLoginErrorMessage(region, oauth, error));
       }
     });
+  }
+
+  /**
+   * Build the message shown to the user in the pairing/repair error dialog.
+   *
+   * Diagnostic reports have repeatedly failed to capture any login logging, so
+   * the error dialog is the one channel guaranteed to reach the user. This puts
+   * the actionable facts right in front of them: a friendly hint for known
+   * failures, plus which step the login reached and the underlying cause
+   * (which already carries the HTTP status / network code from the OAuth layer).
+   * The user can screenshot this popup instead of relying on a diagnostic report.
+   */
+  _buildLoginErrorMessage(region, oauth, error) {
+    const rawMessage = error && error.message ? error.message : String(error);
+
+    let hint;
+    if (rawMessage.includes('418') || rawMessage.includes('status code 418')) {
+      hint = 'Too many requests. Please wait 15-30 minutes and try again.';
+    } else if (rawMessage.includes('403') || rawMessage.includes('status code 403')) {
+      hint = 'Access denied. Please check your credentials.';
+    } else if (rawMessage.includes('2FA')) {
+      hint = 'Two-factor authentication is not supported. Please disable 2FA.';
+    } else {
+      hint = 'Login failed.';
+    }
+
+    const trace = oauth && typeof oauth.getTrace === 'function' ? oauth.getTrace() : [];
+    const steps = trace
+      .map((line) => line.replace(/^\S+\s/, '')) // drop the ISO timestamp prefix
+      .filter((line) => line.startsWith('[Login'));
+    const reached = steps.length ? steps[steps.length - 1] : 'no request was sent';
+
+    return `${hint}\n\n— Diagnostic (please screenshot) —\nRegion: ${region}\nReached: ${reached}\nCause: ${rawMessage}`;
+  }
+
+  /**
+   * Persist the last login attempt's step-by-step trace to app settings.
+   *
+   * Diagnostic reports from failing logins have repeatedly contained only
+   * post-startup lines — the app appears to re-initialise around a failed
+   * pairing attempt, discarding the stdout that held the login logging. By
+   * saving the trace here it survives that restart, and MercedesMeApp re-logs
+   * it on the next init so it shows up in the following diagnostic report.
+   * No password is stored.
+   */
+  _persistLoginDiagnostic(flow, region, email, oauth, error) {
+    try {
+      this.homey.settings.set('lastLoginDiagnostic', {
+        at: new Date().toISOString(),
+        flow,
+        region,
+        email,
+        steps: oauth && typeof oauth.getTrace === 'function' ? oauth.getTrace() : [],
+        error: error && error.message ? error.message : String(error),
+      });
+    } catch (e) {
+      this.error('Failed to persist login diagnostic (non-fatal):', e.message);
+    }
   }
 
   /**
