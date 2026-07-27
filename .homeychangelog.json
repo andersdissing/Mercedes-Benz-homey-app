@@ -106,6 +106,9 @@
     "en": "The login error popup now shows exactly which step failed and the underlying cause (HTTP status / network error), so a failed sign-in can be diagnosed straight from a screenshot of the error message."
   },
   "1.1.29": {
-    "en": "Login stability: the app no longer restarts when an unexpected error occurs during sign-in (which could bounce you back to the login page repeatedly), and it now records the reason so login problems can finally be diagnosed. The device repair screen now also includes the region selector (previously missing), pre-filled with the device's current region, so you can fix a mismatched region without having to remove and re-add the device."
+    "en": "Login stability: the app no longer restarts when an unexpected error occurs during sign-in (which could bounce you back to the login page repeatedly), and it now records the reason so login problems can finally be diagnosed."
+  },
+  "1.1.30": {
+    "en": "The device repair screen now includes the region selector (previously missing), pre-filled with the device's current region, so you can fix a mismatched region without having to remove and re-add the device."
   }
 }
