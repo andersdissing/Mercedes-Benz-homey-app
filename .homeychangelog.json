@@ -116,5 +116,8 @@
   },
   "1.1.32": {
     "en": "Fixed a rare crash (ReferenceError) when sending a vehicle command while the live connection was reconnecting."
+  },
+  "1.1.33": {
+    "en": "Fix door state not refreshing"
   }
 }
