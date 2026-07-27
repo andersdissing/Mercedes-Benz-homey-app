@@ -91,8 +91,7 @@
   ],
   "repair": [
     {
-      "id": "login_credentials",
-      "template": "login_credentials"
+      "id": "login_credentials"
     }
   ],
   "energy": {

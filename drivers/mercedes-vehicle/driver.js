@@ -465,10 +465,19 @@ class MercedesVehicleDriver extends Homey.Driver {
   async onRepair(session, device) {
     this.log('Repair flow started for device:', device.getName());
 
+    const storedRegion = device.getStoreValue('region') || 'Europe';
+
+    // The repair view is the same custom login_credentials.html used for pairing
+    // (it includes the region dropdown), so pre-select the device's current
+    // region rather than guessing from the Homey's timezone.
+    session.setHandler('get_default_region', async () => storedRegion);
+
     session.setHandler('login', async (data) => {
       this.log('Repair login attempt for:', data.username);
 
-      const region = device.getStoreValue('region') || 'Europe';
+      // Allow the user to correct the region during repair (e.g. the account
+      // was actually registered in a different region than originally stored).
+      const region = Object.keys(MercedesOAuth.ENDPOINTS).includes(data.region) ? data.region : storedRegion;
       const existingDeviceGuid = device.getStoreValue('deviceGuid') || null;
 
       let oauth = null;
@@ -479,6 +488,7 @@ class MercedesVehicleDriver extends Homey.Driver {
 
         await device.setStoreValue('username', data.username);
         await device.setStoreValue('password', data.password);
+        await device.setStoreValue('region', region);
         await device.setStoreValue('token', oauth.token);
         if (!existingDeviceGuid) {
           await device.setStoreValue('deviceGuid', oauth.deviceGuid);
