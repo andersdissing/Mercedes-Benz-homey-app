@@ -9,7 +9,7 @@ class MercedesVehicleDriver extends Homey.Driver {
    * onInit is called when the driver is initialized.
    */
   async onInit() {
-    installRedactedLogging(this);
+    installRedactedLogging();
     this.log('Mercedes Vehicle Driver has been initialized');
 
     // Register flow card handlers

@@ -10,7 +10,7 @@ class MercedesVehicleDevice extends Homey.Device {
    * onInit is called when the device is initialized.
    */
   async onInit() {
-    installRedactedLogging(this);
+    installRedactedLogging();
     this.log('Mercedes Vehicle device initializing...');
 
     const settings = this.getSettings();
