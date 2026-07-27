@@ -2,12 +2,15 @@
 
 const Homey = require('homey');
 const MercedesOAuth = require('../../lib/oauth');
+const { installRedactedLogging } = require('../../lib/log-redactor');
 
 class MercedesVehicleDriver extends Homey.Driver {
   /**
    * onInit is called when the driver is initialized.
    */
   async onInit() {
+    installRedactedLogging(this);
+
     this.log('Mercedes Vehicle Driver has been initialized');
 
     // Register flow card handlers

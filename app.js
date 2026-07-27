@@ -1,10 +1,17 @@
 'use strict';
 
 const Homey = require('homey');
+const { installRedactedLogging } = require('./lib/log-redactor');
 
 class MercedesMeApp extends Homey.App {
 
   async onInit() {
+    // Must run before any other logging: lib/api.js, lib/websocket.js and
+    // lib/oauth.js all log via this.homey.app.log(), so wrapping it here
+    // keeps VIN/coordinates/zone names out of user-submitted diagnostic
+    // reports app-wide, not just for this class's own log calls.
+    installRedactedLogging(this);
+
     this.log('Mercedes-Benz app has been initialized');
     this._installCrashHandlers();
     this._logLastCrash();
