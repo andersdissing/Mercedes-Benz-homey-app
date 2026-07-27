@@ -631,398 +631,480 @@ class MercedesVehicleDevice extends Homey.Device {
       this.log('[UPDATE] Updating capabilities from vehicle data...');
 
       // Door lock status
-      if (data.doorlockstatusvehicle !== undefined) {
-        this.log(`[UPDATE] Door lock status raw value: ${data.doorlockstatusvehicle}`);
-        const locked = data.doorlockstatusvehicle === 2; // 2 = external locked
-        this.log(`[UPDATE] Setting locked to: ${locked}`);
-        if (this.getCapabilityValue('locked') !== locked) {
-          await this.setCapabilityValue('locked', locked);
+      try {
+        if (data.doorlockstatusvehicle !== undefined) {
+          this.log(`[UPDATE] Door lock status raw value: ${data.doorlockstatusvehicle}`);
+          const locked = data.doorlockstatusvehicle === 2; // 2 = external locked
+          this.log(`[UPDATE] Setting locked to: ${locked}`);
+          if (this.getCapabilityValue('locked') !== locked) {
+            await this.setCapabilityValue('locked', locked);
 
-          // Trigger flow cards
-          if (locked) {
-            await this.homey.flow.getDeviceTriggerCard('vehicle_locked').trigger(this);
-          } else {
-            await this.homey.flow.getDeviceTriggerCard('vehicle_unlocked').trigger(this);
+            // Trigger flow cards
+            if (locked) {
+              await this.homey.flow.getDeviceTriggerCard('vehicle_locked').trigger(this);
+            } else {
+              await this.homey.flow.getDeviceTriggerCard('vehicle_unlocked').trigger(this);
+            }
           }
+        } else {
+          this.log('[UPDATE] WARNING: doorlockstatusvehicle is undefined');
         }
-      } else {
-        this.log('[UPDATE] WARNING: doorlockstatusvehicle is undefined');
+      } catch (e) {
+        this.error('[UPDATE] Error updating door lock status:', e.message);
       }
 
       // Battery state of charge
-      if (data.soc !== undefined) {
-        const battery = parseInt(data.soc);
-        this.log(`[UPDATE] Setting battery to: ${battery}%`);
-        await this.setCapabilityValue('measure_battery', battery);
+      try {
+        if (data.soc !== undefined) {
+          const battery = parseInt(data.soc);
+          this.log(`[UPDATE] Setting battery to: ${battery}%`);
+          await this.setCapabilityValue('measure_battery', battery);
 
-        // Trigger low battery warning
-        if (battery < 20 && this.getCapabilityValue('measure_battery') >= 20) {
-          await this.homey.flow.getDeviceTriggerCard('low_battery')
-            .trigger(this, { battery_level: battery });
+          // Trigger low battery warning
+          if (battery < 20 && this.getCapabilityValue('measure_battery') >= 20) {
+            await this.homey.flow.getDeviceTriggerCard('low_battery')
+              .trigger(this, { battery_level: battery });
+          }
         }
+      } catch (e) {
+        this.error('[UPDATE] Error updating battery:', e.message);
       }
 
       // Charging power (kW) - check both lowercase and camelCase variants
-      const chargingPowerValue = data.chargingpower ?? data.chargingPower;
-      if (chargingPowerValue !== undefined) {
-        const chargingPower = parseFloat(chargingPowerValue);
-        const wasCharging = this.getCapabilityValue('measure_charge_power') > 0;
-        const isCharging = chargingPower > 0;
+      try {
+        const chargingPowerValue = data.chargingpower ?? data.chargingPower;
+        if (chargingPowerValue !== undefined) {
+          const chargingPower = parseFloat(chargingPowerValue);
+          const wasCharging = this.getCapabilityValue('measure_charge_power') > 0;
+          const isCharging = chargingPower > 0;
 
-        await this.setCapabilityValue('measure_charge_power', chargingPower);
+          await this.setCapabilityValue('measure_charge_power', chargingPower);
 
-        // Update charging on/off capability
-        if (this.hasCapability('onoff_charging')) {
-          await this.setCapabilityValue('onoff_charging', isCharging);
+          // Update charging on/off capability
+          if (this.hasCapability('onoff_charging')) {
+            await this.setCapabilityValue('onoff_charging', isCharging);
+          }
+
+          // Trigger charging flow cards
+          if (!wasCharging && isCharging) {
+            await this.homey.flow.getDeviceTriggerCard('charging_started')
+              .trigger(this, { charging_power: chargingPower });
+            this.log(`[TRIGGER] Charging started with ${chargingPower} kW`);
+          } else if (wasCharging && !isCharging) {
+            await this.homey.flow.getDeviceTriggerCard('charging_stopped').trigger(this);
+            this.log('[TRIGGER] Charging stopped');
+          }
         }
-
-        // Trigger charging flow cards
-        if (!wasCharging && isCharging) {
-          await this.homey.flow.getDeviceTriggerCard('charging_started')
-            .trigger(this, { charging_power: chargingPower });
-          this.log(`[TRIGGER] Charging started with ${chargingPower} kW`);
-        } else if (wasCharging && !isCharging) {
-          await this.homey.flow.getDeviceTriggerCard('charging_stopped').trigger(this);
-          this.log('[TRIGGER] Charging stopped');
-        }
+      } catch (e) {
+        this.error('[UPDATE] Error updating charging power:', e.message);
       }
 
       // Engine state — Mercedes sends `enginestate` for ICE cars; EVs don't
       // include that key, so fall back to `ignitionstate` (4 = engine on / ready).
-      const engineStateValue = data.enginestate ?? data.engineState;
-      const ignitionValue = data.ignitionstate;
-      let engineRunning = null;
-      let engineSource = null;
+      try {
+        const engineStateValue = data.enginestate ?? data.engineState;
+        const ignitionValue = data.ignitionstate;
+        let engineRunning = null;
+        let engineSource = null;
 
-      if (engineStateValue !== undefined) {
-        engineSource = 'enginestate';
-        if (typeof engineStateValue === 'boolean') {
-          engineRunning = engineStateValue;
-        } else if (typeof engineStateValue === 'string') {
-          const s = engineStateValue.toUpperCase();
-          engineRunning = s === 'RUNNING' || s === 'ON' || s === '1' || s === 'TRUE';
-        } else {
-          engineRunning = Number(engineStateValue) === 1;
+        if (engineStateValue !== undefined) {
+          engineSource = 'enginestate';
+          if (typeof engineStateValue === 'boolean') {
+            engineRunning = engineStateValue;
+          } else if (typeof engineStateValue === 'string') {
+            const s = engineStateValue.toUpperCase();
+            engineRunning = s === 'RUNNING' || s === 'ON' || s === '1' || s === 'TRUE';
+          } else {
+            engineRunning = Number(engineStateValue) === 1;
+          }
+        } else if (ignitionValue !== undefined) {
+          engineSource = 'ignitionstate';
+          engineRunning = Number(ignitionValue) === 4; // 4 = start (engine/EV ready to drive)
         }
-      } else if (ignitionValue !== undefined) {
-        engineSource = 'ignitionstate';
-        engineRunning = Number(ignitionValue) === 4; // 4 = start (engine/EV ready to drive)
-      }
 
-      if (engineRunning !== null) {
-        const wasRunning = this.getCapabilityValue('engine_running');
-        this.log(`[UPDATE] Engine state from ${engineSource}=${engineSource === 'enginestate' ? engineStateValue : ignitionValue} -> running=${engineRunning}, was=${wasRunning}`);
+        if (engineRunning !== null) {
+          const wasRunning = this.getCapabilityValue('engine_running');
+          this.log(`[UPDATE] Engine state from ${engineSource}=${engineSource === 'enginestate' ? engineStateValue : ignitionValue} -> running=${engineRunning}, was=${wasRunning}`);
 
-        if (wasRunning !== engineRunning) {
-          await this.setCapabilityValue('engine_running', engineRunning);
+          if (wasRunning !== engineRunning) {
+            await this.setCapabilityValue('engine_running', engineRunning);
 
-          // Skip triggers on initial read (capability was null/unset before)
-          if (wasRunning !== null && wasRunning !== undefined) {
-            if (engineRunning) {
-              this.log('[TRIGGER] Firing engine_started');
-              await this.homey.flow.getDeviceTriggerCard('engine_started').trigger(this);
-            } else {
-              this.log('[TRIGGER] Firing engine_stopped');
-              await this.homey.flow.getDeviceTriggerCard('engine_stopped').trigger(this);
+            // Skip triggers on initial read (capability was null/unset before)
+            if (wasRunning !== null && wasRunning !== undefined) {
+              if (engineRunning) {
+                this.log('[TRIGGER] Firing engine_started');
+                await this.homey.flow.getDeviceTriggerCard('engine_started').trigger(this);
+              } else {
+                this.log('[TRIGGER] Firing engine_stopped');
+                await this.homey.flow.getDeviceTriggerCard('engine_stopped').trigger(this);
+              }
             }
           }
         }
+      } catch (e) {
+        this.error('[UPDATE] Error updating engine state:', e.message);
       }
 
       // Climate control status
-      if (data.precondActive !== undefined) {
-        await this.setCapabilityValue('climate_active', data.precondActive === true);
+      try {
+        if (data.precondActive !== undefined) {
+          await this.setCapabilityValue('climate_active', data.precondActive === true);
+        }
+      } catch (e) {
+        this.error('[UPDATE] Error updating climate control status:', e.message);
       }
 
       // Tire pressures (already converted from kPa to bar in parser)
       // Check both lowercase and camelCase variants for API compatibility
-      const tirePressureFL = data.tirepressurefrontleft ?? data.tirepressureFrontLeft;
-      if (tirePressureFL !== undefined) {
-        await this.setCapabilityValue('tire_pressure_bar.tire_fl', parseFloat(tirePressureFL));
-      }
-      const tirePressureFR = data.tirepressurefrontright ?? data.tirepressureFrontRight;
-      if (tirePressureFR !== undefined) {
-        await this.setCapabilityValue('tire_pressure_bar.tire_fr', parseFloat(tirePressureFR));
-      }
-      const tirePressureRL = data.tirepressurerearleft ?? data.tirepressureRearLeft;
-      if (tirePressureRL !== undefined) {
-        await this.setCapabilityValue('tire_pressure_bar.tire_rl', parseFloat(tirePressureRL));
-      }
-      const tirePressureRR = data.tirepressurerearright ?? data.tirepressureRearRight;
-      if (tirePressureRR !== undefined) {
-        await this.setCapabilityValue('tire_pressure_bar.tire_rr', parseFloat(tirePressureRR));
+      try {
+        const tirePressureFL = data.tirepressurefrontleft ?? data.tirepressureFrontLeft;
+        if (tirePressureFL !== undefined) {
+          await this.setCapabilityValue('tire_pressure_bar.tire_fl', parseFloat(tirePressureFL));
+        }
+        const tirePressureFR = data.tirepressurefrontright ?? data.tirepressureFrontRight;
+        if (tirePressureFR !== undefined) {
+          await this.setCapabilityValue('tire_pressure_bar.tire_fr', parseFloat(tirePressureFR));
+        }
+        const tirePressureRL = data.tirepressurerearleft ?? data.tirepressureRearLeft;
+        if (tirePressureRL !== undefined) {
+          await this.setCapabilityValue('tire_pressure_bar.tire_rl', parseFloat(tirePressureRL));
+        }
+        const tirePressureRR = data.tirepressurerearright ?? data.tirepressureRearRight;
+        if (tirePressureRR !== undefined) {
+          await this.setCapabilityValue('tire_pressure_bar.tire_rr', parseFloat(tirePressureRR));
+        }
+      } catch (e) {
+        this.error('[UPDATE] Error updating tire pressures:', e.message);
       }
 
       // Odometer reading
-      if (data.odo !== undefined) {
-        this.log(`[UPDATE] Setting odometer to: ${data.odo} km`);
-        await this.setCapabilityValue('odometer', parseFloat(data.odo));
+      try {
+        if (data.odo !== undefined) {
+          this.log(`[UPDATE] Setting odometer to: ${data.odo} km`);
+          await this.setCapabilityValue('odometer', parseFloat(data.odo));
+        }
+      } catch (e) {
+        this.error('[UPDATE] Error updating odometer:', e.message);
       }
 
-      // Trip distance since start - check both lowercase and camelCase variants
-      const distanceStartValue = data.distancestart ?? data.distanceStart;
-      if (distanceStartValue !== undefined) {
-        this.log(`[UPDATE] Setting trip distance to: ${distanceStartValue} km`);
-        await this.setCapabilityValue('distance_start', parseFloat(distanceStartValue));
-      }
+      // Trip distance / electric distance / driving time since start
+      try {
+        const distanceStartValue = data.distancestart ?? data.distanceStart;
+        if (distanceStartValue !== undefined) {
+          this.log(`[UPDATE] Setting trip distance to: ${distanceStartValue} km`);
+          await this.setCapabilityValue('distance_start', parseFloat(distanceStartValue));
+        }
 
-      // Electric trip distance - check both lowercase and camelCase variants
-      const distanceElectricalValue = data.distanceelectricalstart ?? data.distanceElectricalStart;
-      if (distanceElectricalValue !== undefined) {
-        this.log(`[UPDATE] Setting electric distance to: ${distanceElectricalValue} km`);
-        await this.setCapabilityValue('distance_electrical', parseFloat(distanceElectricalValue));
-      }
+        const distanceElectricalValue = data.distanceelectricalstart ?? data.distanceElectricalStart;
+        if (distanceElectricalValue !== undefined) {
+          this.log(`[UPDATE] Setting electric distance to: ${distanceElectricalValue} km`);
+          await this.setCapabilityValue('distance_electrical', parseFloat(distanceElectricalValue));
+        }
 
-      // Driving time since start - check both lowercase and camelCase variants
-      const drivenTimeValue = data.driventimestart ?? data.drivenTimeStart;
-      if (drivenTimeValue !== undefined) {
-        this.log(`[UPDATE] Setting driving time to: ${drivenTimeValue} min`);
-        await this.setCapabilityValue('driven_time_start', parseInt(drivenTimeValue));
+        const drivenTimeValue = data.driventimestart ?? data.drivenTimeStart;
+        if (drivenTimeValue !== undefined) {
+          this.log(`[UPDATE] Setting driving time to: ${drivenTimeValue} min`);
+          await this.setCapabilityValue('driven_time_start', parseInt(drivenTimeValue));
+        }
+      } catch (e) {
+        this.error('[UPDATE] Error updating trip distance/time:', e.message);
       }
 
       // Average speed since start - check both lowercase and camelCase variants
-      const averageSpeedValue = data.averagespeedstart ?? data.averageSpeedStart;
-      if (averageSpeedValue !== undefined) {
-        const speed = parseFloat(averageSpeedValue);
-        this.log(`[UPDATE] Setting average speed to: ${speed} km/h`);
-        await this.setCapabilityValue('average_speed', speed);
-      } else {
-        // Set to 0 when not available (car is stopped)
-        await this.setCapabilityValue('average_speed', 0);
+      try {
+        const averageSpeedValue = data.averagespeedstart ?? data.averageSpeedStart;
+        if (averageSpeedValue !== undefined) {
+          const speed = parseFloat(averageSpeedValue);
+          this.log(`[UPDATE] Setting average speed to: ${speed} km/h`);
+          await this.setCapabilityValue('average_speed', speed);
+        } else {
+          // Set to 0 when not available (car is stopped)
+          await this.setCapabilityValue('average_speed', 0);
+        }
+      } catch (e) {
+        this.error('[UPDATE] Error updating average speed:', e.message);
       }
 
-      const ecoScoreAccel = data.ecoscoreaccel ?? data.ecoScoreAccel ?? data.ecoscoreAccel;
-      if (ecoScoreAccel !== undefined) {
-        this.log(`[UPDATE] Setting acceleration eco score to: ${ecoScoreAccel}`);
-        await this.setCapabilityValue('ecoscore_accel', parseInt(ecoScoreAccel));
-      }
-      const ecoScoreConst = data.ecoscoreconst ?? data.ecoScoreConst ?? data.ecoscoreConst;
-      if (ecoScoreConst !== undefined) {
-        this.log(`[UPDATE] Setting constant eco score to: ${ecoScoreConst}`);
-        await this.setCapabilityValue('ecoscore_const', parseInt(ecoScoreConst));
-      }
-      const ecoScoreFreeWhl = data.ecoscorefreewhl ?? data.ecoScoreFreeWhl ?? data.ecoscoreFreeWhl ?? data.ecoScoreFreewheel;
-      if (ecoScoreFreeWhl !== undefined) {
-        this.log(`[UPDATE] Setting freewheel eco score to: ${ecoScoreFreeWhl}`);
-        await this.setCapabilityValue('ecoscore_freewhl', parseInt(ecoScoreFreeWhl));
+      try {
+        const ecoScoreAccel = data.ecoscoreaccel ?? data.ecoScoreAccel ?? data.ecoscoreAccel;
+        if (ecoScoreAccel !== undefined) {
+          this.log(`[UPDATE] Setting acceleration eco score to: ${ecoScoreAccel}`);
+          await this.setCapabilityValue('ecoscore_accel', parseInt(ecoScoreAccel));
+        }
+        const ecoScoreConst = data.ecoscoreconst ?? data.ecoScoreConst ?? data.ecoscoreConst;
+        if (ecoScoreConst !== undefined) {
+          this.log(`[UPDATE] Setting constant eco score to: ${ecoScoreConst}`);
+          await this.setCapabilityValue('ecoscore_const', parseInt(ecoScoreConst));
+        }
+        const ecoScoreFreeWhl = data.ecoscorefreewhl ?? data.ecoScoreFreeWhl ?? data.ecoscoreFreeWhl ?? data.ecoScoreFreewheel;
+        if (ecoScoreFreeWhl !== undefined) {
+          this.log(`[UPDATE] Setting freewheel eco score to: ${ecoScoreFreeWhl}`);
+          await this.setCapabilityValue('ecoscore_freewhl', parseInt(ecoScoreFreeWhl));
+        }
+      } catch (e) {
+        this.error('[UPDATE] Error updating eco scores:', e.message);
       }
 
       // Generic alarm (warnings) with trigger
-      const hasWarning = data.warningwashwater || data.warningcoolantlevellow ||
-                        data.warningbrakefluid || data.warningenginelight;
-      const hadWarning = this.getCapabilityValue('alarm_generic');
-      await this.setCapabilityValue('alarm_generic', hasWarning === true);
+      try {
+        const hasWarning = data.warningwashwater || data.warningcoolantlevellow ||
+                          data.warningbrakefluid || data.warningenginelight;
+        const hadWarning = this.getCapabilityValue('alarm_generic');
+        await this.setCapabilityValue('alarm_generic', hasWarning === true);
 
-      // Trigger warning light activated when a new warning appears
-      if (hasWarning === true && hadWarning !== true) {
-        await this.homey.flow.getDeviceTriggerCard('warning_light_activated').trigger(this);
+        // Trigger warning light activated when a new warning appears
+        if (hasWarning === true && hadWarning !== true) {
+          await this.homey.flow.getDeviceTriggerCard('warning_light_activated').trigger(this);
+        }
+      } catch (e) {
+        this.error('[UPDATE] Error updating generic alarm:', e.message);
       }
 
       // --- NEW CAPABILITIES ---
 
-      // Electric range
-      if (data.rangeelectric !== undefined) {
-        this.log(`[UPDATE] Setting electric range to: ${data.rangeelectric} km`);
-        await this.setCapabilityValue('measure_range_electric', parseFloat(data.rangeelectric));
-      }
+      // Electric range / liquid fuel range / fuel level / AdBlue level
+      try {
+        if (data.rangeelectric !== undefined) {
+          this.log(`[UPDATE] Setting electric range to: ${data.rangeelectric} km`);
+          await this.setCapabilityValue('measure_range_electric', parseFloat(data.rangeelectric));
+        }
 
-      // Liquid fuel range
-      if (data.rangeliquid !== undefined) {
-        this.log(`[UPDATE] Setting liquid range to: ${data.rangeliquid} km`);
-        await this.setCapabilityValue('measure_range_liquid', parseFloat(data.rangeliquid));
-      }
+        if (data.rangeliquid !== undefined) {
+          this.log(`[UPDATE] Setting liquid range to: ${data.rangeliquid} km`);
+          await this.setCapabilityValue('measure_range_liquid', parseFloat(data.rangeliquid));
+        }
 
-      // Fuel level
-      if (data.tanklevelpercent !== undefined) {
-        this.log(`[UPDATE] Setting fuel level to: ${data.tanklevelpercent}%`);
-        await this.setCapabilityValue('measure_fuel', parseInt(data.tanklevelpercent));
-      }
+        if (data.tanklevelpercent !== undefined) {
+          this.log(`[UPDATE] Setting fuel level to: ${data.tanklevelpercent}%`);
+          await this.setCapabilityValue('measure_fuel', parseInt(data.tanklevelpercent));
+        }
 
-      // AdBlue level
-      if (data.tankLevelAdBlue !== undefined) {
-        this.log(`[UPDATE] Setting AdBlue level to: ${data.tankLevelAdBlue}%`);
-        await this.setCapabilityValue('measure_adblue_level', parseInt(data.tankLevelAdBlue));
+        if (data.tankLevelAdBlue !== undefined) {
+          this.log(`[UPDATE] Setting AdBlue level to: ${data.tankLevelAdBlue}%`);
+          await this.setCapabilityValue('measure_adblue_level', parseInt(data.tankLevelAdBlue));
+        }
+      } catch (e) {
+        this.error('[UPDATE] Error updating range/fuel levels:', e.message);
       }
-
 
       // Ignition state
-      if (data.ignitionstate !== undefined) {
-        const raw = Number(data.ignitionstate);
-        const ignitionOn = raw === 1 || raw === 2 || raw === 4; // 0: lock/off, 1: radio, 2: ignition, 4: start
-        this.log(`[UPDATE] Setting ignition state to: ${ignitionOn} (raw: ${data.ignitionstate})`);
-        await this.setCapabilityValue('ignition_on', ignitionOn);
+      try {
+        if (data.ignitionstate !== undefined) {
+          const raw = Number(data.ignitionstate);
+          const ignitionOn = raw === 1 || raw === 2 || raw === 4; // 0: lock/off, 1: radio, 2: ignition, 4: start
+          this.log(`[UPDATE] Setting ignition state to: ${ignitionOn} (raw: ${data.ignitionstate})`);
+          await this.setCapabilityValue('ignition_on', ignitionOn);
+        }
+      } catch (e) {
+        this.error('[UPDATE] Error updating ignition state:', e.message);
       }
 
       // Oil level (percent)
-      if (data.oilLevel !== undefined) {
-        this.log(`[UPDATE] Setting oil level to: ${data.oilLevel}%`);
-        await this.setCapabilityValue('measure_oil_level', parseInt(data.oilLevel));
+      try {
+        if (data.oilLevel !== undefined) {
+          this.log(`[UPDATE] Setting oil level to: ${data.oilLevel}%`);
+          await this.setCapabilityValue('measure_oil_level', parseInt(data.oilLevel));
+        }
+      } catch (e) {
+        this.error('[UPDATE] Error updating oil level:', e.message);
       }
 
       // Charging status (text) with charging completed trigger
-      if (data.chargingstatus !== undefined) {
-        const oldStatus = this.getCapabilityValue('text_charging_status');
-        // Translate Mercedes charging status codes to readable text
-        const statusMap = {
-          '0': 'Charging',
-          '1': 'Charging ends',
-          '2': 'Charge break',
-          '3': 'Unplugged',
-          '4': 'Failure',
-          '5': 'Slow charging',
-          '6': 'Fast charging',
-          '7': 'Discharging',
-          '8': 'Not charging',
-          '9': 'Slow charging (after trip target)',
-          '10': 'Charging (after trip target)',
-          '11': 'Fast charging (after trip target)',
-          '12': 'Connected',
-          '13': 'AC charging',
-          '14': 'DC charging',
-          '15': 'Battery calibration active',
-          '16': 'Unknown',
-        };
-        const rawStatus = String(data.chargingstatus);
-        const readableStatus = statusMap[rawStatus] || rawStatus;
-        this.log(`[UPDATE] Setting charging status to: ${rawStatus} (${readableStatus})`);
-        await this.setCapabilityValue('text_charging_status', readableStatus);
+      try {
+        if (data.chargingstatus !== undefined) {
+          const oldStatus = this.getCapabilityValue('text_charging_status');
+          // Translate Mercedes charging status codes to readable text
+          const statusMap = {
+            '0': 'Charging',
+            '1': 'Charging ends',
+            '2': 'Charge break',
+            '3': 'Unplugged',
+            '4': 'Failure',
+            '5': 'Slow charging',
+            '6': 'Fast charging',
+            '7': 'Discharging',
+            '8': 'Not charging',
+            '9': 'Slow charging (after trip target)',
+            '10': 'Charging (after trip target)',
+            '11': 'Fast charging (after trip target)',
+            '12': 'Connected',
+            '13': 'AC charging',
+            '14': 'DC charging',
+            '15': 'Battery calibration active',
+            '16': 'Unknown',
+          };
+          const rawStatus = String(data.chargingstatus);
+          const readableStatus = statusMap[rawStatus] || rawStatus;
+          this.log(`[UPDATE] Setting charging status to: ${rawStatus} (${readableStatus})`);
+          await this.setCapabilityValue('text_charging_status', readableStatus);
 
-        // Trigger charging completed when status changes to "charging ends" (1)
-        const completedStatuses = ['CHARGING ENDS', 'FINISHED', 'COMPLETED', 'END'];
-        const wasCharging = oldStatus && !completedStatuses.includes(String(oldStatus).toUpperCase());
-        const isCompleted = rawStatus === '1' || completedStatuses.includes(readableStatus.toUpperCase());
+          // Trigger charging completed when status changes to "charging ends" (1)
+          const completedStatuses = ['CHARGING ENDS', 'FINISHED', 'COMPLETED', 'END'];
+          const wasCharging = oldStatus && !completedStatuses.includes(String(oldStatus).toUpperCase());
+          const isCompleted = rawStatus === '1' || completedStatuses.includes(readableStatus.toUpperCase());
 
-        if (wasCharging && isCompleted) {
-          const batteryLevel = this.getCapabilityValue('measure_battery') || 0;
-          await this.homey.flow.getDeviceTriggerCard('charging_completed')
-            .trigger(this, { battery_level: batteryLevel });
+          if (wasCharging && isCompleted) {
+            const batteryLevel = this.getCapabilityValue('measure_battery') || 0;
+            await this.homey.flow.getDeviceTriggerCard('charging_completed')
+              .trigger(this, { battery_level: batteryLevel });
+          }
         }
+      } catch (e) {
+        this.error('[UPDATE] Error updating charging status:', e.message);
       }
 
       // Charge coupler / connector status with plugged in/unplugged triggers
-      const couplerValue = data.chargeCouplerACStatus ?? data.chargecoupleracstatus
-        ?? data.chargeCouplerDCStatus ?? data.chargecoupledcstatus;
-      if (couplerValue === null) {
-        await this.setCapabilityValue('text_connector_status', 'Unknown');
-      } else if (couplerValue !== undefined) {
-        const statusMap = {
-          '0': 'Connected (locked)',
-          '1': 'Connected (unlocked)',
-          '2': 'Disconnected',
-          '3': 'Error',
-          '4': 'Charging started',
-        };
-        const rawStatus = String(couplerValue);
-        const readableStatus = statusMap[rawStatus] || rawStatus;
-        const oldStatus = this.getCapabilityValue('text_connector_status');
-        this.log(`[UPDATE] Setting connector status to: ${rawStatus} (${readableStatus})`);
-        await this.setCapabilityValue('text_connector_status', readableStatus);
-        await this.setCapabilityValue('onoff_connector', readableStatus !== 'Disconnected');
+      try {
+        const couplerValue = data.chargeCouplerACStatus ?? data.chargecoupleracstatus
+          ?? data.chargeCouplerDCStatus ?? data.chargecoupledcstatus;
+        if (couplerValue === null) {
+          await this.setCapabilityValue('text_connector_status', 'Unknown');
+        } else if (couplerValue !== undefined) {
+          const statusMap = {
+            '0': 'Connected (locked)',
+            '1': 'Connected (unlocked)',
+            '2': 'Disconnected',
+            '3': 'Error',
+            '4': 'Charging started',
+          };
+          const rawStatus = String(couplerValue);
+          const readableStatus = statusMap[rawStatus] || rawStatus;
+          const oldStatus = this.getCapabilityValue('text_connector_status');
+          this.log(`[UPDATE] Setting connector status to: ${rawStatus} (${readableStatus})`);
+          await this.setCapabilityValue('text_connector_status', readableStatus);
+          await this.setCapabilityValue('onoff_connector', readableStatus !== 'Disconnected');
 
-        // Determine connected state (anything that is not 'Disconnected')
-        const isConnected = readableStatus !== 'Disconnected';
-        const wasConnected = oldStatus !== null && oldStatus !== 'Disconnected';
+          // Determine connected state (anything that is not 'Disconnected')
+          const isConnected = readableStatus !== 'Disconnected';
+          const wasConnected = oldStatus !== null && oldStatus !== 'Disconnected';
 
-        if (!wasConnected && isConnected) {
-          await this.homey.flow.getDeviceTriggerCard('connector_connected').trigger(this);
-          this.log('[TRIGGER] Charger connected');
-        } else if (wasConnected && !isConnected) {
-          await this.homey.flow.getDeviceTriggerCard('connector_disconnected').trigger(this);
-          this.log('[TRIGGER] Charger disconnected');
+          if (!wasConnected && isConnected) {
+            await this.homey.flow.getDeviceTriggerCard('connector_connected').trigger(this);
+            this.log('[TRIGGER] Charger connected');
+          } else if (wasConnected && !isConnected) {
+            await this.homey.flow.getDeviceTriggerCard('connector_disconnected').trigger(this);
+            this.log('[TRIGGER] Charger disconnected');
+          }
         }
+      } catch (e) {
+        this.error('[UPDATE] Error updating connector status:', e.message);
       }
 
       // Selected charge program (text)
-      if (data.selectedChargeProgram !== undefined) {
-        const programMap = {
-          '0': 'Default',
-          '2': 'Home',
-          '3': 'Work',
-        };
-        const rawProgram = String(data.selectedChargeProgram);
-        const readableProgram = programMap[rawProgram] || rawProgram;
-        this.log(`[UPDATE] Setting selected charge program to: ${rawProgram} (${readableProgram})`);
-        await this.setCapabilityValue('text_charge_program', readableProgram);
-        await this.setStoreValue('selectedChargeProgramRaw', data.selectedChargeProgram);
+      try {
+        if (data.selectedChargeProgram !== undefined) {
+          const programMap = {
+            '0': 'Default',
+            '2': 'Home',
+            '3': 'Work',
+          };
+          const rawProgram = String(data.selectedChargeProgram);
+          const readableProgram = programMap[rawProgram] || rawProgram;
+          this.log(`[UPDATE] Setting selected charge program to: ${rawProgram} (${readableProgram})`);
+          await this.setCapabilityValue('text_charge_program', readableProgram);
+          await this.setStoreValue('selectedChargeProgramRaw', data.selectedChargeProgram);
+        }
+      } catch (e) {
+        this.error('[UPDATE] Error updating selected charge program:', e.message);
       }
 
       // Max SoC (check both maxSoc and max_soc as API may use either)
-      const maxSocValue = data.maxSoc !== undefined ? data.maxSoc : data.max_soc;
-      if (maxSocValue !== undefined) {
-        this.log(`[UPDATE] Setting max SoC to: ${maxSocValue}%`);
-        await this.setCapabilityValue('measure_max_soc', parseInt(maxSocValue));
+      try {
+        const maxSocValue = data.maxSoc !== undefined ? data.maxSoc : data.max_soc;
+        if (maxSocValue !== undefined) {
+          this.log(`[UPDATE] Setting max SoC to: ${maxSocValue}%`);
+          await this.setCapabilityValue('measure_max_soc', parseInt(maxSocValue));
+        }
+      } catch (e) {
+        this.error('[UPDATE] Error updating max SoC:', e.message);
       }
 
       // End of charge time — API sends minutes since midnight (e.g. 825 = 13:45)
-      if (data.endofchargetime !== undefined) {
-        const totalMinutes = parseInt(data.endofchargetime);
-        const hh = String(Math.floor(totalMinutes / 60)).padStart(2, '0');
-        const mm = String(totalMinutes % 60).padStart(2, '0');
-        const timeStr = `${hh}:${mm}`;
-        this.log(`[UPDATE] Setting end of charge time to: ${timeStr} (raw: ${data.endofchargetime})`);
-        await this.setCapabilityValue('text_end_charge_time', timeStr);
+      try {
+        if (data.endofchargetime !== undefined) {
+          const totalMinutes = parseInt(data.endofchargetime);
+          const hh = String(Math.floor(totalMinutes / 60)).padStart(2, '0');
+          const mm = String(totalMinutes % 60).padStart(2, '0');
+          const timeStr = `${hh}:${mm}`;
+          this.log(`[UPDATE] Setting end of charge time to: ${timeStr} (raw: ${data.endofchargetime})`);
+          await this.setCapabilityValue('text_end_charge_time', timeStr);
+        }
+      } catch (e) {
+        this.error('[UPDATE] Error updating end of charge time:', e.message);
       }
 
       // Sunroof status (text)
-      if (data.sunroofstatus !== undefined) {
-        const sunroofMap = {
-          0: 'Closed',
-          1: 'Open',
-          2: 'Tilted',
-          3: 'Running',
-          4: 'Anti-Booming',
-          5: 'Intermediate',
-          6: 'Opening',
-          7: 'Closing'
-        };
-        const sunroofStatus = sunroofMap[data.sunroofstatus] || String(data.sunroofstatus);
-        this.log(`[UPDATE] Setting sunroof status to: ${sunroofStatus} (raw: ${data.sunroofstatus})`);
-        await this.setCapabilityValue('window_sunroof', sunroofStatus);
+      try {
+        if (data.sunroofstatus !== undefined) {
+          const sunroofMap = {
+            0: 'Closed',
+            1: 'Open',
+            2: 'Tilted',
+            3: 'Running',
+            4: 'Anti-Booming',
+            5: 'Intermediate',
+            6: 'Opening',
+            7: 'Closing'
+          };
+          const sunroofStatus = sunroofMap[data.sunroofstatus] || String(data.sunroofstatus);
+          this.log(`[UPDATE] Setting sunroof status to: ${sunroofStatus} (raw: ${data.sunroofstatus})`);
+          await this.setCapabilityValue('window_sunroof', sunroofStatus);
+        }
+      } catch (e) {
+        this.error('[UPDATE] Error updating sunroof status:', e.message);
       }
 
-      // Departure Time (value is minutes from midnight, convert to HH:MM)
-      if (data.departuretime !== undefined) {
-        const minutes = Number(data.departuretime);
-        const hours = Math.floor(minutes / 60);
-        const mins = minutes % 60;
-        const departureTimeStr = `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
-        this.log(`[UPDATE] Setting departure time to: ${departureTimeStr} (raw: ${data.departuretime})`);
-        await this.setCapabilityValue('text_departure_time', departureTimeStr);
-      }
+      // Departure Time (value is minutes from midnight, convert to HH:MM) and mode
+      try {
+        if (data.departuretime !== undefined) {
+          const minutes = Number(data.departuretime);
+          const hours = Math.floor(minutes / 60);
+          const mins = minutes % 60;
+          const departureTimeStr = `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+          this.log(`[UPDATE] Setting departure time to: ${departureTimeStr} (raw: ${data.departuretime})`);
+          await this.setCapabilityValue('text_departure_time', departureTimeStr);
+        }
 
-      // Departure Time Mode (check multiple possible field names)
-      const departureTimeModeRaw = data.departureTimeMode !== undefined ? data.departureTimeMode :
-                                   data.departuretimemode !== undefined ? data.departuretimemode :
-                                   data.departuretime_mode;
-      if (departureTimeModeRaw !== undefined) {
-        const departureModeMap = {
-          0: 'Inactive',
-          1: 'Single',
-          2: 'Weekly'
-        };
-        const departureTimeModeValue = departureModeMap[departureTimeModeRaw] || String(departureTimeModeRaw);
-        this.log(`[UPDATE] Setting departure time mode to: ${departureTimeModeValue} (raw: ${departureTimeModeRaw})`);
-        await this.setCapabilityValue('text_departure_time_mode', departureTimeModeValue);
+        // Departure Time Mode (check multiple possible field names)
+        const departureTimeModeRaw = data.departureTimeMode !== undefined ? data.departureTimeMode :
+                                     data.departuretimemode !== undefined ? data.departuretimemode :
+                                     data.departuretime_mode;
+        if (departureTimeModeRaw !== undefined) {
+          const departureModeMap = {
+            0: 'Inactive',
+            1: 'Single',
+            2: 'Weekly'
+          };
+          const departureTimeModeValue = departureModeMap[departureTimeModeRaw] || String(departureTimeModeRaw);
+          this.log(`[UPDATE] Setting departure time mode to: ${departureTimeModeValue} (raw: ${departureTimeModeRaw})`);
+          await this.setCapabilityValue('text_departure_time_mode', departureTimeModeValue);
+        }
+      } catch (e) {
+        this.error('[UPDATE] Error updating departure time/mode:', e.message);
       }
 
       // Position latitude/longitude are NOT available in vehicle attributes API
       // They come from geofencing violations API (polled separately)
-      const posLat = data.positionlat ?? data.positionLat ?? data.latitude ?? data.gpsLat ?? data.gpslat;
-      const posLong = data.positionlong ?? data.positionLong ?? data.longitude ?? data.gpsLon ?? data.gpslon;
-      if (posLat !== undefined && posLong !== undefined) {
-        const lat = parseFloat(posLat);
-        const long = parseFloat(posLong);
-        this.log(`[UPDATE] Setting location: ${lat}, ${long}`);
-        await this.setCapabilityValue('measure_latitude', lat);
-        await this.setCapabilityValue('measure_longitude', long);
-      }
+      try {
+        const posLat = data.positionlat ?? data.positionLat ?? data.latitude ?? data.gpsLat ?? data.gpslat;
+        const posLong = data.positionlong ?? data.positionLong ?? data.longitude ?? data.gpsLon ?? data.gpslon;
+        if (posLat !== undefined && posLong !== undefined) {
+          const lat = parseFloat(posLat);
+          const long = parseFloat(posLong);
+          this.log(`[UPDATE] Setting location - latitude: ${lat}, longitude: ${long}`);
+          await this.setCapabilityValue('measure_latitude', lat);
+          await this.setCapabilityValue('measure_longitude', long);
+        }
 
-      // Heading - the correct field name is positionHeading (camelCase)
-      const posHeading = data.positionHeading ?? data.positionheading ?? data.heading ?? data.gpsHeading ?? data.gpsheading;
-      if (posHeading !== undefined) {
-        const heading = parseFloat(posHeading);
-        this.log(`[UPDATE] Setting heading: ${heading}`);
-        await this.setCapabilityValue('measure_heading', heading);
+        // Heading - the correct field name is positionHeading (camelCase)
+        const posHeading = data.positionHeading ?? data.positionheading ?? data.heading ?? data.gpsHeading ?? data.gpsheading;
+        if (posHeading !== undefined) {
+          const heading = parseFloat(posHeading);
+          this.log(`[UPDATE] Setting heading: ${heading}`);
+          await this.setCapabilityValue('measure_heading', heading);
+        }
+      } catch (e) {
+        this.error('[UPDATE] Error updating position/heading:', e.message);
       }
 
       // Window statuses with flow triggers
@@ -1109,100 +1191,117 @@ class MercedesVehicleDevice extends Homey.Device {
         }
       }
 
-      // Parking brake status
-      if (data.parkbrakestatus !== undefined) {
-        const parkBrakeEngaged = data.parkbrakestatus === true || data.parkbrakestatus === 'true' || data.parkbrakestatus === 1;
-        await this.setCapabilityValue('parking_brake_engaged', parkBrakeEngaged);
-      }
+      // Parking brake status / service interval days
+      try {
+        if (data.parkbrakestatus !== undefined) {
+          const parkBrakeEngaged = data.parkbrakestatus === true || data.parkbrakestatus === 'true' || data.parkbrakestatus === 1;
+          await this.setCapabilityValue('parking_brake_engaged', parkBrakeEngaged);
+        }
 
-      // Service interval days
-      if (data.serviceintervaldays !== undefined) {
-        await this.setCapabilityValue('measure_service_days', parseInt(data.serviceintervaldays));
+        if (data.serviceintervaldays !== undefined) {
+          await this.setCapabilityValue('measure_service_days', parseInt(data.serviceintervaldays));
+        }
+      } catch (e) {
+        this.error('[UPDATE] Error updating parking brake/service interval:', e.message);
       }
 
       // Battery temperature (EV) - check various possible attribute names
       // Mercedes uses different naming conventions: temperaturehvbattery, hvbatterytemperature, etc.
-      const batteryTempValue = data.temperaturehvbattery ?? data.temperatureHVBattery ??
-        data.hvbatterytemperature ?? data.hvBatteryTemperature ??
-        data.ecoelectricbatterytemperature ?? data.ecoElectricBatteryTemperature ??
-        data.batterytemperature ?? data.batteryTemperature;
-      if (batteryTempValue !== undefined) {
-        this.log('[DATA] Battery temperature found:', batteryTempValue);
-        await this.setCapabilityValue('measure_battery_temperature', parseFloat(batteryTempValue));
-      }
-
-      // Debug: Log all attributes containing 'temp' or 'battery' to find correct key
-      const tempBatteryKeys = Object.keys(data).filter(k =>
-        k.toLowerCase().includes('temp') || k.toLowerCase().includes('battery')
-      );
-      if (tempBatteryKeys.length > 0) {
-        this.log('[DEBUG] Temperature/Battery related attributes:', tempBatteryKeys.map(k => `${k}=${data[k]}`).join(', '));
-      }
-
-      // Preconditioning status - check both lowercase and camelCase variants
-      const precondActiveValue = data.precondactive ?? data.precondActive;
-      if (precondActiveValue !== undefined) {
-        const precondActive = precondActiveValue === true || precondActiveValue === 'true' || precondActiveValue === 1;
-        await this.setCapabilityValue('onoff_precond', precondActive);
-      }
-
-      // Auxiliary heating status - check both lowercase and camelCase variants
-      const auxheatActiveValue = data.auxheatactive ?? data.auxheatActive;
-      if (auxheatActiveValue !== undefined) {
-        const auxheatActive = auxheatActiveValue === true || auxheatActiveValue === 'true' || auxheatActiveValue === 1;
-        await this.setCapabilityValue('onoff_auxheat', auxheatActive);
-      }
-
-      // Remote start status - check both lowercase and camelCase variants
-      const remoteStartActiveValue = data.remotestartactive ?? data.remoteStartActive;
-      if (remoteStartActiveValue !== undefined) {
-        const remoteStartActive = remoteStartActiveValue === true || remoteStartActiveValue === 'true' || remoteStartActiveValue === 1;
-        await this.setCapabilityValue('onoff_remote_start', remoteStartActive);
-      }
-
-      // Theft system armed status - check both lowercase and camelCase variants
-      const theftSystemArmedValue = data.theftsystemarmed ?? data.theftSystemArmed;
-      if (theftSystemArmedValue !== undefined) {
-        const theftArmed = theftSystemArmedValue === true || theftSystemArmedValue === 'true' || theftSystemArmedValue === 1;
-        await this.setCapabilityValue('theft_system_armed', theftArmed);
-      }
-
-      // Theft alarm status - check both lowercase and camelCase variants
-      const theftAlarmActiveValue = data.theftalarmactive ?? data.theftAlarmActive;
-      const lastTheftWarningValue = data.lasttheftwarning ?? data.lastTheftWarning;
-      if (theftAlarmActiveValue !== undefined || lastTheftWarningValue !== undefined) {
-        const theftActive = theftAlarmActiveValue === true || theftAlarmActiveValue === 1;
-        const wasTheftActive = this.getCapabilityValue('alarm_theft');
-        await this.setCapabilityValue('alarm_theft', theftActive);
-
-        // Trigger vehicle alarm flow card when alarm activates
-        if (theftActive && !wasTheftActive) {
-          const reasonValue = data.lasttheftwarningreason ?? data.lastTheftWarningReason;
-          const reason = reasonValue || 'UNKNOWN';
-          await this.homey.flow.getDeviceTriggerCard('vehicle_alarm')
-            .trigger(this, { reason: String(reason) });
+      try {
+        const batteryTempValue = data.temperaturehvbattery ?? data.temperatureHVBattery ??
+          data.hvbatterytemperature ?? data.hvBatteryTemperature ??
+          data.ecoelectricbatterytemperature ?? data.ecoElectricBatteryTemperature ??
+          data.batterytemperature ?? data.batteryTemperature;
+        if (batteryTempValue !== undefined) {
+          this.log('[DATA] Battery temperature found:', batteryTempValue);
+          await this.setCapabilityValue('measure_battery_temperature', parseFloat(batteryTempValue));
         }
+
+        // Debug: Log all attributes containing 'temp' or 'battery' to find correct key
+        const tempBatteryKeys = Object.keys(data).filter(k =>
+          k.toLowerCase().includes('temp') || k.toLowerCase().includes('battery')
+        );
+        if (tempBatteryKeys.length > 0) {
+          this.log('[DEBUG] Temperature/Battery related attributes:', tempBatteryKeys.map(k => `${k}=${data[k]}`).join(', '));
+        }
+      } catch (e) {
+        this.error('[UPDATE] Error updating battery temperature:', e.message);
+      }
+
+      // Preconditioning / auxiliary heating / remote start status - check both lowercase and camelCase variants
+      try {
+        const precondActiveValue = data.precondactive ?? data.precondActive;
+        if (precondActiveValue !== undefined) {
+          const precondActive = precondActiveValue === true || precondActiveValue === 'true' || precondActiveValue === 1;
+          await this.setCapabilityValue('onoff_precond', precondActive);
+        }
+
+        const auxheatActiveValue = data.auxheatactive ?? data.auxheatActive;
+        if (auxheatActiveValue !== undefined) {
+          const auxheatActive = auxheatActiveValue === true || auxheatActiveValue === 'true' || auxheatActiveValue === 1;
+          await this.setCapabilityValue('onoff_auxheat', auxheatActive);
+        }
+
+        const remoteStartActiveValue = data.remotestartactive ?? data.remoteStartActive;
+        if (remoteStartActiveValue !== undefined) {
+          const remoteStartActive = remoteStartActiveValue === true || remoteStartActiveValue === 'true' || remoteStartActiveValue === 1;
+          await this.setCapabilityValue('onoff_remote_start', remoteStartActive);
+        }
+      } catch (e) {
+        this.error('[UPDATE] Error updating precond/auxheat/remote start:', e.message);
+      }
+
+      // Theft system armed / theft alarm status - check both lowercase and camelCase variants
+      try {
+        const theftSystemArmedValue = data.theftsystemarmed ?? data.theftSystemArmed;
+        if (theftSystemArmedValue !== undefined) {
+          const theftArmed = theftSystemArmedValue === true || theftSystemArmedValue === 'true' || theftSystemArmedValue === 1;
+          await this.setCapabilityValue('theft_system_armed', theftArmed);
+        }
+
+        const theftAlarmActiveValue = data.theftalarmactive ?? data.theftAlarmActive;
+        const lastTheftWarningValue = data.lasttheftwarning ?? data.lastTheftWarning;
+        if (theftAlarmActiveValue !== undefined || lastTheftWarningValue !== undefined) {
+          const theftActive = theftAlarmActiveValue === true || theftAlarmActiveValue === 1;
+          const wasTheftActive = this.getCapabilityValue('alarm_theft');
+          await this.setCapabilityValue('alarm_theft', theftActive);
+
+          // Trigger vehicle alarm flow card when alarm activates
+          if (theftActive && !wasTheftActive) {
+            const reasonValue = data.lasttheftwarningreason ?? data.lastTheftWarningReason;
+            const reason = reasonValue || 'UNKNOWN';
+            await this.homey.flow.getDeviceTriggerCard('vehicle_alarm')
+              .trigger(this, { reason: String(reason) });
+          }
+        }
+      } catch (e) {
+        this.error('[UPDATE] Error updating theft system/alarm status:', e.message);
       }
 
       // Geofence data from WebSocket (if available) - check multiple possible field names
-      const geofenceZone = data.geofencename ?? data.geofenceName ?? data.geofence_name ??
-                           data.lastgeofencezone ?? data.lastGeofenceZone ?? data.currentzone ?? data.currentZone;
-      if (geofenceZone !== undefined) {
-        this.log(`[UPDATE] Setting geofence zone to: ${geofenceZone}`);
-        await this.setCapabilityValue('text_geofence_last_zone', String(geofenceZone));
-      }
+      try {
+        const geofenceZone = data.geofencename ?? data.geofenceName ?? data.geofence_name ??
+                             data.lastgeofencezone ?? data.lastGeofenceZone ?? data.currentzone ?? data.currentZone;
+        if (geofenceZone !== undefined) {
+          this.log(`[UPDATE] Setting geofence zone to: ${geofenceZone}`);
+          await this.setCapabilityValue('text_geofence_last_zone', String(geofenceZone));
+        }
 
-      const geofenceEvent = data.geofenceevent ?? data.geofenceEvent ?? data.geofence_event ??
-                            data.lastgeofenceevent ?? data.lastGeofenceEvent;
-      if (geofenceEvent !== undefined) {
-        this.log(`[UPDATE] Setting geofence event to: ${geofenceEvent}`);
-        await this.setCapabilityValue('text_geofence_last_event', String(geofenceEvent));
+        const geofenceEvent = data.geofenceevent ?? data.geofenceEvent ?? data.geofence_event ??
+                              data.lastgeofenceevent ?? data.lastGeofenceEvent;
+        if (geofenceEvent !== undefined) {
+          this.log(`[UPDATE] Setting geofence event to: ${geofenceEvent}`);
+          await this.setCapabilityValue('text_geofence_last_event', String(geofenceEvent));
+        }
+      } catch (e) {
+        this.error('[UPDATE] Error updating geofence zone/event:', e.message);
       }
 
       this.log('Capabilities updated successfully');
 
     } catch (error) {
       this.error('Error updating capabilities:', error.message);
+      this.error('Error stack:', error.stack);
     }
   }
 
