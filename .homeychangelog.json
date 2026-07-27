@@ -113,5 +113,8 @@
   },
   "1.1.31": {
     "en": "Fixed the login/repair form not responding when you clicked 'Log in' (the page would silently blink and clear instead of signing you in). Also fixed a missing icon on the device-selection screen during pairing."
+  },
+  "1.1.32": {
+    "en": "Fixed a rare crash (ReferenceError) when sending a vehicle command while the live connection was reconnecting."
   }
 }
