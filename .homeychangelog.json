@@ -110,5 +110,8 @@
   },
   "1.1.30": {
     "en": "The device repair screen now includes the region selector (previously missing), pre-filled with the device's current region, so you can fix a mismatched region without having to remove and re-add the device."
+  },
+  "1.1.31": {
+    "en": "Fixed the login/repair form not responding when you clicked 'Log in' (the page would silently blink and clear instead of signing you in). Also fixed a missing icon on the device-selection screen during pairing."
   }
 }
