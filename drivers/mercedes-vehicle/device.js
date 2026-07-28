@@ -1109,14 +1109,17 @@ class MercedesVehicleDevice extends Homey.Device {
 
       // Window statuses with flow triggers
       const windowMappings = [
-        { key: 'windowstatusfrontleft', cap: 'window_front_left', name: 'front_left' },
-        { key: 'windowstatusfrontright', cap: 'window_front_right', name: 'front_right' },
-        { key: 'windowstatusrearleft', cap: 'window_rear_left', name: 'rear_left' },
-        { key: 'windowstatusrearright', cap: 'window_rear_right', name: 'rear_right' }
+        { keys: ['windowstatusfrontleft', 'windowStatusFrontLeft', 'windowFrontLeftStatus'], cap: 'window_front_left', name: 'front_left' },
+        { keys: ['windowstatusfrontright', 'windowStatusFrontRight', 'windowFrontRightStatus'], cap: 'window_front_right', name: 'front_right' },
+        { keys: ['windowstatusrearleft', 'windowStatusRearLeft', 'windowRearLeftStatus'], cap: 'window_rear_left', name: 'rear_left' },
+        { keys: ['windowstatusrearright', 'windowStatusRearRight', 'windowRearRightStatus'], cap: 'window_rear_right', name: 'rear_right' }
       ];
 
       for (const win of windowMappings) {
-        if (data[win.key] !== undefined) {
+        // Find the first matching key (matches the doorMappings fallback pattern below -
+        // the Mercedes API has been observed to vary key casing/naming across pushes)
+        const matchingKey = win.keys.find(k => data[k] !== undefined);
+        if (matchingKey !== undefined && data[matchingKey] !== undefined) {
           try {
             if (!this.hasCapability(win.cap)) {
               this.log(`[UPDATE] Skipping ${win.cap} - capability not available (re-pair device to fix)`);
@@ -1129,7 +1132,7 @@ class MercedesVehicleDevice extends Homey.Device {
               3: 'Airing',
               4: 'Running'
             };
-            const rawStatus = data[win.key];
+            const rawStatus = data[matchingKey];
             const newStatus = windowStatusMap[rawStatus] || String(rawStatus);
             const oldStatus = this.getCapabilityValue(win.cap);
             this.log(`[UPDATE] Setting ${win.cap} to: ${newStatus} (raw: ${rawStatus}, old: ${oldStatus})`);
