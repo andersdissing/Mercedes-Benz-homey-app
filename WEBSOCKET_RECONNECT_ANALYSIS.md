@@ -2,6 +2,10 @@
 
 Issue: #47 ("not all capabilities are refreshed")
 
+**Status: fixed.** All five steps in the plan below are implemented; see
+`test/websocket-reconnect.test.js` for the regression tests. Each test was
+verified to fail against the original code before the fix was applied.
+
 ## Symptom
 
 After initialization, some capabilities (battery, range, position) keep
@@ -168,9 +172,23 @@ so they freeze.
    a genuine user-initiated stop, not via the timeout path. Run
    `npm test` and `homey app validate` (via the existing CI workflow).
 
-## Open scope question
+## What was actually implemented
 
-Steps 1–3 fix the actual bugs. Step 4 is defensive (a backstop against
-future regressions in the same state machine) rather than strictly
-necessary once 1–3 land. Decide whether to implement all five or just
-1–3.
+All five steps.
+
+| Step | Change |
+| --- | --- |
+| 1 | Added `_teardownSocket()` in `lib/websocket.js` — releases the socket and timers without setting `isStopping`; `_handleConnectionTimeout()` now uses it instead of `disconnect()`. |
+| 2 | `PING_INTERVAL` 32s → 20s, watchdogs 30s → 60s, and `pong` now resets the connection watchdog as well as the ping watchdog. |
+| 3 | The close handler always schedules a reconnect on an unexpected close; `_lastError` no longer gates it (it still informs backoff/token refresh). |
+| 4 | `_startWebSocketHealthCheck()` / `_stopWebSocketHealthCheck()` in `device.js` — a re-entrancy-guarded 5-minute check that reconnects if the socket isn't `OPEN`. Also fixed `api.connectWebSocket()` to dispose the previous client before replacing it, so a stale instance's pending reconnect timer can't race a second live socket. |
+| 5 | `test/websocket-reconnect.test.js` — 9 tests covering the state machine, including the open→error→close sequence via a small `_createSocket` injection seam. |
+
+Verification: each regression test was confirmed to **fail** against the
+original code (the timeout path and the `_lastError` guard were each
+temporarily reinstated to prove it), then pass after the fix. Full suite:
+23 tests passing.
+
+`isStopping` now has exactly one meaning — "the user/app asked us to stop,
+do not come back" — and is only set by `disconnect()` on genuine shutdown
+paths (`onDeleted`, device repair, api-level disposal).
