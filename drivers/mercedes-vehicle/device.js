@@ -419,6 +419,17 @@ class MercedesVehicleDevice extends Homey.Device {
         this.log('Automatic polling disabled - use flow action to refresh data');
       }
 
+      // Safety net: make sure the real-time connection is actually alive.
+      //
+      // The WebSocket carries the full ~129-attribute payload (windows,
+      // doors, tire pressure, odometer, ...); the REST poll only returns a
+      // small subset (battery, ranges, position). So if the socket dies and
+      // never comes back, those capabilities silently freeze forever while
+      // the polled ones keep updating. The reconnect logic in websocket.js
+      // handles this itself, but this check means no single bug in that
+      // state machine can strand the connection unnoticed again.
+      this._startWebSocketHealthCheck();
+
       // Do initial poll
       await this.pollVehicleData();
 
@@ -484,9 +495,56 @@ class MercedesVehicleDevice extends Homey.Device {
       clearInterval(this.pollInterval);
     }
 
+    this._stopWebSocketHealthCheck();
+
     // Disconnect WebSocket if connected
     if (this.api && this.api.websocket) {
       await this.api.disconnectWebSocket();
+    }
+  }
+
+  /**
+   * Periodically verify the WebSocket is still alive, and reconnect if not.
+   *
+   * This is a backstop, not the primary reconnect mechanism - websocket.js
+   * schedules its own reconnects. It exists because a dead socket is silent:
+   * capabilities that only arrive over the WebSocket simply stop changing,
+   * which looks like "the car stopped reporting" rather than a connection
+   * fault. Re-entrancy is guarded so a slow reconnect can't stack up.
+   */
+  _startWebSocketHealthCheck() {
+    this._stopWebSocketHealthCheck();
+
+    this.wsHealthCheckInterval = setInterval(async () => {
+      if (this._wsHealthCheckRunning) return;
+      this._wsHealthCheckRunning = true;
+
+      try {
+        if (!this.api) return;
+
+        // api.connectWebSocket() is a no-op when the socket is already
+        // connected, so this only acts when the connection is actually down.
+        if (!this.api.isWebSocketConnected()) {
+          this.log('[WS-HEALTH] WebSocket is not connected - reconnecting');
+          await this.api.connectWebSocket(this.onWebSocketData.bind(this));
+          this.log('[WS-HEALTH] Reconnect attempt completed');
+        }
+      } catch (error) {
+        // Never let the safety net throw: it runs unattended on a timer.
+        this.error('[WS-HEALTH] Reconnect attempt failed (will retry):', error.message);
+      } finally {
+        this._wsHealthCheckRunning = false;
+      }
+    }, this.WS_HEALTH_CHECK_INTERVAL || 300000); // 5 minutes
+  }
+
+  /**
+   * Stop the WebSocket health check timer.
+   */
+  _stopWebSocketHealthCheck() {
+    if (this.wsHealthCheckInterval) {
+      clearInterval(this.wsHealthCheckInterval);
+      this.wsHealthCheckInterval = null;
     }
   }
 
@@ -1109,14 +1167,17 @@ class MercedesVehicleDevice extends Homey.Device {
 
       // Window statuses with flow triggers
       const windowMappings = [
-        { key: 'windowstatusfrontleft', cap: 'window_front_left', name: 'front_left' },
-        { key: 'windowstatusfrontright', cap: 'window_front_right', name: 'front_right' },
-        { key: 'windowstatusrearleft', cap: 'window_rear_left', name: 'rear_left' },
-        { key: 'windowstatusrearright', cap: 'window_rear_right', name: 'rear_right' }
+        { keys: ['windowstatusfrontleft', 'windowStatusFrontLeft', 'windowFrontLeftStatus'], cap: 'window_front_left', name: 'front_left' },
+        { keys: ['windowstatusfrontright', 'windowStatusFrontRight', 'windowFrontRightStatus'], cap: 'window_front_right', name: 'front_right' },
+        { keys: ['windowstatusrearleft', 'windowStatusRearLeft', 'windowRearLeftStatus'], cap: 'window_rear_left', name: 'rear_left' },
+        { keys: ['windowstatusrearright', 'windowStatusRearRight', 'windowRearRightStatus'], cap: 'window_rear_right', name: 'rear_right' }
       ];
 
       for (const win of windowMappings) {
-        if (data[win.key] !== undefined) {
+        // Find the first matching key (matches the doorMappings fallback pattern below -
+        // the Mercedes API has been observed to vary key casing/naming across pushes)
+        const matchingKey = win.keys.find(k => data[k] !== undefined);
+        if (matchingKey !== undefined && data[matchingKey] !== undefined) {
           try {
             if (!this.hasCapability(win.cap)) {
               this.log(`[UPDATE] Skipping ${win.cap} - capability not available (re-pair device to fix)`);
@@ -1129,7 +1190,7 @@ class MercedesVehicleDevice extends Homey.Device {
               3: 'Airing',
               4: 'Running'
             };
-            const rawStatus = data[win.key];
+            const rawStatus = data[matchingKey];
             const newStatus = windowStatusMap[rawStatus] || String(rawStatus);
             const oldStatus = this.getCapabilityValue(win.cap);
             this.log(`[UPDATE] Setting ${win.cap} to: ${newStatus} (raw: ${rawStatus}, old: ${oldStatus})`);

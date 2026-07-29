@@ -47,8 +47,15 @@ Find the widget under **Dashboards > + Add Widget > Apps tab > "Car Status"**.
 
 ### Real-Time Updates
 - WebSocket connection for instant push updates from the vehicle
+- Automatic reconnection with exponential backoff if the connection drops, plus a periodic health check that restores it if it ever goes down unnoticed
+- Keepalive ping/pong so an idle connection (parked car with nothing to report) is not mistaken for a dead one
 - Automatic fallback to REST API polling when WebSocket is unavailable
 - Configurable polling interval (60-3600 seconds)
+
+Note: the WebSocket carries the full vehicle payload, while the REST poll
+returns only a subset (battery, ranges, position, fuel). Door, window,
+tire-pressure and odometer updates therefore depend on the WebSocket being
+connected.
 
 ## Requirements
 
@@ -116,6 +123,9 @@ widgets/car-status/
   widget.compose.json           # Widget configuration
   api.js                        # Widget backend API
   public/index.html             # Widget frontend
+test/
+  log-redactor.test.js          # PII redaction tests
+  websocket-reconnect.test.js   # WebSocket reconnect state machine tests
 ```
 
 ## Troubleshooting
@@ -130,6 +140,14 @@ widgets/car-status/
 - Verify the polling interval in device settings
 - Ensure your vehicle has active Mercedes Me connectivity
 
+### Some Values Update, Others Are Stuck
+If fields like battery, range and position keep updating but doors,
+windows, tire pressure or odometer stay frozen, the WebSocket connection
+is down and only the REST poll is running — the poll does not carry those
+attributes. Look for `[WS]` lines in the app logs: a healthy connection
+reconnects on its own (`[WS] Scheduling reconnect attempt ...`), and a
+`[WS-HEALTH]` line indicates the periodic health check stepped in.
+
 ### HTTP 418 Errors
 Mercedes periodically updates their API requirements. If you see HTTP 418 errors, the app's API headers may need updating to match the current Mercedes mobile app version. Check the [mbapi2020](https://github.com/ReneNulschDE/mbapi2020) integration for reference.
 
@@ -142,6 +160,7 @@ Mercedes periodically updates their API requirements. If you see HTTP 418 errors
 
 ```bash
 npm install                 # Install dependencies
+npm test                    # Run unit tests (Node's built-in test runner)
 npx homey app validate      # Validate app structure
 npx homey app build         # Build the app
 npx homey app run           # Run on Homey (live logs)

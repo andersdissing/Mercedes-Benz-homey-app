@@ -125,5 +125,11 @@
   },
   "1.1.35": {
     "en": "Fixed a repeat crash on startup (Cannot redefine property: log) caused by the previous fix; log redaction now patches the console directly instead of touching the SDK's locked-down log/error properties."
+  },
+  "1.1.36": {
+    "en": "Fix window status not registering for some key-name variants"
+  },
+  "1.1.37": {
+    "en": "Fixed vehicle status freezing shortly after startup. The live connection to the car was being dropped about 30 seconds in and never restored, so doors, windows, tyre pressure and odometer stopped updating while battery and range kept working. The connection now stays alive and reconnects automatically if it drops."
   }
 }
