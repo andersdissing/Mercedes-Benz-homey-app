@@ -1,0 +1,16 @@
+# Files excluded from the published Homey app bundle.
+#
+# These are development-only: they are never require()d by app.js, the
+# driver, the device or the widget, so shipping them only inflates the
+# build. Runtime code (lib/, drivers/, widgets/, assets/, locales/,
+# app.json, README.txt) is deliberately NOT listed here.
+
+# Unit tests
+test/
+*.test.js
+
+# CI configuration
+.github/
+
+# Developer documentation (README.txt is the store description and must ship)
+WEBSOCKET_RECONNECT_ANALYSIS.md
