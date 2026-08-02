@@ -106,17 +106,16 @@ async function waitFor(predicate, message, timeoutMs = 2000) {
   assert.fail(`timed out waiting for: ${message}`);
 }
 
-/** Release every timer a test may have left running. */
+/**
+ * Release every timer a test may have left running.
+ *
+ * Use the real shutdown path rather than clearing timers by hand: it also
+ * releases the socket, so a command still queued behind the chain fails
+ * immediately instead of sending on a fake socket that still claims to be
+ * OPEN and arming a 90-second completion timer that outlives the test.
+ */
 function cleanup(ws) {
-  ws.isStopping = true;
-  if (ws.reconnectTimer) clearTimeout(ws.reconnectTimer);
-  ws.reconnectTimer = null;
-  ws._stopWatchdogs();
-  for (const [, pending] of ws.pendingCommands) {
-    clearTimeout(pending.timeout);
-    pending.reject(new Error('test cleanup'));
-  }
-  ws.pendingCommands.clear();
+  ws.disconnect();
 }
 
 test('a command goes over the existing session instead of opening a new one', async () => {
