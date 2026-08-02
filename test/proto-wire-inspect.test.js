@@ -369,6 +369,26 @@ test('a schema draft names the repeated entry and the scalars inside it', () => 
   assert.ok(draft.indexOf('message TemperaturePointsValue {') < draft.indexOf('message TemperaturePointsValue_20 {'));
 });
 
+test('a schema draft refuses to declare a packed field for unknown bytes', () => {
+  // weeklyProfile's field 4 is the case: not a message, not text, and it does
+  // parse as varints. Declaring `repeated int64` would be the same confident
+  // guess the old walker made - so it comes out as bytes, with the varint
+  // reading and the raw hex in a comment for whoever picks it up.
+  const draft = wire.suggestProto(fixtures.weeklyProfile.bytes, { name: 'WeeklyProfileValue' });
+
+  assert.match(draft, /bytes f4 = 4;.*0x00011228.*UNKNOWN/);
+  assert.ok(!/repeated int64 f4/.test(draft), 'must not declare a packed field it cannot verify');
+});
+
+test('a schema draft reports a negative varint as negative', () => {
+  // `observed 18446744073709551615` is what invited the sentinel misreading in
+  // the issue; the draft has to say -1.
+  const draft = wire.suggestProto(fixtures.weeklyProfile.bytes, { name: 'WeeklyProfileValue' });
+
+  assert.match(draft, /int64 f3 = 3;\s*\/\/ observed -1$/m);
+  assert.ok(!draft.includes('observed 18446744073709551615'));
+});
+
 test('a schema draft flags a varint that only ever holds 0 or 1', () => {
   const draft = wire.suggestProto(len(44, vint(3, 1)));
   assert.match(draft, /int64 f3 = 3;.*may be bool/);
