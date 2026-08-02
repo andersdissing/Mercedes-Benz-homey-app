@@ -117,12 +117,15 @@ lib/
   websocket.js                  # WebSocket client for real-time updates
   proto/
     parser.js                   # Protobuf message parser
+    wire-inspect.js             # Wire-format inspector for undecodable attributes
     vehicle-events.proto        # Vehicle event protobuf schema
     client.proto                # Command protobuf schema
 widgets/car-status/
   widget.compose.json           # Widget configuration
   api.js                        # Widget backend API
   public/index.html             # Widget frontend
+tools/
+  inspect-attribute.js          # CLI for decoding an attribute the app cannot read
 test/
   log-redactor.test.js          # PII redaction tests
   websocket-reconnect.test.js   # WebSocket reconnect state machine tests
@@ -165,6 +168,35 @@ npx homey app validate      # Validate app structure
 npx homey app build         # Build the app
 npx homey app run           # Run on Homey (live logs)
 npx homey app install       # Install to Homey
+```
+
+### Inspecting an attribute the app cannot decode
+
+`vehicle-events.proto` declares only some of the value types a vehicle can send.
+protobufjs discards fields the schema does not declare, so an attribute using one
+decodes with no value and never reaches the device. The app reports each of those
+once per app run, with both a field summary and the raw bytes:
+
+```
+[PARSER] No value read for "temperaturePoints" (attributeType: none, status: 0,
+  raw fields: 20:{1:{1:"frontLeft" 2:fixed64=21.5(dbl) ...}}, raw hex: a2013909...)
+```
+
+`status: 0` means the car considers the value valid, so an unreadable one is a
+gap in our schema rather than a missing reading. Feed the hex to the inspector
+for the full structure and a draft schema:
+
+```bash
+npm run inspect-attribute -- --hex a2013909...   # one attribute
+npm run inspect-attribute -- --log run.log       # every report in a captured log
+npm run inspect-attribute -- --frame capture.bin # a saved PushMessage frame
+npm run inspect-attribute -- --demo              # the attributes from issue #61
+```
+
+To find the reports in a log:
+
+```powershell
+Select-String -Path run.log -Pattern "No value read for" | Select-String "status: 0"
 ```
 
 ## Mercedes-Benz Data Explorer

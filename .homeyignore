@@ -7,6 +7,10 @@
 
 # Unit tests
 test/
+
+# Developer tooling (attribute inspector) - run from a checkout, never by the app
+tools/
+
 *.test.js
 
 # CI configuration

@@ -113,6 +113,109 @@ test('an attribute using an undeclared field reports its field numbers', async (
   const reported = lines.filter(l => l.includes('No value read for "chargePrograms"'));
   assert.equal(reported.length, 1);
   assert.match(reported[0], /raw fields: 22:\{1:varint=80\}/);
+
+  // The bytes come along too. The summary is an interpretation, and when the
+  // interpretation is wrong - as it was for temperaturePoints in issue #61 -
+  // the payload is the only way to find that out without another capture.
+  assert.match(reported[0], new RegExp(`raw hex: ${attrBytes.toString('hex')}`));
+});
+
+test('an unreadable attribute reports the strings and numbers it carries', async () => {
+  const { parser, lines } = makeParser();
+  await parser.initialize();
+
+  // temperaturePoints, the attribute issue #61 could not get a usable dump of:
+  // a zone string and a temperature per entry. The old walker read the leading
+  // `f` of "frontLeft" as a tag byte and reported `1:{12:?wire6}`, naming
+  // neither.
+  const { temperaturePoints } = require('./fixtures/issue-61-attributes');
+
+  const frame = parser.PushMessageRaw.encode({
+    vepUpdates: {
+      updates: { VIN1: { vin: 'VIN1', attributes: { temperaturePoints: temperaturePoints.bytes } } },
+    },
+  }).finish();
+
+  const message = parser.parsePushMessage(frame);
+  parser.extractVehicleData(message.vepUpdates.updates.VIN1, frame);
+
+  const reported = lines.filter(l => l.includes('No value read for "temperaturePoints"'));
+  assert.equal(reported.length, 1);
+  assert.match(reported[0], /1:"frontLeft"/);
+  assert.match(reported[0], /2:fixed64=21\.5\(dbl\)/);
+  assert.ok(!reported[0].includes('?wire6'), 'a string field must not be walked as a message');
+});
+
+test('an undeclared field holding opaque bytes is reported, not walked into', async () => {
+  const { parser, lines } = makeParser();
+  await parser.initialize();
+
+  const { len } = require('./fixtures/issue-61-attributes');
+
+  // Field 45 is undeclared, and its payload is neither a message nor text.
+  // Reporting it as bytes is the correct answer; guessing at a structure is
+  // what produced `?wire6`.
+  const attrBytes = len(45, Buffer.from([0xff, 0x00, 0xfe, 0x81]));
+
+  const frame = parser.PushMessageRaw.encode({
+    vepUpdates: { updates: { VIN1: { vin: 'VIN1', attributes: { odd: attrBytes } } } },
+  }).finish();
+
+  const message = parser.parsePushMessage(frame);
+  const data = parser.extractVehicleData(message.vepUpdates.updates.VIN1, frame);
+
+  assert.ok(!('odd' in data));
+
+  const reported = lines.filter(l => l.includes('No value read for "odd"'));
+  assert.equal(reported.length, 1);
+  assert.match(reported[0], /raw fields: 45:len\(4\)=0xff00fe81/);
+});
+
+test('a VIN inside a reported attribute survives neither as text nor as hex', async () => {
+  const { parser, lines } = makeParser();
+  await parser.initialize();
+
+  const { redactText } = require('../lib/log-redactor');
+  const { len } = require('./fixtures/issue-61-attributes');
+
+  // The report now carries the payload as hex as well as a decoded summary, so
+  // both are new places a VIN could reach the log. log-redactor scans hex runs
+  // for exactly this reason - hex, not base64, is why.
+  const vin = 'WDD1234567890ABCD';
+  const attrBytes = len(45, len(1, vin));
+
+  const frame = parser.PushMessageRaw.encode({
+    vepUpdates: { updates: { VIN1: { vin: 'VIN1', attributes: { withVin: attrBytes } } } },
+  }).finish();
+
+  parser.extractVehicleData(parser.parsePushMessage(frame).vepUpdates.updates.VIN1, frame);
+
+  const reported = lines.filter(l => l.includes('No value read for "withVin"'));
+  assert.equal(reported.length, 1);
+  assert.ok(reported[0].includes(vin), 'the raw line does carry it - redaction is what removes it');
+
+  const redacted = redactText(reported[0]);
+  assert.ok(!redacted.includes(vin), 'plaintext VIN must not survive');
+  assert.ok(!redacted.includes(Buffer.from(vin, 'ascii').toString('hex')), 'hex-encoded VIN must not survive');
+});
+
+test('a diagnostic never breaks the update path', async () => {
+  const { parser } = makeParser();
+  await parser.initialize();
+
+  // An attribute always decodes as a VehicleAttributeStatus by the time it
+  // reaches here - a frame that did not would have failed in parsePushMessage
+  // first - so the bytes are fed to the describer directly. Whatever it is
+  // handed, an update must not be lost to its own diagnostic.
+  for (const bytes of [
+    Buffer.alloc(0),
+    Buffer.from([0xff]),
+    Buffer.from([0x0a, 0x28]), // claims 40 bytes that are not there
+    Buffer.from([(12 << 3) | 6]), // the impossible wire type from issue #61
+    null,
+  ]) {
+    assert.doesNotThrow(() => parser._describeRawAttribute(bytes));
+  }
 });
 
 test('a missing raw frame degrades to the plain report', async () => {
