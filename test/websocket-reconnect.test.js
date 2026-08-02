@@ -2,6 +2,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const { EventEmitter } = require('node:events');
 const WebSocket = require('ws');
 const MercedesWebSocket = require('../lib/websocket');
 
@@ -28,10 +29,50 @@ function fakeSocket(readyState = WebSocket.OPEN) {
     readyState,
     closed: false,
     listenersRemoved: false,
+    handlers: {},
+    on(event, fn) {
+      (this.handlers[event] = this.handlers[event] || []).push(fn);
+      return this;
+    },
     close() { this.closed = true; },
-    removeAllListeners() { this.listenersRemoved = true; },
+    removeAllListeners() { this.handlers = {}; this.listenersRemoved = true; },
     ping() {},
   };
+}
+
+/**
+ * Socket that reproduces what `ws` does when a still-CONNECTING socket is
+ * closed: it aborts the handshake and reports that by emitting 'error' on a
+ * later tick (`process.nextTick(emitErrorAndClose, ...)` in ws/lib/websocket.js).
+ *
+ * The emit is a real EventEmitter emit, which is the point - an 'error' with
+ * no listener throws instead of being delivered. In production that throw
+ * lands on a bare tick, so no try/catch anywhere up the call stack can hold
+ * it and the app goes down. Here the throw is captured in `unhandledError`
+ * so the regression fails as an assertion rather than by killing the run.
+ */
+class AbortingHandshakeSocket extends EventEmitter {
+  constructor() {
+    super();
+    this.readyState = WebSocket.CONNECTING;
+    this.closed = false;
+    this.unhandledError = null;
+  }
+
+  ping() {}
+
+  close() {
+    this.closed = true;
+    this.readyState = WebSocket.CLOSED;
+    process.nextTick(() => {
+      try {
+        this.emit('error', new Error('WebSocket was closed before the connection was established'));
+        this.emit('close', 1006, Buffer.alloc(0));
+      } catch (error) {
+        this.unhandledError = error;
+      }
+    });
+  }
 }
 
 test('ping interval stays below the connection watchdog timeout', () => {
@@ -82,6 +123,37 @@ test('_teardownSocket releases the socket without blocking reconnects', () => {
   assert.equal(sock.listenersRemoved, true, 'abandoned socket must not keep driving events');
   assert.equal(ws.isConnecting, false);
   assert.equal(ws.connectionState, 'disconnected');
+});
+
+test('_teardownSocket does not crash on a socket that never finished connecting', async () => {
+  // Reported on issue #57: a routine health-check reconnect took the app
+  // down with "WebSocket was closed before the connection was established",
+  // thrown from ws's close() via _teardownSocket(). Tearing down a socket
+  // mid-handshake is completely normal - the health check does it every time
+  // it replaces a connection that is stuck connecting - so it must not be
+  // fatal. The cause was removeAllListeners() stripping the 'error' listener
+  // moments before close() caused an 'error' to be emitted.
+  const ws = makeWs();
+  const sock = new AbortingHandshakeSocket();
+  ws.ws = sock;
+
+  ws._teardownSocket();
+
+  assert.ok(
+    sock.listenerCount('error') > 0,
+    'an abandoned socket must keep an error listener, or its abort throws',
+  );
+
+  // Let the handshake abort land.
+  await new Promise((resolve) => setImmediate(resolve));
+
+  assert.equal(
+    sock.unhandledError,
+    null,
+    `abandoned socket must not raise an unhandled error (${sock.unhandledError && sock.unhandledError.message})`,
+  );
+  assert.equal(ws.ws, null, 'socket reference must still be released');
+  assert.equal(sock.closed, true, 'connecting socket must still be closed');
 });
 
 test('_teardownSocket rejects pending commands so callers do not hang', async () => {
