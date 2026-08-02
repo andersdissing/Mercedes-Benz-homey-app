@@ -284,3 +284,66 @@ session opening and then **no** `[WS] Scheduling reconnect attempt 1 in
 keep arriving afterwards, and a stalled connection should now surface as
 `[WS-HEALTH] WebSocket is stale (no traffic for Ns) - reconnecting`
 rather than as silence.
+
+---
+
+# Part 3: the handshake-per-command that caused HTTP 429 (issue #57, follow-up)
+
+After Part 2 shipped, the same flow failed with a *different* — and now
+self-explaining — error:
+
+```
+Failed to configure max SOC: WebSocket connection not available for command:
+Unexpected server response: 429
+```
+
+## Root cause
+
+`sendCommand()` tore the socket down, rotated the session ID and performed
+a **fresh authenticated handshake for every single command**, justified by
+this comment:
+
+> Mercedes silently drops commands sent on a persistent data-push session.
+> Each command requires a fresh WebSocket session with a new session ID.
+
+mbapi2020 — the Home Assistant integration this client is modelled on and
+cites throughout — does not do that. It sends car commands over the
+existing long-lived connection:
+
+```python
+async def execute_car_command(self, message):
+    await self.websocket.call(message.SerializeToString(), car_command=True)
+```
+
+with a single `session_id` for the client's lifetime. `car_command=True`
+only forces a reconnect when the connection is already closed/stopping,
+and relaxes the watchdog to 180s for the duration.
+
+So every flow run cost a handshake the reference implementation never
+pays. Repeat that — a few flow runs, or the 5-minute health check — and
+Mercedes rate-limits the upgrade with HTTP 429.
+
+Two things then made the block self-sustaining:
+
+1. The teardown happened *before* the attempt, so a refused handshake left
+   the app with **no** connection at all, and the reconnect was pushed out
+   by the ≥10-minute 429 backoff.
+2. `api.connectWebSocket()` builds a **brand-new** `MercedesWebSocket`,
+   whose `accountBlocked` starts false. The device health check calls it
+   every 5 minutes, so the app handshaked straight through its own
+   10-minute backoff, refreshing the rate limit indefinitely. Restarting
+   the app did the same thing, which is why restarting no longer helped.
+
+## What was implemented
+
+| Area | Change |
+| --- | --- |
+| Command transport | Commands now go over the session that is already open, with no session-ID rotation. A connection is opened only when there isn't a usable one (`_connectForCommand()`), which keeps the vepUpdate warmup for that cold path. |
+| Rate-limit fail-fast | A command that would need a handshake during a 429 window fails immediately with the time remaining, instead of tearing down a working socket to retry. A command on an already-open socket still goes through — it needs no handshake. |
+| Backoff persistence | `getRateLimitState()` / `restoreRateLimitState()` carry the window across client re-creation, and `api.connectWebSocket()` refuses to build a replacement client while blocked. The health check can no longer punch through the backoff. |
+| Re-authentication | A 429 also schedules a token refresh before the next attempt, bounded to 3 attempts (mbapi2020 relogins up to 3× too) — a 429 on the upgrade is often a rejected token rather than pure request volume. |
+| Command watchdog | `COMMAND_WATCHDOG_TIMEOUT` (180s, as upstream) is used while a command is pending, so the liveness watchdog can't tear down the socket under a command in flight. |
+
+Tests: `test/websocket-command-session.test.js` (session reuse, fail-fast,
+backoff expiry/persistence, bounded re-auth, watchdog relaxation) and
+`test/api-websocket-lifecycle.test.js` (the API-layer guard).
