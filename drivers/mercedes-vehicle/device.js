@@ -522,10 +522,19 @@ class MercedesVehicleDevice extends Homey.Device {
       try {
         if (!this.api) return;
 
-        // api.connectWebSocket() is a no-op when the socket is already
-        // connected, so this only acts when the connection is actually down.
-        if (!this.api.isWebSocketConnected()) {
-          this.log('[WS-HEALTH] WebSocket is not connected - reconnecting');
+        // api.connectWebSocket() is a no-op when the socket is healthy, so
+        // this only acts when the connection is actually down or stale.
+        //
+        // Staleness matters as much as disconnection: a socket whose TCP
+        // path was dropped without a close frame stays in readyState OPEN
+        // indefinitely. Checking "connected" alone would keep declaring
+        // that zombie healthy while no vehicle data ever arrives again.
+        if (!this.api.isWebSocketHealthy()) {
+          const idle = this.api.getWebSocketIdleTime();
+          const why = this.api.isWebSocketConnected()
+            ? `stale (no traffic for ${Math.round((idle || 0) / 1000)}s)`
+            : 'not connected';
+          this.log(`[WS-HEALTH] WebSocket is ${why} - reconnecting`);
           await this.api.connectWebSocket(this.onWebSocketData.bind(this));
           this.log('[WS-HEALTH] Reconnect attempt completed');
         }
@@ -682,15 +691,42 @@ class MercedesVehicleDevice extends Homey.Device {
   }
 
   /**
-   * Update device capabilities from vehicle data
+   * Update device capabilities from vehicle data.
+   *
+   * Serialized: pushes arrive faster than an update can be applied (each
+   * capability is an IPC round-trip), and two overlapping runs both read the
+   * old value before either writes it. That made a single window movement log
+   * `Setting window_front_right to: Open (raw: 1, old: Unknown)` twice and fire
+   * the window_opened trigger twice, with the runs' log lines interleaved. The
+   * backend also re-sends a sequence number occasionally, which lands the same
+   * payload twice; queued behind the first pass, the second sees current values
+   * and changes nothing.
    */
   async updateCapabilities(data) {
+    if (!this._capabilityChain) this._capabilityChain = Promise.resolve();
+
+    const run = this._capabilityChain.then(
+      () => this._applyCapabilityUpdate(data),
+      () => this._applyCapabilityUpdate(data),
+    );
+
+    // Keep the queue alive regardless of this update's outcome.
+    this._capabilityChain = run.then(() => {}, () => {});
+
+    return run;
+  }
+
+  /**
+   * Apply one update. Callers go through updateCapabilities(), which serializes.
+   */
+  async _applyCapabilityUpdate(data) {
     try {
       this.log('[UPDATE] Updating capabilities from vehicle data...');
 
       // Door lock status
       try {
         if (data.doorlockstatusvehicle !== undefined) {
+          this._doorLockStatusSeen = true;
           this.log(`[UPDATE] Door lock status raw value: ${data.doorlockstatusvehicle}`);
           const locked = data.doorlockstatusvehicle === 2; // 2 = external locked
           this.log(`[UPDATE] Setting locked to: ${locked}`);
@@ -704,8 +740,12 @@ class MercedesVehicleDevice extends Homey.Device {
               await this.homey.flow.getDeviceTriggerCard('vehicle_unlocked').trigger(this);
             }
           }
-        } else {
-          this.log('[UPDATE] WARNING: doorlockstatusvehicle is undefined');
+        } else if (!this._doorLockStatusSeen) {
+          // A partial push carries only the attributes that changed, so an absent
+          // lock status is the normal case - this used to warn on every single
+          // update and bury the rest of the log. Once the attribute has been seen
+          // at least once, its absence says nothing and is not worth a line.
+          this.log('[UPDATE] No doorlockstatusvehicle seen yet - lock state still unknown');
         }
       } catch (e) {
         this.error('[UPDATE] Error updating door lock status:', e.message);
@@ -1068,7 +1108,24 @@ class MercedesVehicleDevice extends Homey.Device {
 
       // Max SoC (check both maxSoc and max_soc as API may use either)
       try {
-        const maxSocValue = data.maxSoc !== undefined ? data.maxSoc : data.max_soc;
+        let maxSocValue = data.maxSoc !== undefined ? data.maxSoc : data.max_soc;
+
+        // Vehicles that report nil for the top-level maxSoc attribute carry the
+        // real setting per charge program instead, which is also how the app
+        // writes it (configureBatteryMaxSoc -> ChargeProgramConfigure). Use the
+        // entry for the program currently selected; the others are settings the
+        // user is not on.
+        if (maxSocValue === undefined && Array.isArray(data.chargePrograms)) {
+          const selected = data.selectedChargeProgram !== undefined
+            ? Number(data.selectedChargeProgram)
+            : (this.getStoreValue('selectedChargeProgramRaw') ?? 0);
+          const match = data.chargePrograms.find(program => program.chargeProgram === selected);
+          if (match && match.maxSoc !== undefined) {
+            this.log(`[UPDATE] Max SoC from charge program ${selected}`);
+            maxSocValue = match.maxSoc;
+          }
+        }
+
         if (maxSocValue !== undefined) {
           this.log(`[UPDATE] Setting max SoC to: ${maxSocValue}%`);
           await this.setCapabilityValue('measure_max_soc', parseInt(maxSocValue));

@@ -11,6 +11,3 @@ test/
 
 # CI configuration
 .github/
-
-# Developer documentation (README.txt is the store description and must ship)
-WEBSOCKET_RECONNECT_ANALYSIS.md

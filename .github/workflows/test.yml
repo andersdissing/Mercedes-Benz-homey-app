@@ -1,0 +1,31 @@
+name: Unit Tests
+
+# Runs the `npm test` suite (test/*.test.js) on every pull request and push,
+# alongside the Homey app validation. Validation only checks app.json and the
+# manifest — it never executes the app's logic, so without this job the
+# regression tests for the WebSocket state machine could break unnoticed.
+on:
+  workflow_dispatch:
+  push:
+  pull_request:
+
+jobs:
+  main:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22.x
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # A hung test has to fail the run rather than tie up the runner until
+      # the job timeout: these tests drive reconnect timers and command
+      # warmup loops, so a regression can stall instead of throwing.
+      - name: Run tests
+        run: npm test -- --test-timeout=60000
