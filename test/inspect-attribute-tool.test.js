@@ -102,18 +102,23 @@ test('--log says so when a line predates the raw bytes being logged', () => {
   assert.match(stdout, /nothing to inspect/);
 });
 
+function allFixtureAttributes() {
+  const attributes = {};
+  for (const fixture of fixtures.all) attributes[fixture.key] = fixture.bytes;
+  return attributes;
+}
+
 test('--frame decodes every attribute out of a captured push frame', async () => {
   const root = await protobuf.load(path.join(__dirname, '..', 'lib', 'proto', 'vehicle-events.proto'));
   const PushMessageRaw = root.lookupType('proto.PushMessageRaw');
-
-  const attributes = {};
-  for (const fixture of fixtures.all) attributes[fixture.key] = fixture.bytes;
 
   const framePath = path.join(workdir, 'capture.bin');
   fs.writeFileSync(
     framePath,
     PushMessageRaw.encode({
-      vepUpdates: { updates: { WDD1234567890ABCD: { vin: 'WDD1234567890ABCD', attributes } } },
+      vepUpdates: {
+        updates: { WDD1234567890ABCD: { vin: 'WDD1234567890ABCD', attributes: allFixtureAttributes() } },
+      },
     }).finish(),
   );
 
@@ -121,6 +126,55 @@ test('--frame decodes every attribute out of a captured push frame', async () =>
 
   for (const fixture of fixtures.all) assert.ok(output.includes(fixture.key), `${fixture.key} must appear`);
   assert.match(output, /1:"frontLeft"/);
+});
+
+test('--frame also takes a bare VEPUpdate, as saved from a browser network tab', async () => {
+  // The body of GET {widget}/v1/vehicle/{vin}/vehicleattributes is a VEPUpdate,
+  // not a PushMessage - so a capture from the Data Explorer or from DevTools
+  // has to work without the caller converting anything.
+  const root = await protobuf.load(path.join(__dirname, '..', 'lib', 'proto', 'vehicle-events.proto'));
+  const VEPUpdateRaw = root.lookupType('proto.VEPUpdateRaw');
+
+  const vepPath = path.join(workdir, 'vehicleattributes.bin');
+  fs.writeFileSync(
+    vepPath,
+    VEPUpdateRaw.encode({ vin: 'WDD1234567890ABCD', attributes: allFixtureAttributes() }).finish(),
+  );
+
+  const output = run(['--frame', vepPath, '--compact']);
+
+  for (const fixture of fixtures.all) assert.ok(output.includes(fixture.key), `${fixture.key} must appear`);
+  assert.match(output, /1:"frontLeft"/);
+});
+
+test('--frame says which of the two shapes it read', async () => {
+  const root = await protobuf.load(path.join(__dirname, '..', 'lib', 'proto', 'vehicle-events.proto'));
+  const VEPUpdateRaw = root.lookupType('proto.VEPUpdateRaw');
+
+  const vepPath = path.join(workdir, 'shape.bin');
+  fs.writeFileSync(
+    vepPath,
+    VEPUpdateRaw.encode({ vin: 'WDD1234567890ABCD', attributes: { precondState: fixtures.precondState.bytes } }).finish(),
+  );
+
+  // The detection is a guess between two shapes, so it should say which one it
+  // landed on rather than leave the reader to assume.
+  const result = require('node:child_process').spawnSync(process.execPath, [TOOL, '--frame', vepPath, '--compact'], {
+    encoding: 'utf8',
+  });
+
+  assert.match(result.stderr, /read .* as a VEPUpdate payload \(1 attributes\)/);
+});
+
+test('--frame refuses a file that is neither shape', () => {
+  const junkPath = path.join(workdir, 'junk.bin');
+  fs.writeFileSync(junkPath, Buffer.from('not a protobuf payload at all', 'utf8'));
+
+  assert.throws(() => run([`--frame`, junkPath]), (err) => {
+    assert.equal(err.status, 1);
+    assert.match(err.stderr, /did not decode as a PushMessage or a VEPUpdate/);
+    return true;
+  });
 });
 
 test('the suggested schema is offered with instructions for using it', () => {

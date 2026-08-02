@@ -189,9 +189,15 @@ for the full structure and a draft schema:
 ```bash
 npm run inspect-attribute -- --hex a2013909...   # one attribute
 npm run inspect-attribute -- --log run.log       # every report in a captured log
-npm run inspect-attribute -- --frame capture.bin # a saved PushMessage frame
+npm run inspect-attribute -- --frame capture.bin # a saved protobuf payload
 npm run inspect-attribute -- --demo              # the attributes from issue #61
 ```
+
+`--frame` takes either a WebSocket `PushMessage` frame or a bare `VEPUpdate` —
+the body of `GET {widget}/v1/vehicle/{vin}/vehicleattributes`, which is what the
+[Data Explorer](#mercedes-benz-data-explorer) fetches and what a browser's
+network tab will hand you. It works out which shape it was given. Saving that
+response is usually less work than capturing a WebSocket frame.
 
 To find the reports in a log:
 

@@ -26,6 +26,10 @@
  *   node tools/inspect-attribute.js --frame capture.bin [--attr temperaturePoints]
  *   node tools/inspect-attribute.js --demo
  *
+ * --frame accepts either a WebSocket PushMessage frame or a bare VEPUpdate, so
+ * the /vehicleattributes response saved out of a browser's network tab works
+ * without any conversion.
+ *
  * Options:
  *   --name <Name>   name for the suggested .proto message
  *   --depth <n>     how deep to descend (default 8)
@@ -44,8 +48,12 @@ Inspect a Mercedes vehicle attribute that the parser could not decode.
   node tools/inspect-attribute.js --hex <hex>
   node tools/inspect-attribute.js --base64 <base64>
   node tools/inspect-attribute.js --log <run.log>
-  node tools/inspect-attribute.js --frame <file.bin> [--vin <vin>] [--attr <key>]
+  node tools/inspect-attribute.js --frame <file.bin> [--attr <key>]
   node tools/inspect-attribute.js --demo
+
+  --frame takes either a WebSocket PushMessage frame or a bare VEPUpdate - the
+  body of GET {widget}/v1/vehicle/{vin}/vehicleattributes, which is what a
+  browser network tab gives you. It works out which it was handed.
 
   --name <Name>   name for the suggested .proto message (default RecoveredValue)
   --depth <n>     how deep to descend into nested messages (default ${wire.DEFAULT_MAX_DEPTH})
@@ -71,7 +79,6 @@ function parseArgs(argv) {
       case '--base64': options.base64 = value(); break;
       case '--log': options.log = value(); break;
       case '--frame': options.frame = value(); break;
-      case '--vin': options.vin = value(); break;
       case '--attr': options.attr = value(); break;
       case '--name': options.name = value(); break;
       case '--depth': options.maxDepth = Number(value()); break;
@@ -97,31 +104,71 @@ function parseHex(text) {
 }
 
 /**
- * Pull the attributes out of a captured PushMessage frame.
+ * Pull the attributes out of a captured protobuf payload.
  *
- * Uses the raw mirror messages in vehicle-events.proto, so every attribute
- * comes back as opaque bytes whether or not the schema declares its value
- * field. That is the whole reason those mirrors exist.
+ * Two shapes carry vehicle attributes and both are worth accepting, because
+ * they come from different places:
+ *
+ *   PushMessage - a WebSocket frame, what lib/websocket.js receives.
+ *   VEPUpdate   - the body of GET {widget}/v1/vehicle/{vin}/vehicleattributes,
+ *                 what lib/api.js polls and what the Mercedes-Benz Data
+ *                 Explorer fetches. Saving that response from a browser's
+ *                 network tab is the least work for a capture.
+ *
+ * Which one a saved .bin holds is not obvious from looking at it, so this tries
+ * both rather than making the caller know.
+ *
+ * Either way it decodes through the raw mirror messages in vehicle-events.proto,
+ * so every attribute comes back as opaque bytes whether or not the schema
+ * declares its value field. That is the whole reason those mirrors exist.
  */
 async function attributesFromFrame(file) {
   const protobuf = require('protobufjs');
 
   const root = await protobuf.load(path.join(__dirname, '..', 'lib', 'proto', 'vehicle-events.proto'));
-  const PushMessageRaw = root.lookupType('proto.PushMessageRaw');
-
   const frame = file === '-' ? fs.readFileSync(0) : fs.readFileSync(file);
-  const object = PushMessageRaw.toObject(PushMessageRaw.decode(frame), { bytes: Buffer });
 
-  const updates = (object.vepUpdates && object.vepUpdates.updates) || {};
-  const found = [];
+  const collect = (updates) => {
+    const found = [];
+    for (const [vin, update] of Object.entries(updates)) {
+      for (const [key, bytes] of Object.entries((update && update.attributes) || {})) {
+        found.push({ source: `${vin} / ${key}`, key, bytes });
+      }
+    }
+    return found;
+  };
 
-  for (const [vin, update] of Object.entries(updates)) {
-    for (const [key, bytes] of Object.entries(update.attributes || {})) {
-      found.push({ source: `${vin} / ${key}`, key, bytes });
+  // Decoding as the wrong type mostly yields nothing rather than throwing -
+  // protobufjs skips fields it does not recognise - so "no attributes" is the
+  // signal to try the other shape, not just a thrown error.
+  const attempts = [
+    ['PushMessage', () => {
+      const type = root.lookupType('proto.PushMessageRaw');
+      const object = type.toObject(type.decode(frame), { bytes: Buffer });
+      return collect((object.vepUpdates && object.vepUpdates.updates) || {});
+    }],
+    ['VEPUpdate', () => {
+      const type = root.lookupType('proto.VEPUpdateRaw');
+      const object = type.toObject(type.decode(frame), { bytes: Buffer });
+      return collect({ [object.vin || 'vehicle']: object });
+    }],
+  ];
+
+  for (const [shape, attempt] of attempts) {
+    let found;
+    try {
+      found = attempt();
+    } catch (err) {
+      continue;
+    }
+
+    if (found.length) {
+      process.stderr.write(`note: read ${file} as a ${shape} payload (${found.length} attributes)\n`);
+      return found;
     }
   }
 
-  return found;
+  throw new Error(`${file} did not decode as a PushMessage or a VEPUpdate carrying attributes`);
 }
 
 /**
