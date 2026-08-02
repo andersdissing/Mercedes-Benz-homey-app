@@ -96,6 +96,13 @@ function parseArgs(argv) {
 }
 
 function parseHex(text) {
+  // A pasted `a2013909...` from the docs strips down to four valid bytes and
+  // then fails with a length-overrun deep in the output, which reads like a
+  // problem with the capture rather than with the paste. Say so instead.
+  if (text.includes('...') || text.includes('…')) {
+    throw new Error('hex input contains "..." - that looks like a truncated example rather than a full payload');
+  }
+
   const cleaned = text.replace(/[^0-9a-fA-F]/g, '');
   if (!cleaned.length || cleaned.length % 2 !== 0) {
     throw new Error('hex input must be an even number of hex digits');

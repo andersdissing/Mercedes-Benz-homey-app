@@ -192,6 +192,16 @@ test('an unknown option fails loudly instead of inspecting nothing', () => {
   });
 });
 
+test('a truncated example pasted from the docs is named as such', () => {
+  // `a2013909...` strips to four bytes and then fails with a length-overrun,
+  // which reads like a bad capture rather than a bad paste.
+  assert.throws(() => run(['--hex', 'a2013909...']), (err) => {
+    assert.equal(err.status, 1);
+    assert.match(err.stderr, /truncated example rather than a full payload/);
+    return true;
+  });
+});
+
 test('malformed hex is rejected rather than silently truncated', () => {
   assert.throws(() => run(['--hex', 'abc']), (err) => {
     assert.equal(err.status, 1);

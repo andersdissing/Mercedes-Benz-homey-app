@@ -15,6 +15,18 @@
  * printed for it. Those strings are what the issue was written from, and
  * reproducing them character for character is what proves these fixtures
  * really are the payloads it saw.
+ *
+ * Verified against a live capture (see PR #62):
+ *
+ *   temperaturePoints  byte-identical to the vehicle's payload
+ *   weeklySetHU        byte-identical
+ *   precondState       byte-identical
+ *   weeklyProfile      byte-identical
+ *   tcuConnectionStateLowChannel
+ *                      same shape; the vehicle sent 38:varint=1 where the issue
+ *                      recorded 3, so the value moves and the field does not
+ *
+ * These are captured payloads, not reconstructions.
  */
 
 const WIRE_VARINT = 0;
@@ -120,23 +132,27 @@ const weeklySetHU = {
 // read as sentinels. They are -1 encoded as int64, which is what the inspector
 // now says out loud.
 //
-// The issue elided the inner field 4 as `4:{...}`. A live capture shows it as
+// The issue elided the inner field 4 as `4:{...}`. The old walker rendered it
 // `4:{0:varint=1 <truncated>}`, and field number 0 does not exist in protobuf -
-// so that payload is not a message and the old walker was inventing a field
+// so that payload is never a message, and the walker was inventing a field
 // there, the same mistake it made on the zone strings.
 //
-// Only the first two bytes of field 4 are pinned by that observation: `0x00`
-// read as a tag gives field 0 wire type 0, and `0x01` is the varint it read as
-// 1. The two bytes after them are filler chosen to reproduce the `<truncated>`
-// - what field 4 actually holds is still unknown, and the test asserts the
-// inspector declines to guess rather than asserting a structure.
+// The bytes below are the real ones, from the capture: five bytes 0x00..0x04.
+// Whether they are a packed repeated field or an opaque `bytes` value cannot be
+// decided from the wire - every byte is under 0x80, so the two encodings are
+// identical here - which is why the inspector prints both readings and the
+// schema draft declines to declare `repeated`.
+//
+// Worth noting for whoever declares this: the five values 0,1,2,3,4 line up
+// with weeklySetHU's five entries, indexed 0 through 4. That is suggestive of
+// day indices, not a conclusion.
 //
 // Live capture:
 //   `29:{2:varint=21 3:varint=<-1> 4:varint=5 5:varint=<-1>
 //        6:{1:varint=1 4:{0:varint=1 <truncated>} 6:varint=<-1>
 //           7:{1:varint=6} 8:{1:varint=20} 9:{1:varint=1}}}`
 // ---------------------------------------------------------------------------
-const weeklyProfileUnknownField4 = Buffer.from([0x00, 0x01, 0x12, 0x28]);
+const weeklyProfileUnknownField4 = Buffer.from([0x00, 0x01, 0x02, 0x03, 0x04]);
 
 const weeklyProfile = {
   key: 'weeklyProfile',
@@ -174,7 +190,12 @@ const weeklyProfile = {
 // Its entries match TemperaturePoint in vehicle-commands.proto: a `zone` string
 // ("frontLeft", "frontRight", "rearLeft", "rearRight") at field 1 and a
 // `temperature_in_celsius` double at field 2, plus a field 3 the command side
-// does not have.
+// does not have - which the capture shows is the temperature again as a display
+// string ("21.5" beside the double 21.5).
+//
+// The whole attribute also carries temperature_unit at field 16 (1 = CELSIUS),
+// which is a declared field and so came through all along. That is what the
+// issue meant by temperaturePoints_unit working while the value did not.
 //
 // The zone string is what broke the old walker. It descended into field 1 as if
 // it were a message, read the `f` of "frontLeft" (0x66) as a tag, and got field

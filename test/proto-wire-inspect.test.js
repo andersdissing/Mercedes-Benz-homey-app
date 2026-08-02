@@ -322,7 +322,7 @@ test('weeklyProfile field 4 is not claimed to be a message', () => {
 
   // Whatever reading it does offer, the bytes come with it so the reader can
   // judge for themselves.
-  assert.match(described, /4:packed\[0,1,18,40\]=0x00011228/);
+  assert.match(described, /4:packed\[0,1,2,3,4\]=0x0001020304/);
 });
 
 test('a packed reading always carries the bytes it was read from', () => {
@@ -376,7 +376,7 @@ test('a schema draft refuses to declare a packed field for unknown bytes', () =>
   // reading and the raw hex in a comment for whoever picks it up.
   const draft = wire.suggestProto(fixtures.weeklyProfile.bytes, { name: 'WeeklyProfileValue' });
 
-  assert.match(draft, /bytes f4 = 4;.*0x00011228.*UNKNOWN/);
+  assert.match(draft, /bytes f4 = 4;.*0x0001020304.*UNKNOWN/);
   assert.ok(!/repeated int64 f4/.test(draft), 'must not declare a packed field it cannot verify');
 });
 
