@@ -691,9 +691,35 @@ class MercedesVehicleDevice extends Homey.Device {
   }
 
   /**
-   * Update device capabilities from vehicle data
+   * Update device capabilities from vehicle data.
+   *
+   * Serialized: pushes arrive faster than an update can be applied (each
+   * capability is an IPC round-trip), and two overlapping runs both read the
+   * old value before either writes it. That made a single window movement log
+   * `Setting window_front_right to: Open (raw: 1, old: Unknown)` twice and fire
+   * the window_opened trigger twice, with the runs' log lines interleaved. The
+   * backend also re-sends a sequence number occasionally, which lands the same
+   * payload twice; queued behind the first pass, the second sees current values
+   * and changes nothing.
    */
   async updateCapabilities(data) {
+    if (!this._capabilityChain) this._capabilityChain = Promise.resolve();
+
+    const run = this._capabilityChain.then(
+      () => this._applyCapabilityUpdate(data),
+      () => this._applyCapabilityUpdate(data),
+    );
+
+    // Keep the queue alive regardless of this update's outcome.
+    this._capabilityChain = run.then(() => {}, () => {});
+
+    return run;
+  }
+
+  /**
+   * Apply one update. Callers go through updateCapabilities(), which serializes.
+   */
+  async _applyCapabilityUpdate(data) {
     try {
       this.log('[UPDATE] Updating capabilities from vehicle data...');
 
