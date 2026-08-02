@@ -85,6 +85,68 @@ message WeeklySetHUValue {
   repeated WeeklySetEntry entries = 1;
 }
 
+// PrecondStateValue - the `precondState` attribute.
+//
+// A single varint at field 3, observed as 1. Whether it is a boolean or a state
+// enum cannot be told from one value, so it is typed as an int rather than a
+// bool: an int decodes a bool's wire form correctly, and the reverse silently
+// flattens every non-zero state to true.
+//
+// Nothing consumes this. onoff_precond and climate_active are already driven by
+// the `precondactive` attribute, so this is only worth wiring up if it turns out
+// to carry more than that boolean does.
+message PrecondStateValue {
+  int32 state = 3;
+}
+
+// Wire-compatible stand-in for google.protobuf.Int32Value - a single int32 at
+// field 1, the shape Mercedes uses for an optional number. Named distinctly from
+// vehicle-commands.proto's Int32Value for the same reason as
+// VehicleTemperaturePoint: same package, different roots by convention only.
+message OptionalInt32 {
+  int32 value = 1;
+}
+
+// WeeklyProfileValue - the `weeklyProfile` attribute.
+//
+// Nothing consumes this and no field's meaning is established, so the fields are
+// named for their numbers rather than given invented names ("unknown4" is field 4). Renaming them is the
+// job of whoever works out what they are; the point of declaring it now is that
+// the value stops being discarded.
+//
+// What a capture showed, for whoever picks it up:
+//
+//   field 2 = 21, field 4 = 5          plain counts or ids
+//   fields 3, 5 and entry field 6      -1 as int64, so almost certainly "unset"
+//                                      rather than a real value
+//   entry field 4 = 0x0001020304       either packed varints [0,1,2,3,4] or an
+//                                      opaque blob - indistinguishable on the
+//                                      wire, every byte being under 0x80. Typed
+//                                      as bytes so nothing is lost either way.
+//                                      Those five values match weeklySetHU's
+//                                      five entry indices, which suggests days.
+//   entry fields 7, 8, 9 = 6, 20, 1    each wrapped in the Int32Value shape
+//
+// Field 6 is declared repeated on one observation of a single entry: a weekly
+// profile plausibly carries more, and repeated decodes one occurrence correctly
+// while a singular field would silently keep only the last of several.
+message WeeklyProfileEntry {
+  int32 unknown1 = 1;
+  bytes unknown4 = 4;
+  int64 unknown6 = 6;
+  OptionalInt32 unknown7 = 7;
+  OptionalInt32 unknown8 = 8;
+  OptionalInt32 unknown9 = 9;
+}
+
+message WeeklyProfileValue {
+  int32 unknown2 = 2;
+  int64 unknown3 = 3;
+  int32 unknown4 = 4;
+  int64 unknown5 = 5;
+  repeated WeeklyProfileEntry entries = 6;
+}
+
 // Raw mirrors of the push chain, used only to inspect attributes whose value
 // field this schema does not declare. protobufjs discards unknown fields, so an
 // attribute carrying one decodes with no attribute_type set and is dropped with
@@ -143,7 +205,12 @@ message VehicleAttributeStatus {
     string unsupported_value = 9;
     TemperaturePointsValue temperature_points_value = 20;
     WeeklySetHUValue weekly_set_hu_value = 24;
+    WeeklyProfileValue weekly_profile_value = 29;
     ChargeProgramsValue charge_programs_value = 31;
+    // A bare varint, not a message. Observed as 1 and as 3, so it is a state
+    // rather than a flag; what the values mean is still unknown.
+    int64 tcu_connection_state_low_channel = 38;
+    PrecondStateValue precond_state_value = 44;
   }
 
   // Unit enums

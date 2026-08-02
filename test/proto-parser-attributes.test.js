@@ -171,25 +171,66 @@ test('weeklySetHU decodes from the bytes a real vehicle sent', async () => {
   assert.equal(`${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`, '06:20');
 });
 
-test('an attribute that is still undeclared is reported with usable field numbers', async () => {
+test('weeklyProfile decodes from the bytes a real vehicle sent', async () => {
   const { parser, lines } = makeParser();
   await parser.initialize();
 
-  // weeklyProfile stays undeclared on purpose - nothing consumes it. What
-  // matters is that the report is good enough to declare it from, which is
-  // exactly what the old walker's output was not.
   const { weeklyProfile } = require('./fixtures/issue-61-attributes');
   const data = await decodeAttribute(parser, 'weeklyProfile', weeklyProfile.bytes);
 
-  assert.ok(!('weeklyProfile' in data));
+  assert.deepEqual(data.weeklyProfile, {
+    unknown2: 21,
+    unknown3: -1,
+    unknown4: 5,
+    unknown5: -1,
+    entries: [{
+      unknown1: 1,
+      // Kept as the bytes it arrived as. Packed varints [0,1,2,3,4] and an
+      // opaque blob are the same five bytes on the wire, so declaring either
+      // reading would be a guess; hex loses neither.
+      unknown4: '0001020304',
+      unknown6: -1,
+      unknown7: 6,
+      unknown8: 20,
+      unknown9: 1,
+    }],
+  });
+  assert.equal(lines.filter(l => l.includes('No value read for "weeklyProfile"')).length, 0);
+});
 
-  const reported = lines.filter(l => l.includes('No value read for "weeklyProfile"'));
+test('precondState and tcuConnectionStateLowChannel decode to plain values', async () => {
+  const { parser } = makeParser();
+  await parser.initialize();
+
+  const { precondState, tcuConnectionStateLowChannel } = require('./fixtures/issue-61-attributes');
+
+  assert.equal((await decodeAttribute(parser, 'precondState', precondState.bytes)).precondState, 1);
+
+  // A bare varint in the oneof rather than a message.
+  const tcu = await decodeAttribute(parser, 'tcuConnectionStateLowChannel', tcuConnectionStateLowChannel.bytes);
+  assert.equal(tcu.tcuConnectionStateLowChannel, 3);
+});
+
+test('an attribute this schema still does not declare is reported usably', async () => {
+  const { parser, lines } = makeParser();
+  await parser.initialize();
+
+  const { len, vint, cat } = require('./fixtures/issue-61-attributes');
+
+  // All five from issue #61 are declared now, so this stands in for the next
+  // one the car sends that we have never seen. What matters is unchanged: the
+  // report has to be good enough to declare from, which is exactly what the
+  // old walker's output was not.
+  const bytes = len(45, cat(len(1, 'rearLeft'), vint(2, -1)));
+  const data = await decodeAttribute(parser, 'somethingNew', bytes);
+
+  assert.ok(!('somethingNew' in data));
+
+  const reported = lines.filter(l => l.includes('No value read for "somethingNew"'));
   assert.equal(reported.length, 1);
-  assert.match(reported[0], /29:\{2:varint=21/);
-  assert.match(reported[0], /3:varint=18446744073709551615\/-1/);
-  assert.match(reported[0], /4:packed\[0,1,2,3,4\]=0x0001020304/);
-  assert.ok(!reported[0].includes('?wire6'));
-  assert.ok(!reported[0].includes('0:varint'), 'field number 0 does not exist');
+  assert.match(reported[0], /45:\{1:"rearLeft" 2:varint=18446744073709551615\/-1\}/);
+  assert.ok(!reported[0].includes('?wire6'), 'a string field must not be walked as a message');
+  assert.match(reported[0], new RegExp(`raw hex: ${bytes.toString('hex')}`));
 });
 
 test('an undeclared field holding opaque bytes is reported, not walked into', async () => {
