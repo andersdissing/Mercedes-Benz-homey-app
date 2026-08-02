@@ -221,7 +221,7 @@ test('a message that does not read as a word carries no text hint', () => {
 test('packed varints are recognised when they are not a valid message', () => {
   // 0xff 0xff 0x03 is varint 65535, which as a tag means wire type 7 - not a
   // message, not text, but a clean varint run.
-  assert.equal(wire.formatFields(len(30, Buffer.from([0xff, 0xff, 0x03]))), '30:packed[65535]');
+  assert.equal(wire.formatFields(len(30, Buffer.from([0xff, 0xff, 0x03]))), '30:packed[65535]=0xffff03');
 });
 
 test('multi-byte UTF-8 text is read as text', () => {
@@ -305,8 +305,30 @@ test('weeklyProfile shows its -1 fields as -1', () => {
   assert.match(described, /3:varint=18446744073709551615\/-1/);
   assert.match(described, /5:varint=18446744073709551615\/-1/);
   assert.match(described, /6:varint=18446744073709551615\/-1/);
-  // Nesting past the old three-level limit is reached.
-  assert.match(described, /4:\{1:varint=480 2:varint=1\}/);
+});
+
+test('weeklyProfile field 4 is not claimed to be a message', () => {
+  // A live capture renders this as `4:{0:varint=1 <truncated>}` under the old
+  // walker. Field number 0 does not exist in protobuf, so those bytes are not a
+  // message and that reading was invented - the same failure as the zone
+  // strings, one level down and easier to miss because it looks plausible.
+  //
+  // What field 4 holds is genuinely unknown, so this asserts what must NOT be
+  // claimed rather than pinning a structure the capture does not support.
+  const described = wire.formatFields(fixtures.weeklyProfile.bytes);
+
+  assert.ok(!/4:\{/.test(described), 'must not report field 4 as a nested message');
+  assert.ok(!described.includes('0:varint'), 'field number 0 must never appear');
+
+  // Whatever reading it does offer, the bytes come with it so the reader can
+  // judge for themselves.
+  assert.match(described, /4:packed\[0,1,18,40\]=0x00011228/);
+});
+
+test('a packed reading always carries the bytes it was read from', () => {
+  const described = wire.formatFields(len(30, Buffer.from([0xff, 0xff, 0x03])));
+
+  assert.equal(described, '30:packed[65535]=0xffff03');
 });
 
 // ---------------------------------------------------------------------------

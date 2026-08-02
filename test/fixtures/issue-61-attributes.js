@@ -116,17 +116,32 @@ const weeklySetHU = {
 };
 
 // ---------------------------------------------------------------------------
-// weeklyProfile - field 29, four levels deep, with several varints the issue
+// weeklyProfile - field 29, three levels deep, with several varints the issue
 // read as sentinels. They are -1 encoded as int64, which is what the inspector
 // now says out loud.
 //
-// Issue: `29:{2:varint=21 3:varint=<-1> 4:varint=5 5:varint=<-1>
-//             6:{1:varint=1 4:{...} 6:varint=<-1> 7:{1:varint=6}
-//                8:{1:varint=20} 9:{1:varint=1}}}`
+// The issue elided the inner field 4 as `4:{...}`. A live capture shows it as
+// `4:{0:varint=1 <truncated>}`, and field number 0 does not exist in protobuf -
+// so that payload is not a message and the old walker was inventing a field
+// there, the same mistake it made on the zone strings.
+//
+// Only the first two bytes of field 4 are pinned by that observation: `0x00`
+// read as a tag gives field 0 wire type 0, and `0x01` is the varint it read as
+// 1. The two bytes after them are filler chosen to reproduce the `<truncated>`
+// - what field 4 actually holds is still unknown, and the test asserts the
+// inspector declines to guess rather than asserting a structure.
+//
+// Live capture:
+//   `29:{2:varint=21 3:varint=<-1> 4:varint=5 5:varint=<-1>
+//        6:{1:varint=1 4:{0:varint=1 <truncated>} 6:varint=<-1>
+//           7:{1:varint=6} 8:{1:varint=20} 9:{1:varint=1}}}`
 // ---------------------------------------------------------------------------
+const weeklyProfileUnknownField4 = Buffer.from([0x00, 0x01, 0x12, 0x28]);
+
 const weeklyProfile = {
   key: 'weeklyProfile',
   field: 29,
+  unknownField4: weeklyProfileUnknownField4,
   bytes: len(
     29,
     cat(
@@ -138,7 +153,7 @@ const weeklyProfile = {
         6,
         cat(
           vint(1, 1),
-          len(4, cat(vint(1, 480), vint(2, 1))),
+          len(4, weeklyProfileUnknownField4),
           vint(6, -1),
           len(7, vint(1, 6)),
           len(8, vint(1, 20)),
@@ -149,7 +164,7 @@ const weeklyProfile = {
   ),
   observedDescription:
     '29:{2:varint=21 3:varint=18446744073709551615 4:varint=5 5:varint=18446744073709551615 '
-    + '6:{1:varint=1 4:{1:varint=480 2:varint=1} 6:varint=18446744073709551615 7:{1:varint=6} '
+    + '6:{1:varint=1 4:{0:varint=1 <truncated>} 6:varint=18446744073709551615 7:{1:varint=6} '
     + '8:{1:varint=20} 9:{1:varint=1}}}',
 };
 
