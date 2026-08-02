@@ -1231,6 +1231,12 @@ class MercedesVehicleDevice extends Homey.Device {
         { keys: ['enginehoodstatus', 'engineHoodStatus', 'hoodStatus'], cap: 'door_hood', name: 'hood' }
       ];
 
+      // Mercedes reports door state as bool, "true"/"false", or a numeric
+      // enum (0/2 = closed, 1 = open - matches mbapi2020's handling), not
+      // just plain booleans, so normalize every variant here.
+      const doorClosedValues = new Set([false, 0, 2, 'false', '0', '2', 'inactive', 'closed']);
+      const doorOpenValues = new Set([true, 1, 'true', '1', 'active', 'open']);
+
       for (const door of doorMappings) {
         // Find the first matching key
         const matchingKey = door.keys.find(k => data[k] !== undefined);
@@ -1241,8 +1247,18 @@ class MercedesVehicleDevice extends Homey.Device {
               continue;
             }
             const doorData = data[matchingKey];
-            const newStatus = doorData === true ? 'Open' : doorData === false ? 'Closed' : String(doorData);
+            const normalized = typeof doorData === 'string' ? doorData.toLowerCase() : doorData;
+            let newStatus;
+            if (doorOpenValues.has(normalized)) {
+              newStatus = 'Open';
+            } else if (doorClosedValues.has(normalized)) {
+              newStatus = 'Closed';
+            } else {
+              this.log(`[UPDATE] WARNING: Unrecognized ${door.cap} raw value: ${JSON.stringify(doorData)} (type: ${typeof doorData})`);
+              newStatus = String(doorData);
+            }
             const oldStatus = this.getCapabilityValue(door.cap);
+            this.log(`[UPDATE] Setting ${door.cap} to: ${newStatus} (raw: ${JSON.stringify(doorData)}, old: ${oldStatus})`);
             await this.setCapabilityValue(door.cap, newStatus);
 
             // Trigger flow cards on status change
