@@ -1082,7 +1082,24 @@ class MercedesVehicleDevice extends Homey.Device {
 
       // Max SoC (check both maxSoc and max_soc as API may use either)
       try {
-        const maxSocValue = data.maxSoc !== undefined ? data.maxSoc : data.max_soc;
+        let maxSocValue = data.maxSoc !== undefined ? data.maxSoc : data.max_soc;
+
+        // Vehicles that report nil for the top-level maxSoc attribute carry the
+        // real setting per charge program instead, which is also how the app
+        // writes it (configureBatteryMaxSoc -> ChargeProgramConfigure). Use the
+        // entry for the program currently selected; the others are settings the
+        // user is not on.
+        if (maxSocValue === undefined && Array.isArray(data.chargePrograms)) {
+          const selected = data.selectedChargeProgram !== undefined
+            ? Number(data.selectedChargeProgram)
+            : (this.getStoreValue('selectedChargeProgramRaw') ?? 0);
+          const match = data.chargePrograms.find(program => program.chargeProgram === selected);
+          if (match && match.maxSoc !== undefined) {
+            this.log(`[UPDATE] Max SoC from charge program ${selected}`);
+            maxSocValue = match.maxSoc;
+          }
+        }
+
         if (maxSocValue !== undefined) {
           this.log(`[UPDATE] Setting max SoC to: ${maxSocValue}%`);
           await this.setCapabilityValue('measure_max_soc', parseInt(maxSocValue));

@@ -130,3 +130,66 @@ test('a missing raw frame degrades to the plain report', async () => {
   assert.equal(reported.length, 1);
   assert.ok(!reported[0].includes('raw fields'), 'no frame, no field numbers - but still reported');
 });
+
+test('chargePrograms decodes from the byte layout a real vehicle sends', async () => {
+  const { parser } = makeParser();
+  await parser.initialize();
+
+  // Rebuilt from an observed payload:
+  //   31:{ 1:{2:varint=100} 1:{1:varint=1 2:varint=100} 1:{1:varint=2 2:varint=100} }
+  // The first entry omits field 1, so its charge program is the proto3 default 0.
+  const program = (chargeProgram, maxSoc) => {
+    const writer = protobuf.Writer.create();
+    if (chargeProgram !== undefined) writer.uint32((1 << 3) | 0).uint64(chargeProgram);
+    writer.uint32((2 << 3) | 0).uint64(maxSoc);
+    return writer.finish();
+  };
+
+  const programs = protobuf.Writer.create();
+  for (const entry of [program(undefined, 100), program(1, 100), program(2, 100)]) {
+    programs.uint32((1 << 3) | 2).bytes(entry);
+  }
+  const attrBytes = protobuf.Writer.create()
+    .uint32((31 << 3) | 2).bytes(programs.finish())
+    .finish();
+
+  const frame = parser.PushMessageRaw.encode({
+    vepUpdates: { updates: { VIN1: { vin: 'VIN1', attributes: { chargePrograms: attrBytes } } } },
+  }).finish();
+
+  const message = parser.parsePushMessage(frame);
+  const data = parser.extractVehicleData(message.vepUpdates.updates.VIN1, frame);
+
+  assert.deepEqual(data.chargePrograms, [
+    { chargeProgram: 0, maxSoc: 100 },
+    { chargeProgram: 1, maxSoc: 100 },
+    { chargeProgram: 2, maxSoc: 100 },
+  ]);
+});
+
+test('a decoded chargePrograms attribute is no longer reported as unreadable', async () => {
+  const { parser, lines } = makeParser();
+  await parser.initialize();
+
+  const frame = parser.PushMessage.encode({
+    vepUpdates: {
+      updates: {
+        VIN1: {
+          vin: 'VIN1',
+          attributes: {
+            chargePrograms: {
+              status: 0,
+              chargeProgramsValue: { chargeProgramParameters: [{ chargeProgram: 3, maxSoc: 80 }] },
+            },
+          },
+        },
+      },
+    },
+  }).finish();
+
+  const message = parser.parsePushMessage(frame);
+  const data = parser.extractVehicleData(message.vepUpdates.updates.VIN1, frame);
+
+  assert.deepEqual(data.chargePrograms, [{ chargeProgram: 3, maxSoc: 80 }]);
+  assert.equal(lines.filter(l => l.includes('No value read for "chargePrograms"')).length, 0);
+});
