@@ -2,6 +2,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const protobuf = require('protobufjs');
 const ProtoParser = require('../lib/proto/parser');
 
 /**
@@ -82,4 +83,50 @@ test('each unreadable key is reported separately', () => {
 
   const reported = lines.filter(l => l.includes('No value read for'));
   assert.equal(reported.length, 3);
+});
+
+test('an attribute using an undeclared field reports its field numbers', async () => {
+  const { parser, lines } = makeParser();
+  await parser.initialize();
+
+  // A VehicleAttributeStatus carrying only field 22, a length-delimited value
+  // this schema does not declare - the shape chargePrograms arrives in. status
+  // is left at its proto3 default of 0, i.e. the car considers it valid.
+  const inner = protobuf.Writer.create().uint32((1 << 3) | 0).uint64(80).finish();
+  const attrBytes = protobuf.Writer.create().uint32((22 << 3) | 2).bytes(inner).finish();
+
+  // PushMessageRaw mirrors PushMessage's field numbers, so encoding through it
+  // produces a frame the real PushMessage decoder accepts.
+  const frame = parser.PushMessageRaw.encode({
+    vepUpdates: { updates: { VIN1: { vin: 'VIN1', attributes: { chargePrograms: attrBytes } } } },
+  }).finish();
+
+  const message = parser.parsePushMessage(frame);
+  const vepUpdate = message.vepUpdates.updates.VIN1;
+
+  // Decoding drops the undeclared field, which is the whole problem.
+  assert.equal(vepUpdate.attributes.chargePrograms.attributeType, undefined);
+
+  const data = parser.extractVehicleData(vepUpdate, frame);
+  assert.ok(!('chargePrograms' in data));
+
+  const reported = lines.filter(l => l.includes('No value read for "chargePrograms"'));
+  assert.equal(reported.length, 1);
+  assert.match(reported[0], /raw fields: 22:\{1:varint=80\}/);
+});
+
+test('a missing raw frame degrades to the plain report', async () => {
+  const { parser, lines } = makeParser();
+  await parser.initialize();
+
+  parser.extractVehicleData({
+    vin: 'VIN1',
+    emitTimestampInMs: 1,
+    fullUpdate: true,
+    attributes: { chargePrograms: attr({}) },
+  });
+
+  const reported = lines.filter(l => l.includes('No value read for "chargePrograms"'));
+  assert.equal(reported.length, 1);
+  assert.ok(!reported[0].includes('raw fields'), 'no frame, no field numbers - but still reported');
 });

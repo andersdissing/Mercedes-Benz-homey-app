@@ -15,6 +15,26 @@ message VEPUpdate {
   map<string, VehicleAttributeStatus> attributes = 11;
 }
 
+// Raw mirrors of the push chain, used only to inspect attributes whose value
+// field this schema does not declare. protobufjs discards unknown fields, so an
+// attribute carrying one decodes with no attribute_type set and is dropped with
+// no way to see what it held. Reading the attributes map as opaque bytes works
+// because a sub-message and a bytes field share wire type 2, which lets the
+// parser report the field numbers a real payload actually uses.
+// Field numbers must stay in step with PushMessage/VEPUpdatesByVIN/VEPUpdate.
+message PushMessageRaw {
+  VEPUpdatesByVINRaw vep_updates = 2;
+}
+
+message VEPUpdatesByVINRaw {
+  map<string, VEPUpdateRaw> updates = 1;
+}
+
+message VEPUpdateRaw {
+  string vin = 2;
+  map<string, bytes> attributes = 11;
+}
+
 // VehicleAttributeStatus contains the value and metadata for a single vehicle attribute
 message VehicleAttributeStatus {
   int64 timestamp = 1 [deprecated = true];
