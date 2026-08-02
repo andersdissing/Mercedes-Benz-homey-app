@@ -192,6 +192,32 @@ test('an unknown option fails loudly instead of inspecting nothing', () => {
   });
 });
 
+test('a payload that decodes to nothing says so, without schema advice', () => {
+  // The first field of a temperaturePoints attribute, on its own: it declares
+  // 57 bytes of payload that are not there. Printing the parse error three
+  // times and then instructions for declaring a schema reads as though the
+  // capture is damaged, when a partial copy is the usual cause.
+  assert.throws(() => run(['--hex', 'a2013909']), (err) => {
+    assert.equal(err.status, 1, 'a failed inspection must not exit 0');
+    assert.match(err.stdout, /nothing decoded/);
+    assert.match(err.stdout, /declares 57 bytes of payload, but the whole input is only/);
+    assert.ok(!err.stdout.includes('attribute_type oneof'), 'no advice for a schema that does not exist');
+    assert.ok(!err.stdout.includes('suggested schema'));
+    // The bytes still come back, so the paste can be compared against the log.
+    assert.match(err.stdout, /raw hex:\s*a2013909/);
+    return true;
+  });
+});
+
+test('bytes that are not protobuf at all get a different explanation', () => {
+  assert.throws(() => run(['--hex', '060606']), (err) => {
+    assert.equal(err.status, 1);
+    assert.match(err.stdout, /not a protobuf message/);
+    assert.ok(!err.stdout.includes('partial copy'), 'that diagnosis belongs to the overrun case');
+    return true;
+  });
+});
+
 test('a truncated example pasted from the docs is named as such', () => {
   // `a2013909...` strips to four bytes and then fails with a length-overrun,
   // which reads like a bad capture rather than a bad paste.

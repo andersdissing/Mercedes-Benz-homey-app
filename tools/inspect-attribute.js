@@ -233,12 +233,43 @@ function demoAttributes() {
   }));
 }
 
+/**
+ * Explain a payload that yielded no fields at all.
+ *
+ * Printing the same parse error three times over and then instructions for
+ * declaring a schema that does not exist is worse than useless - it reads as
+ * though the capture is damaged when the usual cause is an incomplete copy.
+ * A length that overruns the whole input says so outright.
+ */
+function diagnoseNothingDecoded(entry, error) {
+  const lines = [`nothing decoded - ${wire.formatFields(entry.bytes)}`];
+
+  if (error && error.reason === 'length-overrun' && error.need > entry.bytes.length) {
+    lines.push(
+      '',
+      `The first field declares ${error.need} bytes of payload, but the whole input is only`,
+      `${entry.bytes.length}. That is an incomplete payload rather than an unreadable one -`,
+      'the usual cause is a partial copy, so check the hex was taken whole.',
+    );
+  } else {
+    lines.push('', 'These bytes are not a protobuf message. Check they are the raw attribute', 'payload and not a fragment of a surrounding structure.');
+  }
+
+  return lines.join('\n');
+}
+
 function report(entry, options) {
   const heading = `=== ${entry.source} (${entry.bytes.length} bytes) ===`;
   const out = [heading];
 
   if (options.compact) {
     out.push(wire.formatFields(entry.bytes, options));
+    return out.join('\n');
+  }
+
+  const tree = wire.inspect(entry.bytes, options);
+  if (!tree.fields.length) {
+    out.push('', diagnoseNothingDecoded(entry, tree.error), '', 'raw hex:', `  ${entry.bytes.toString('hex')}`);
     return out.join('\n');
   }
 
@@ -326,6 +357,12 @@ async function main() {
   }
 
   process.stdout.write(`${entries.map((entry) => report(entry, options)).join('\n\n')}\n`);
+
+  // A payload that yielded nothing is a failed inspection, not a finding, so it
+  // should not look like success to whatever ran this.
+  if (entries.every((entry) => wire.inspect(entry.bytes, options).fields.length === 0)) {
+    process.exitCode = 1;
+  }
 }
 
 main().catch((err) => {
