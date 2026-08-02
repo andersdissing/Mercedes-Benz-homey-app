@@ -120,30 +120,76 @@ test('an attribute using an undeclared field reports its field numbers', async (
   assert.match(reported[0], new RegExp(`raw hex: ${attrBytes.toString('hex')}`));
 });
 
-test('an unreadable attribute reports the strings and numbers it carries', async () => {
-  const { parser, lines } = makeParser();
-  await parser.initialize();
-
-  // temperaturePoints, the attribute issue #61 could not get a usable dump of:
-  // a zone string and a temperature per entry. The old walker read the leading
-  // `f` of "frontLeft" as a tag byte and reported `1:{12:?wire6}`, naming
-  // neither.
-  const { temperaturePoints } = require('./fixtures/issue-61-attributes');
-
+/** Decode one attribute from its raw bytes, the way a push actually arrives. */
+async function decodeAttribute(parser, key, bytes) {
   const frame = parser.PushMessageRaw.encode({
-    vepUpdates: {
-      updates: { VIN1: { vin: 'VIN1', attributes: { temperaturePoints: temperaturePoints.bytes } } },
-    },
+    vepUpdates: { updates: { VIN1: { vin: 'VIN1', attributes: { [key]: bytes } } } },
   }).finish();
 
   const message = parser.parsePushMessage(frame);
-  parser.extractVehicleData(message.vepUpdates.updates.VIN1, frame);
+  return parser.extractVehicleData(message.vepUpdates.updates.VIN1, frame);
+}
 
-  const reported = lines.filter(l => l.includes('No value read for "temperaturePoints"'));
+test('temperaturePoints decodes from the bytes a real vehicle sent', async () => {
+  const { parser, lines } = makeParser();
+  await parser.initialize();
+
+  // These are captured bytes, not bytes encoded through our own schema, so a
+  // wrong field number fails here instead of agreeing with itself. This is the
+  // attribute issue #61 could not get a usable dump of at all.
+  const { temperaturePoints } = require('./fixtures/issue-61-attributes');
+  const data = await decodeAttribute(parser, 'temperaturePoints', temperaturePoints.bytes);
+
+  assert.deepEqual(data.temperaturePoints, [
+    { zone: 'frontLeft', temperature: 21.5, displayValue: '21.5' },
+    { zone: 'frontRight', temperature: 21.5, displayValue: '21.5' },
+  ]);
+  assert.equal(lines.filter(l => l.includes('No value read for "temperaturePoints"')).length, 0);
+});
+
+test('weeklySetHU decodes from the bytes a real vehicle sent', async () => {
+  const { parser, lines } = makeParser();
+  await parser.initialize();
+
+  const { weeklySetHU } = require('./fixtures/issue-61-attributes');
+  const data = await decodeAttribute(parser, 'weeklySetHU', weeklySetHU.bytes);
+
+  // The first entry omits field 1, so its index is the proto3 default of 0 -
+  // the same shape chargePrograms arrives in.
+  assert.deepEqual(data.weeklySetHU, [
+    { index: 0, minutesFromMidnight: 380 },
+    { index: 1, minutesFromMidnight: 380 },
+    { index: 2, minutesFromMidnight: 380 },
+    { index: 3, minutesFromMidnight: 380 },
+    { index: 4, minutesFromMidnight: 380 },
+  ]);
+  assert.equal(lines.filter(l => l.includes('No value read for "weeklySetHU"')).length, 0);
+
+  // 380 minutes from midnight is 06:20, in the unit device.js already renders
+  // departure times with.
+  const minutes = data.weeklySetHU[0].minutesFromMidnight;
+  assert.equal(`${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`, '06:20');
+});
+
+test('an attribute that is still undeclared is reported with usable field numbers', async () => {
+  const { parser, lines } = makeParser();
+  await parser.initialize();
+
+  // weeklyProfile stays undeclared on purpose - nothing consumes it. What
+  // matters is that the report is good enough to declare it from, which is
+  // exactly what the old walker's output was not.
+  const { weeklyProfile } = require('./fixtures/issue-61-attributes');
+  const data = await decodeAttribute(parser, 'weeklyProfile', weeklyProfile.bytes);
+
+  assert.ok(!('weeklyProfile' in data));
+
+  const reported = lines.filter(l => l.includes('No value read for "weeklyProfile"'));
   assert.equal(reported.length, 1);
-  assert.match(reported[0], /1:"frontLeft"/);
-  assert.match(reported[0], /2:fixed64=21\.5\(dbl\)/);
-  assert.ok(!reported[0].includes('?wire6'), 'a string field must not be walked as a message');
+  assert.match(reported[0], /29:\{2:varint=21/);
+  assert.match(reported[0], /3:varint=18446744073709551615\/-1/);
+  assert.match(reported[0], /4:packed\[0,1,2,3,4\]=0x0001020304/);
+  assert.ok(!reported[0].includes('?wire6'));
+  assert.ok(!reported[0].includes('0:varint'), 'field number 0 does not exist');
 });
 
 test('an undeclared field holding opaque bytes is reported, not walked into', async () => {

@@ -32,6 +32,59 @@ message ChargeProgramsValue {
   repeated ChargeProgramParameters charge_program_parameters = 1;
 }
 
+// TemperaturePointsValue - the `temperaturePoints` attribute: the cabin
+// setpoint, one entry per zone.
+//
+// Field numbers recovered from a live payload (issue #61), then confirmed
+// byte-for-byte against a second capture. Fields 1 and 2 match
+// TemperatureConfigure's TemperaturePoint in vehicle-commands.proto exactly -
+// same zone string, same celsius double - so this is the read side of a value
+// the app already knows how to write. Field 3 is the same temperature formatted
+// for display ("21.5" beside the double 21.5) and has no command-side
+// counterpart.
+//
+// The unit is not in here: temperaturePoints also sets temperature_unit
+// (field 16) on the attribute itself, which is why `temperaturePoints_unit`
+// reached the device all along while the value did not.
+//
+// Deliberately not named TemperaturePoint. The command-side message of that
+// name has no field 3, both files declare `package proto`, and they stay apart
+// only because they happen to be loaded into separate roots - two different
+// messages sharing a fully-qualified name would collide on the first import.
+message VehicleTemperaturePoint {
+  string zone = 1;  // frontLeft, frontRight, rearLeft, rearRight
+  double temperature_in_celsius = 2;
+  string display_value = 3;
+}
+
+message TemperaturePointsValue {
+  repeated VehicleTemperaturePoint temperature_points = 1;
+}
+
+// WeeklySetHUValue - the `weeklySetHU` attribute, one entry per day.
+//
+// Field numbers recovered from a live payload. A capture carried five entries
+// indexed 0 through 4, every one holding 380.
+//
+// 380 read as minutes from midnight is 06:20 - and minutes from midnight is
+// already the unit on both sides of this app's departure time: device.js
+// renders `departuretime` that way, and ZevPrecondStart.departure_time is
+// written that way. So this is very likely the weekly departure schedule, whose
+// write path exists (configure_departure_time in DEPARTURE_WEEKLY mode) with no
+// read path until now.
+//
+// Named `index` rather than `day` because the mapping to weekdays is inferred,
+// not observed. The same five indices appear in weeklyProfile's field 4, which
+// corroborates that they are days but does not say which.
+message WeeklySetEntry {
+  int32 index = 1;
+  int32 minutes_from_midnight = 2;
+}
+
+message WeeklySetHUValue {
+  repeated WeeklySetEntry entries = 1;
+}
+
 // Raw mirrors of the push chain, used only to inspect attributes whose value
 // field this schema does not declare. protobufjs discards unknown fields, so an
 // attribute carrying one decodes with no attribute_type set and is dropped with
@@ -76,6 +129,11 @@ message VehicleAttributeStatus {
   }
 
   // Value types (oneof attribute_type)
+  //
+  // Anything the car sends that is not declared here decodes with no
+  // attribute_type set and is dropped with no value - see extractVehicleData().
+  // The non-scalar entries below were each recovered from a real payload with
+  // tools/inspect-attribute.js rather than from an upstream schema.
   oneof attribute_type {
     int64 int_value = 4;
     bool bool_value = 5;
@@ -83,6 +141,8 @@ message VehicleAttributeStatus {
     double double_value = 7;
     bool nil_value = 8;
     string unsupported_value = 9;
+    TemperaturePointsValue temperature_points_value = 20;
+    WeeklySetHUValue weekly_set_hu_value = 24;
     ChargeProgramsValue charge_programs_value = 31;
   }
 
