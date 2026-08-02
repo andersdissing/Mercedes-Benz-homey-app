@@ -131,5 +131,8 @@
   },
   "1.1.37": {
     "en": "Fixed vehicle status freezing shortly after startup. The live connection to the car was being dropped about 30 seconds in and never restored, so doors, windows, tyre pressure and odometer stopped updating while battery and range kept working. The connection now stays alive and reconnects automatically if it drops."
+  },
+  "1.1.38": {
+    "en": "Fixed vehicle commands (locking, windows, charging limit) failing and staying stuck until Mercedes lifted the block — the app was opening a new connection for every command instead of reusing the one it already had. Also fixed status updates sometimes being applied twice, which could trigger flows twice, and the maximum charge limit showing as empty."
   }
 }
