@@ -522,10 +522,19 @@ class MercedesVehicleDevice extends Homey.Device {
       try {
         if (!this.api) return;
 
-        // api.connectWebSocket() is a no-op when the socket is already
-        // connected, so this only acts when the connection is actually down.
-        if (!this.api.isWebSocketConnected()) {
-          this.log('[WS-HEALTH] WebSocket is not connected - reconnecting');
+        // api.connectWebSocket() is a no-op when the socket is healthy, so
+        // this only acts when the connection is actually down or stale.
+        //
+        // Staleness matters as much as disconnection: a socket whose TCP
+        // path was dropped without a close frame stays in readyState OPEN
+        // indefinitely. Checking "connected" alone would keep declaring
+        // that zombie healthy while no vehicle data ever arrives again.
+        if (!this.api.isWebSocketHealthy()) {
+          const idle = this.api.getWebSocketIdleTime();
+          const why = this.api.isWebSocketConnected()
+            ? `stale (no traffic for ${Math.round((idle || 0) / 1000)}s)`
+            : 'not connected';
+          this.log(`[WS-HEALTH] WebSocket is ${why} - reconnecting`);
           await this.api.connectWebSocket(this.onWebSocketData.bind(this));
           this.log('[WS-HEALTH] Reconnect attempt completed');
         }

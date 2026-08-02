@@ -6,6 +6,11 @@ Issue: #47 ("not all capabilities are refreshed")
 `test/websocket-reconnect.test.js` for the regression tests. Each test was
 verified to fail against the original code before the fix was applied.
 
+> A second, independent failure mode with the same symptom was found later
+> in the *command* path (issues #57 and #56). See
+> [Part 2](#part-2-the-command-path-stall-issues-57-and-56) at the end of
+> this document — the analysis below covers network drops only.
+
 ## Symptom
 
 After initialization, some capabilities (battery, range, position) keep
@@ -192,3 +197,90 @@ temporarily reinstated to prove it), then pass after the fix. Full suite:
 `isStopping` now has exactly one meaning — "the user/app asked us to stop,
 do not come back" — and is only set by `disconnect()` on genuine shutdown
 paths (`onDeleted`, device repair, api-level disposal).
+
+---
+
+# Part 2: the command-path stall (issues #57 and #56)
+
+Issue: #57 ("Failed to configure max SOC: WebSocket connection not
+available for command"), with #56 ("Many capabilities not updating") as
+the same stall seen from the other side.
+
+**Status: fixed.** See `test/websocket-command-session.test.js` — all ten
+tests were verified to fail against the code before this fix.
+
+## Symptom
+
+A flow that sends a vehicle command (set max SOC, lock, precondition, …)
+works right after the app is restarted, then days later fails with:
+
+```
+Failed to configure max SOC: WebSocket connection not available for command
+```
+
+In the same period, push-only capabilities (odometer, ignition, doors,
+windows) stop changing altogether. Restarting the app fixes both.
+
+The reproduction is therefore not really about the PIN or the flow: it is
+**send any command, then wait.**
+
+## Root cause
+
+Mercedes drops commands sent on a long-lived data-push session, so
+`sendCommand()` deliberately recycles the socket with a new session ID
+before every command. It did that through `disconnect()`:
+
+```js
+this.disconnect();        // "the user asked us to stop" path
+this.isStopping = false;  // ...then undo the stop flag by hand
+```
+
+`disconnect()` is the shutdown path, and it differed from the recovery
+path (`_teardownSocket()`) in two ways that matter here: it never called
+`removeAllListeners()` on the socket it abandoned, and it never cleared
+`isConnecting`.
+
+1. The abandoned socket kept its handlers. Its `close` event is
+   asynchronous, so it arrives while the *replacement* socket is
+   connecting or already live.
+2. That late handler then ran against the live client and
+   - called `_stopWatchdogs()`, killing the new socket's keepalive ping
+     **and** its liveness watchdog, and
+   - saw `isStopping === false` (just cleared by hand) and scheduled a
+     reconnect, which ~10s later replaced the socket mid-command and
+     orphaned another one.
+3. A live socket with no ping and no watchdog has nothing left to detect
+   a dead connection. When the TCP path is dropped without a close frame
+   — the normal fate of an idle mobile-backend connection behind NAT —
+   the socket stays in `readyState === OPEN` forever: a zombie.
+4. Every health check was `readyState`-only (`isConnected()`,
+   `api.connectWebSocket()`'s early return, `device.js`'s
+   `_startWebSocketHealthCheck`), so the zombie was reported healthy and
+   **nothing ever reconnected**. Push updates stopped → issue #56.
+5. The next command recycled that state again: `connect()` either
+   early-returned (`isConnecting` still set from a racing attempt) or
+   failed and had its error swallowed by `connect()`'s own catch. Either
+   way `this.ws` was not `OPEN` after the 30s warmup, and `sendCommand`
+   threw the generic "WebSocket connection not available for command" →
+   issue #57.
+
+## What was implemented
+
+| Area | Change |
+| --- | --- |
+| `disconnect()` | Now delegates to `_teardownSocket()`, so *every* stop path removes listeners, clears `isConnecting` and rejects pending commands exactly once (the rejection loop was also duplicated). `isStopping` still means "do not come back". |
+| `sendCommand()` | Recycles the session with `_teardownSocket()` instead of `disconnect()` + manual flag clearing, and cancels any pending reconnect so none fires mid-command. |
+| Socket identity | Handlers bind to their own socket and ignore events once `this.ws` has moved on, so a superseded socket can never stop the live watchdogs or schedule a reconnect. A late close still fails its own connect attempt, so nothing hangs. |
+| `connect()` | Split into `connect()` (absorbs failures, retries — for the push channel) and `connectOrThrow()` (reports them — for commands). Concurrent callers share one in-flight attempt instead of being told "already connecting" and left with nothing, and `isConnecting` is cleared in a `finally` so it can never latch the client offline. |
+| Liveness | `lastMessageAt` is tracked on open/message/pong; `isHealthy()` treats an `OPEN` socket with no traffic for 3 minutes as dead. `api.connectWebSocket()` and the device health check now use it, so a zombie socket is replaced instead of trusted. |
+| Command errors | Failures carry the underlying reason (`… not available for command: Unexpected server response: 401`) instead of a bare "not available". |
+| Command hygiene | Commands are serialized (one recycled session at a time), the pending command is registered only after the send succeeds (a failed send used to leak a 90s timer and an unhandled rejection), and a 429 backoff expires instead of pinning every later reconnect to 10 minutes. |
+
+## Verifying by hand
+
+After sending a command from a flow, the app log should show the new
+session opening and then **no** `[WS] Scheduling reconnect attempt 1 in
+10s` about ten seconds later. Push updates (odometer, ignition) should
+keep arriving afterwards, and a stalled connection should now surface as
+`[WS-HEALTH] WebSocket is stale (no traffic for Ns) - reconnecting`
+rather than as silence.
