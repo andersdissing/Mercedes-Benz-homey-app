@@ -280,6 +280,10 @@
 
   function update(data) {
     document.getElementById('loading').classList.add('hidden');
+    // The not-configured panel is full height, so leaving it visible would
+    // cover the content we are about to render. It must be hidden here or a
+    // single transient not-configured response latches the widget forever.
+    document.getElementById('notConfigured').classList.add('hidden');
     document.getElementById('content').classList.remove('hidden');
 
     document.getElementById('modelName').textContent = data.model || 'Mercedes-Benz';
@@ -363,29 +367,50 @@
   var selectedDeviceId = null;
   var _homey = null;
 
+  // The widget endpoint only reads already-cached capability values from
+  // Homey - it never calls the Mercedes API - so it is deliberately NOT tied
+  // to the device's `polling_interval` setting. That setting rate-limits
+  // backend calls and can be up to an hour, which would leave the dashboard
+  // an hour stale even while the app receives real-time WebSocket pushes.
+  var REFRESH_INTERVAL = 15000; // 15 seconds
+
+  var hasRenderedData = false;
+
   async function fetchData() {
     try {
       var path = selectedDeviceId ? '/status/' + encodeURIComponent(selectedDeviceId) : '/';
       var data = await _homey.api('GET', path, {});
       if (data && data.error === 'not_configured') {
-        document.getElementById('loading').classList.add('hidden');
-        document.getElementById('content').classList.add('hidden');
-        document.getElementById('notConfigured').classList.remove('hidden');
+        // Only show the placeholder if we have never had data. Once real data
+        // has been rendered, a transient not-configured response (app restart,
+        // driver not ready yet) should leave the last known values on screen
+        // rather than blanking the widget.
+        if (!hasRenderedData) {
+          document.getElementById('loading').classList.add('hidden');
+          document.getElementById('content').classList.add('hidden');
+          document.getElementById('notConfigured').classList.remove('hidden');
+        }
         return null;
       }
-      if (data) update(data);
+      if (data) {
+        update(data);
+        hasRenderedData = true;
+      }
       return data;
     } catch(error) {
       console.error('Failed to fetch data:', error);
-      document.getElementById('loading').textContent = 'Error: ' + (error.message || String(error));
+      // Don't wipe good data on a transient failure - only surface the error
+      // while the widget is still on its initial loading state.
+      if (!hasRenderedData) {
+        document.getElementById('loading').textContent = 'Error: ' + (error.message || String(error));
+      }
       return null;
     }
   }
 
   async function startWidget() {
-    var data = await fetchData();
-    var interval = (data && data.pollingInterval) || 180000;
-    setInterval(fetchData, interval);
+    await fetchData();
+    setInterval(fetchData, REFRESH_INTERVAL);
   }
 
   async function onHomeyReady(Homey) {
