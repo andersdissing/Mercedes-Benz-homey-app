@@ -700,6 +700,7 @@ class MercedesVehicleDevice extends Homey.Device {
       // Door lock status
       try {
         if (data.doorlockstatusvehicle !== undefined) {
+          this._doorLockStatusSeen = true;
           this.log(`[UPDATE] Door lock status raw value: ${data.doorlockstatusvehicle}`);
           const locked = data.doorlockstatusvehicle === 2; // 2 = external locked
           this.log(`[UPDATE] Setting locked to: ${locked}`);
@@ -713,8 +714,12 @@ class MercedesVehicleDevice extends Homey.Device {
               await this.homey.flow.getDeviceTriggerCard('vehicle_unlocked').trigger(this);
             }
           }
-        } else {
-          this.log('[UPDATE] WARNING: doorlockstatusvehicle is undefined');
+        } else if (!this._doorLockStatusSeen) {
+          // A partial push carries only the attributes that changed, so an absent
+          // lock status is the normal case - this used to warn on every single
+          // update and bury the rest of the log. Once the attribute has been seen
+          // at least once, its absence says nothing and is not worth a line.
+          this.log('[UPDATE] No doorlockstatusvehicle seen yet - lock state still unknown');
         }
       } catch (e) {
         this.error('[UPDATE] Error updating door lock status:', e.message);
