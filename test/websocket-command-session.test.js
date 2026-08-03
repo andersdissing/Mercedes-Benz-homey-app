@@ -19,9 +19,14 @@ const MercedesWebSocket = require('../lib/websocket');
  * available for command" until the app was restarted.
  */
 
-function makeWs() {
+function makeWs(oauthOverrides = {}) {
   const homey = { app: { log() {}, error() {} } };
-  const oauth = { getAccessToken: async () => 'token', refreshToken: async () => {} };
+  const oauth = {
+    getAccessToken: async () => 'token',
+    refreshToken: async () => {},
+    reauthenticate: async () => true,
+    ...oauthOverrides,
+  };
   return new MercedesWebSocket(homey, oauth, 'Europe', {});
 }
 
@@ -259,29 +264,117 @@ test('the 429 backoff window expires on its own', () => {
   assert.equal(ws.accountBlocked, false, 'the flag must clear once the window passes');
 });
 
+/** Socket factory whose every handshake is refused with the given HTTP status. */
+function refuseWith(ws, status) {
+  ws._createSocket = () => {
+    const sock = new ScriptedSocket();
+    setImmediate(() => {
+      sock.emit('error', new Error(`Unexpected server response: ${status}`));
+      sock.emit('close', 1006, Buffer.from(''));
+    });
+    return sock;
+  };
+}
+
 test('a 429 schedules a bounded re-authentication', async () => {
   const ws = makeWs();
   let attempts = 0;
 
+  refuseWith(ws, 429);
+
+  try {
+    for (let i = 0; i < ws.MAX_TOKEN_REFRESH_ATTEMPTS + 2; i++) {
+      await assert.rejects(ws.connectOrThrow(() => {}), /429/);
+      if (ws._needsReauthentication) attempts++;
+      ws._needsReauthentication = false; // connectOrThrow would consume it
+    }
+
+    // A 429 on the upgrade usually means an invalidated session, so re-logging
+    // in helps - but a genuinely blocked account must not become a login loop.
+    assert.equal(attempts, ws.MAX_TOKEN_REFRESH_ATTEMPTS);
+  } finally {
+    cleanup(ws);
+  }
+});
+
+test('a 429 triggers a full re-login, not a refresh grant', async () => {
+  const calls = [];
+  const ws = makeWs({
+    refreshToken: async () => { calls.push('refresh'); },
+    reauthenticate: async () => { calls.push('reauthenticate'); return true; },
+  });
+
+  refuseWith(ws, 429);
+
+  try {
+    // First attempt earns the 429 and arms the recovery.
+    await assert.rejects(ws.connectOrThrow(() => {}), /429/);
+    assert.equal(calls.length, 0, 'nothing is re-authenticated until the next attempt');
+    assert.equal(ws._needsReauthentication, true);
+
+    // The next attempt must re-login. A refresh grant is not good enough: the
+    // identity service will mint a token the upgrade rejects all the same,
+    // because what Mercedes invalidated is the session, not the token.
+    await assert.rejects(ws.connectOrThrow(() => {}), /429/);
+
+    assert.deepEqual(calls, ['reauthenticate'], 'a 429 must re-login, never merely refresh');
+  } finally {
+    cleanup(ws);
+  }
+});
+
+test('a successful re-login clears the 429 backoff before the retry', async () => {
+  const ws = makeWs();
+  refuseWith(ws, 429);
+
+  await assert.rejects(ws.connectOrThrow(() => {}), /429/);
+  assert.ok(ws.getRateLimitRemaining() > 0, 'precondition: the 429 armed a backoff');
+
+  // Capture the state at handshake time - after the re-login has run, before
+  // the socket resolves. Asserting after the connect would prove nothing:
+  // 'open' clears the flag on its own, and a second refusal would re-arm it.
+  let blockedAtHandshake = null;
+  const sockets = [];
   ws._createSocket = () => {
+    blockedAtHandshake = ws.accountBlocked;
     const sock = new ScriptedSocket();
+    sockets.push(sock);
     setImmediate(() => {
-      sock.emit('error', new Error('Unexpected server response: 429'));
-      sock.emit('close', 1006, Buffer.from(''));
+      sock.readyState = WebSocket.OPEN;
+      sock.emit('open');
     });
     return sock;
   };
 
   try {
-    for (let i = 0; i < ws.MAX_TOKEN_REFRESH_ATTEMPTS + 2; i++) {
-      await assert.rejects(ws.connectOrThrow(() => {}), /429/);
-      if (ws._needsTokenRefresh) attempts++;
-      ws._needsTokenRefresh = false; // connectOrThrow would consume it
-    }
+    await ws.connectOrThrow(() => {});
 
-    // A 429 on the upgrade is often a rejected token, so re-authenticating
-    // helps - but a genuinely blocked account must not become a refresh loop.
-    assert.equal(attempts, ws.MAX_TOKEN_REFRESH_ATTEMPTS);
+    // The backoff exists to stop us re-presenting the thing that was refused.
+    // A new session is not that thing, so continuing to serve the old window
+    // would strand a recovered account for the rest of it.
+    assert.equal(blockedAtHandshake, false, 'the retry must not still be carrying the old block');
+    assert.equal(ws.getRateLimitRemaining(), 0);
+  } finally {
+    cleanup(ws);
+  }
+});
+
+test('a 401 still uses a refresh grant rather than a full re-login', async () => {
+  const calls = [];
+  const ws = makeWs({
+    refreshToken: async () => { calls.push('refresh'); },
+    reauthenticate: async () => { calls.push('reauthenticate'); return true; },
+  });
+
+  refuseWith(ws, 401);
+
+  try {
+    await assert.rejects(ws.connectOrThrow(() => {}), /401/);
+    await assert.rejects(ws.connectOrThrow(() => {}), /401/);
+
+    // An expired token is exactly what the refresh grant is for - escalating
+    // every auth failure to a full credentialed login would be gratuitous.
+    assert.deepEqual(calls, ['refresh']);
   } finally {
     cleanup(ws);
   }
@@ -473,6 +566,51 @@ test('a healthy but idle connection is not mistaken for a zombie', async () => {
     sockets[0].emit('pong');
 
     assert.equal(ws.isHealthy(), true, 'a pong must refresh liveness');
+  } finally {
+    cleanup(ws);
+  }
+});
+
+test('a command on a stale-but-open socket closes it before opening a replacement', async () => {
+  const ws = makeWs();
+  const sockets = scriptSockets(ws);
+
+  // Stub the proto parser so the post-connect vepUpdate warmup wait (up to
+  // 30s of real time) resolves on the first delivered message instead of
+  // timing out, keeping this test fast without changing what it verifies.
+  ws.protoParser = {
+    parsePushMessage: () => ({ msg: 'vepUpdates', vepUpdates: { sequenceNumber: 1, updates: { VIN1: {} } } }),
+    extractVehicleData: () => ({}),
+    createAcknowledgeVepUpdatesByVin: () => Buffer.from('ack'),
+  };
+
+  await ws.connect(() => {}); // plain connect: identical setup on both code paths
+  const staleSocket = sockets[0];
+
+  // Zombie precondition: no traffic for STALE_TIMEOUT, but readyState still
+  // reports OPEN because the TCP path died without a close frame.
+  ws.lastMessageAt = Date.now() - (ws.STALE_TIMEOUT + 1000);
+  assert.equal(ws.isConnected(), true, 'precondition: the zombie still reports OPEN');
+  assert.equal(ws.isHealthy(), false, 'precondition: staleness makes it unhealthy');
+
+  const command = ws.sendCommand(Buffer.from('command'), 'req-1');
+  command.catch(() => {});
+
+  await waitFor(() => sockets.length === 2 && sockets[1].readyState === WebSocket.OPEN, 'the replacement socket opened');
+  sockets[1].emit('message', Buffer.from('warmup'));
+
+  await waitFor(() => ws.pendingCommands.has('req-1'), 'the command was sent on the replacement socket');
+
+  try {
+    // Mercedes treats two live handshakes on one session as abuse and
+    // answers with HTTP 429, so the stale socket must be shut down before -
+    // never after or never - the replacement is opened.
+    assert.equal(sockets.length, 2, 'a replacement socket must be opened for the zombie');
+    assert.equal(staleSocket.closed, true, 'the stale socket must be closed, not left dangling');
+    assert.equal(staleSocket.listenersRemoved, true, 'the stale socket must not keep driving state');
+    assert.equal(ws.ws, sockets[1], 'the live socket must be the replacement');
+    // The warmup vepUpdate is acknowledged before the command is sent.
+    assert.deepEqual(sockets[1].sent, [Buffer.from('ack'), Buffer.from('command')]);
   } finally {
     cleanup(ws);
   }

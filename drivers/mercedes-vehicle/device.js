@@ -37,6 +37,14 @@ class MercedesVehicleDevice extends Homey.Device {
         this.log('Refreshed token persisted successfully');
       });
 
+      // Let the OAuth client re-login on its own when Mercedes invalidates the
+      // session (HTTP 429 at the WebSocket upgrade). Read from the store on
+      // each call rather than captured once, so a repair takes effect.
+      this.oauth.setCredentialsProvider(async () => {
+        const current = this.getStore();
+        return { username: current.username, password: current.password };
+      });
+
       // Initialize API client
       this.api = new MercedesAPI(this.homey, this.oauth, this.region);
       await this.api.initialize();
