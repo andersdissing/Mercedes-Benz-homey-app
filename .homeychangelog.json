@@ -141,5 +141,8 @@
     "en": "Fixed the app crashing while re-establishing its connection to the car. Replacing a connection that had not finished opening yet could bring the whole app down, which the automatic connection check could trigger on its own.",
     "nl": "Opgelost: de app crashte tijdens het opnieuw opbouwen van de verbinding met de auto. Het vervangen van een verbinding die nog niet volledig tot stand was gekomen kon de hele app laten crashen — iets wat de automatische verbindingscontrole zelf kon veroorzaken.",
     "de": "Behoben: Die App stürzte beim Wiederherstellen der Verbindung zum Fahrzeug ab. Das Ersetzen einer Verbindung, die noch nicht vollständig aufgebaut war, konnte die gesamte App zum Absturz bringen — was die automatische Verbindungsprüfung von sich aus auslösen konnte."
+  },
+  "1.1.40": {
+    "en": "Fixed vehicle commands failing when a flow runs two actions in a row. Mercedes refuses a new command while it is still working on an earlier one, and the app now lets the first finish instead of sending into that window. When a command really is blocked, the flow says so — including how long the earlier command has been running — instead of showing a raw error code."
   }
 }
