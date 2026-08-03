@@ -143,6 +143,8 @@
     "de": "Behoben: Die App stürzte beim Wiederherstellen der Verbindung zum Fahrzeug ab. Das Ersetzen einer Verbindung, die noch nicht vollständig aufgebaut war, konnte die gesamte App zum Absturz bringen — was die automatische Verbindungsprüfung von sich aus auslösen konnte."
   },
   "1.1.40": {
-    "en": "Fixed vehicle commands failing when a flow runs two actions in a row. Mercedes refuses a new command while it is still working on an earlier one, and the app now lets the first finish instead of sending into that window. When a command really is blocked, the flow says so — including how long the earlier command has been running — instead of showing a raw error code."
+    "en": "Fixed vehicle commands failing when a flow runs two actions in a row. Mercedes refuses a new command while it is still working on an earlier one, and the app now lets the first finish instead of sending into that window. When a command really is blocked, the flow says so — including how long the earlier command has been running — instead of showing a raw error code.",
+    "nl": "Opgelost: voertuigopdrachten mislukten wanneer een flow twee acties achter elkaar uitvoert. Mercedes weigert een nieuwe opdracht zolang het nog met een eerdere bezig is; de app laat de eerste nu afronden in plaats van er middenin te sturen. Als een opdracht echt geblokkeerd is, meldt de flow dat — inclusief hoe lang de eerdere opdracht al loopt — in plaats van een ruwe foutcode.",
+    "de": "Behoben: Fahrzeugbefehle schlugen fehl, wenn ein Flow zwei Aktionen nacheinander ausführt. Mercedes lehnt einen neuen Befehl ab, solange ein früherer noch läuft; die App lässt den ersten jetzt zu Ende laufen, statt mitten hinein zu senden. Ist ein Befehl tatsächlich blockiert, sagt der Flow das — samt der Laufzeit des früheren Befehls — statt einen rohen Fehlercode zu zeigen."
   }
 }
