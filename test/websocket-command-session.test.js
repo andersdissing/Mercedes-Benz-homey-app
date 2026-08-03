@@ -547,3 +547,94 @@ test('an unknown backend failure code still reports code and message', async () 
   assert.ok(error);
   assert.match(error.message, /backend said no \(RIS_SOMETHING_NEW\)/);
 });
+
+/** Feed a command status update in, the way the backend would. */
+function commandStatus(ws, requestId, state, errors) {
+  ws._handleCommandStatusUpdates({
+    updatesByVin: {
+      VIN1: { updatesByPid: { pid1: { requestId, state, errors } } },
+    },
+  });
+}
+
+test('a second command waits for the first to finish, not just to be accepted', async () => {
+  const ws = makeWs();
+  const sockets = scriptSockets(ws);
+
+  await ws.connect(() => {});
+
+  const first = ws.sendCommand(Buffer.from('first'), 'req-1');
+  const second = ws.sendCommand(Buffer.from('second'), 'req-2');
+  first.catch(() => {});
+  second.catch(() => {});
+
+  await waitFor(() => ws.pendingCommands.has('req-1'), 'the first command is in flight');
+
+  try {
+    // Acceptance settles the caller, so the flow card returns promptly...
+    commandStatus(ws, 'req-1', 7); // ACKED_BY_APPTWIN
+    assert.deepEqual(await first, { success: true, state: 'ACKED_BY_APPTWIN' });
+
+    // ...but Mercedes still has the command open, and refuses an overlapping
+    // one with RIS_COULD_NOT_SEND_COMMAND. Reported on issue #57 as "cannot
+    // run two actions in a row".
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    assert.deepEqual(sockets[0].sent, [Buffer.from('first')], 'the second command must wait');
+
+    commandStatus(ws, 'req-1', 5); // FINISHED
+    await waitFor(() => sockets[0].sent.length === 2, 'the second command is released');
+    assert.deepEqual(sockets[0].sent[1], Buffer.from('second'));
+  } finally {
+    cleanup(ws);
+  }
+});
+
+test('a failed command releases the next one immediately', async () => {
+  const ws = makeWs();
+  const sockets = scriptSockets(ws);
+
+  await ws.connect(() => {});
+
+  const first = ws.sendCommand(Buffer.from('first'), 'req-1');
+  const second = ws.sendCommand(Buffer.from('second'), 'req-2');
+  first.catch(() => {});
+  second.catch(() => {});
+
+  await waitFor(() => ws.pendingCommands.has('req-1'), 'the first command is in flight');
+
+  try {
+    commandStatus(ws, 'req-1', 6, [{ code: 'RIS_SOMETHING', message: 'nope' }]);
+    await assert.rejects(first, /nope/);
+
+    // Nothing is left running at Mercedes, so there is nothing to wait for.
+    await waitFor(() => sockets[0].sent.length === 2, 'the second command is released');
+  } finally {
+    cleanup(ws);
+  }
+});
+
+test('a command that never reports completion does not block later commands forever', async () => {
+  const ws = makeWs();
+  const sockets = scriptSockets(ws);
+  ws.COMMAND_COMPLETION_WAIT = 60;
+
+  await ws.connect(() => {});
+
+  const first = ws.sendCommand(Buffer.from('first'), 'req-1');
+  const second = ws.sendCommand(Buffer.from('second'), 'req-2');
+  first.catch(() => {});
+  second.catch(() => {});
+
+  await waitFor(() => ws.pendingCommands.has('req-1'), 'the first command is in flight');
+
+  try {
+    commandStatus(ws, 'req-1', 7); // accepted, then silence
+    await first;
+
+    // The backend is the authority on whether an overlap is allowed; a
+    // command it never reports on must not wedge every later command.
+    await waitFor(() => sockets[0].sent.length === 2, 'the wait is capped', 3000);
+  } finally {
+    cleanup(ws);
+  }
+});
