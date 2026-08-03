@@ -669,3 +669,104 @@ test('tracking a command past its caller does not relax the liveness watchdog', 
     cleanup(ws);
   }
 });
+
+/**
+ * A command's caller is answered at ACKED_BY_APPTWIN, but Mercedes can report
+ * the command failed minutes later - a windowsClose acked in 81ms once came
+ * back FAILED/CMD_TIMEOUT eight and a half minutes on. By then the caller's
+ * promise is long settled, so rejecting it settles nothing and the failure
+ * reached the log and nowhere else. These cover reporting it out of band.
+ */
+
+/** Drive one command status update through the real handler. */
+function emitCommandStatus(ws, requestId, state, errors = []) {
+  ws._handleCommandStatusUpdates({
+    updatesByVin: {
+      VIN1: { updatesByPid: { pid1: { requestId, state, errors } } },
+    },
+  });
+}
+
+/** A tracked command whose caller has already been answered at acceptance. */
+function trackAnsweredCommand(ws, requestId, commandName) {
+  ws.pendingCommands.set(requestId, {
+    resolve() {},
+    reject() {},
+    callerTimeout: setTimeout(() => {}, 0),
+    trackingTimeout: setTimeout(() => {}, 0),
+    settleCompletion() {},
+    sentAt: 0,
+    awaitingCaller: false, // resolved at ACKED_BY_APPTWIN
+    commandName,
+  });
+}
+
+test('a failure after the caller returned is reported out of band', async () => {
+  const ws = makeWs();
+  const reported = [];
+  ws.setCommandFailedHandler((failure) => reported.push(failure));
+
+  trackAnsweredCommand(ws, 'req-1', 'windowsClose');
+  emitCommandStatus(ws, 'req-1', 6, [{ code: 'CMD_TIMEOUT', message: '' }]);
+
+  assert.equal(reported.length, 1, 'the failure must be reported exactly once');
+  // Which command failed has to survive: by the time this lands the caller is
+  // gone, and a request id alone means nothing to a user.
+  assert.equal(reported[0].commandName, 'windowsClose');
+  assert.equal(reported[0].code, 'CMD_TIMEOUT');
+  assert.equal(reported[0].requestId, 'req-1');
+});
+
+test('a failure the caller is still waiting for is not reported twice', async () => {
+  const ws = makeWs();
+  const reported = [];
+  ws.setCommandFailedHandler((failure) => reported.push(failure));
+
+  const rejected = new Promise((resolve, reject) => {
+    ws.pendingCommands.set('req-1', {
+      resolve,
+      reject,
+      callerTimeout: setTimeout(() => {}, 0),
+      awaitingCaller: true, // still listening
+      commandName: 'doorsLock',
+    });
+  });
+
+  emitCommandStatus(ws, 'req-1', 6, [{ code: 'CMD_TIMEOUT', message: '' }]);
+
+  const error = await rejected.then(() => null, (err) => err);
+  assert.ok(error, 'the caller still gets the failure directly');
+  // Reporting it again out of band would surface one failure as two.
+  assert.equal(reported.length, 0, 'an answered caller needs no out-of-band report');
+});
+
+test('a known code is explained in the out-of-band report too', async () => {
+  const ws = makeWs();
+  const reported = [];
+  ws.setCommandFailedHandler((failure) => reported.push(failure));
+
+  trackAnsweredCommand(ws, 'req-1', 'windowsClose');
+  emitCommandStatus(ws, 'req-1', 6, [{ code: 'RIS_COULD_NOT_SEND_COMMAND', message: '' }]);
+
+  assert.equal(reported.length, 1);
+  assert.match(reported[0].message, /still busy with an earlier command/);
+});
+
+test('a throwing failure handler does not escape the message loop', async () => {
+  const ws = makeWs();
+  ws.setCommandFailedHandler(() => { throw new Error('flow card unavailable'); });
+
+  trackAnsweredCommand(ws, 'req-1', 'doorsLock');
+
+  // This runs inside the WebSocket message loop: a flow that cannot be
+  // triggered must not take the connection down with it.
+  assert.doesNotThrow(() => emitCommandStatus(ws, 'req-1', 6, [{ code: 'CMD_TIMEOUT', message: '' }]));
+});
+
+test('a command with no failure handler still completes normally', async () => {
+  const ws = makeWs();
+
+  trackAnsweredCommand(ws, 'req-1', 'windowsClose');
+  assert.doesNotThrow(() => emitCommandStatus(ws, 'req-1', 6, [{ code: 'CMD_TIMEOUT', message: '' }]));
+  assert.equal(ws.pendingCommands.has('req-1'), false, 'the command is no longer tracked');
+});

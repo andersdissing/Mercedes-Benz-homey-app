@@ -42,6 +42,12 @@ class MercedesVehicleDevice extends Homey.Device {
       await this.api.initialize();
       this.log('API client and protobuf parser initialized');
 
+      // A command that fails at the vehicle does so ~12s after it was sent,
+      // long after its Flow action returned - Homey abandons an action card
+      // before Mercedes reports completion, so the card can only ever report
+      // acceptance. This trigger is what makes the real outcome reachable.
+      this.api.setCommandFailedHandler((failure) => this.onCommandFailed(failure));
+
       // Check if token is expired and refresh if needed
       if (!this.oauth.token || MercedesOAuth.isTokenExpired(this.oauth.token)) {
         this.log('Token expired, refreshing...');
@@ -1868,6 +1874,28 @@ class MercedesVehicleDevice extends Homey.Device {
     } catch (error) {
       this.error('[FLOW] Failed to open windows:', error.message);
       throw new Error(`Failed to open windows: ${error.message}`);
+    }
+  }
+
+  /**
+   * A command failed at the vehicle after its Flow action already returned.
+   *
+   * Fires the `command_failed` trigger so the failure is actionable rather
+   * than only present in the log. Never throws: this runs from the WebSocket
+   * message loop, and a Flow that cannot be triggered must not take the
+   * connection down with it.
+   *
+   * @param {Object} failure - { requestId, commandName, code, message }
+   */
+  async onCommandFailed({ requestId, commandName, code, message }) {
+    const reason = message ? `${code}: ${message}` : code;
+    this.error(`[TRIGGER] Command ${commandName} (${requestId}) failed at the vehicle: ${reason}`);
+
+    try {
+      await this.homey.flow.getDeviceTriggerCard('command_failed')
+        .trigger(this, { command: commandName, reason });
+    } catch (error) {
+      this.error('[TRIGGER] Could not fire command_failed:', error.message);
     }
   }
 
