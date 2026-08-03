@@ -786,19 +786,64 @@ class MercedesVehicleDevice extends Homey.Device {
       try {
         const chargingPowerValue = data.chargingpower ?? data.chargingPower;
         if (chargingPowerValue !== undefined) {
-          const chargingPower = parseFloat(chargingPowerValue);
-          const wasCharging = this.getCapabilityValue('measure_charge_power') > 0;
-          const isCharging = chargingPower > 0;
+          await this.setCapabilityValue('measure_charge_power', parseFloat(chargingPowerValue));
+        }
+      } catch (e) {
+        this.error('[UPDATE] Error updating charging power:', e.message);
+      }
 
-          await this.setCapabilityValue('measure_charge_power', chargingPower);
+      // Whether the car is actually charging.
+      //
+      // Deliberately NOT derived from chargingPower alone. Mercedes sends that
+      // attribute as a nilValue whenever the car is not charging, so it never
+      // reaches `data` at all - and a derivation guarded by
+      // `if (chargingPower !== undefined)` therefore never runs to clear the
+      // flag. onoff_charging kept the value from the last session forever,
+      // which is what left the dashboard widget animating a charging battery
+      // on an unplugged car.
+      //
+      // `chargingactive` is the direct answer and is present on every full
+      // update; chargingstatus is the fallback, and chargingPower the last
+      // resort for vehicles that report neither.
+      try {
+        const CHARGING_STATUS_CODES = new Set(['0', '5', '6', '9', '10', '11', '13', '14']);
 
-          // Update charging on/off capability
-          if (this.hasCapability('onoff_charging')) {
-            await this.setCapabilityValue('onoff_charging', isCharging);
+        const activeValue = data.chargingactive ?? data.chargingActive;
+        const statusValue = data.chargingstatus ?? data.chargingStatus;
+        const powerValue = data.chargingpower ?? data.chargingPower;
+
+        let isCharging = null;
+        let source = null;
+
+        if (activeValue !== undefined && activeValue !== null) {
+          isCharging = activeValue === true || activeValue === 1 || String(activeValue) === 'true';
+          source = 'chargingactive';
+        } else if (statusValue !== undefined && statusValue !== null) {
+          isCharging = CHARGING_STATUS_CODES.has(String(statusValue));
+          source = 'chargingstatus';
+        } else if (powerValue !== undefined && powerValue !== null) {
+          isCharging = parseFloat(powerValue) > 0;
+          source = 'chargingpower';
+        }
+
+        if (isCharging !== null && this.hasCapability('onoff_charging')) {
+          const wasCharging = this.getCapabilityValue('onoff_charging') === true;
+
+          if (wasCharging !== isCharging) {
+            this.log(`[UPDATE] Setting charging to: ${isCharging} (from ${source})`);
+          }
+          await this.setCapabilityValue('onoff_charging', isCharging);
+
+          // Power is only meaningful while charging, and Mercedes stops
+          // reporting it entirely when it stops - so clear it here rather than
+          // leaving the last session's figure on display.
+          if (!isCharging && this.getCapabilityValue('measure_charge_power') > 0) {
+            await this.setCapabilityValue('measure_charge_power', 0);
           }
 
           // Trigger charging flow cards
           if (!wasCharging && isCharging) {
+            const chargingPower = this.getCapabilityValue('measure_charge_power') || 0;
             await this.homey.flow.getDeviceTriggerCard('charging_started')
               .trigger(this, { charging_power: chargingPower });
             this.log(`[TRIGGER] Charging started with ${chargingPower} kW`);
@@ -808,7 +853,7 @@ class MercedesVehicleDevice extends Homey.Device {
           }
         }
       } catch (e) {
-        this.error('[UPDATE] Error updating charging power:', e.message);
+        this.error('[UPDATE] Error updating charging state:', e.message);
       }
 
       // Engine state — Mercedes sends `enginestate` for ICE cars; EVs don't
