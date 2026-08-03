@@ -39,11 +39,25 @@ A compact "Car Status" widget for the Homey dashboard showing:
 Find the widget under **Dashboards > + Add Widget > Apps tab > "Car Status"**.
 
 ### Flow Cards
-**16 trigger cards:** vehicle locked/unlocked, door opened/closed, window opened/closed, engine started/stopped, charging started/stopped/completed, low battery, geofence entered/left, warning light activated, vehicle alarm.
+**19 trigger cards:** vehicle locked/unlocked, door opened/closed, window opened/closed, engine started/stopped, charging started/stopped/completed, connector connected/disconnected, low battery, geofence entered/left, warning light activated, vehicle alarm, vehicle command failed.
 
-**12 condition cards:** is locked, engine running, charging, windows closed, tire pressure OK, preconditioning, any door open, warning active, sunroof open, battery level above threshold, aux heat active, in geofence.
+**13 condition cards:** is locked, engine running, charging, connector connected, windows closed, tire pressure OK, preconditioning, any door open, warning active, sunroof open, battery level above threshold, aux heat active, in geofence.
 
-**19 action cards:** lock/unlock, start/stop climate, flash lights, start/stop engine, open/close windows, open/close/tilt sunroof, start/stop preconditioning, send route, configure max SOC, configure departure time, configure temperature, configure seat heating, sound horn, refresh data.
+**23 action cards:** lock/unlock, start/stop climate, flash lights, start/stop engine, open/close windows, open/close/tilt sunroof, start/stop preconditioning, start/stop charging, send route, configure max SOC, configure departure time, configure temperature, configure seat heating, sound horn, refresh data.
+
+#### What an action card's result means
+An action card finishes as soon as Mercedes **accepts** the command, which
+takes 60-300 ms. That is not the same as the car having carried it out —
+the vehicle reports completion roughly 8-13 seconds later, far beyond what
+a Flow card can wait for. Acceptance is all the card can honestly report.
+
+A command can therefore be accepted and still fail: sending two commands
+within a few seconds gets the second refused with `CMD_REJECTED_BY_QUEUE`,
+and a car that never acts on a queued command eventually returns
+`CMD_TIMEOUT`. The **Vehicle command failed** trigger exists for exactly
+these cases. It carries two tokens — `command` (e.g. `windowsClose`) and
+`reason` (e.g. `CMD_TIMEOUT`) — so a failure that arrives after the action
+card has already reported success can still start a notification Flow.
 
 ### Real-Time Updates
 - WebSocket connection for instant push updates from the vehicle
@@ -158,6 +172,16 @@ Mercedes periodically updates their API requirements. If you see HTTP 418 errors
 - Widgets require Homey firmware >= 12.3.0
 - Look under **Dashboards > + Add Widget > Apps tab** (not the Home screen)
 - If you previously ran `homey app run`, reinstall with `homey app install`
+- After re-pairing the vehicle the widget loses its selection, because it
+  stores the device's Homey ID and re-pairing mints a new one. Re-pick the
+  car in the widget's settings.
+
+### A Flow Reports a Timeout That Never Happened
+The Flow editor's **Test** button gives up on a run after well under 30
+seconds and blames whichever card it was nearest — so any Flow containing a
+delay will report a timeout even though every card succeeded and the Flow
+runs to completion. Trigger the Flow for real (from the mobile app, or via
+its trigger card) and judge by what the car does, not by the Test view.
 
 ## Development
 
