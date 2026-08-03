@@ -164,7 +164,8 @@ test('_teardownSocket rejects pending commands so callers do not hang', async ()
     ws.pendingCommands.set('req-1', {
       resolve,
       reject,
-      timeout: setTimeout(() => {}, 60000),
+      callerTimeout: setTimeout(() => {}, 60000),
+      trackingTimeout: setTimeout(() => {}, 60000),
       commandType: 'doorsLock',
     });
   });
