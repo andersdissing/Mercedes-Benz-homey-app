@@ -477,3 +477,73 @@ test('a healthy but idle connection is not mistaken for a zombie', async () => {
     cleanup(ws);
   }
 });
+
+/**
+ * Reported on issue #57: a flow action failed with nothing but
+ * "Command failed (RIS_COULD_NOT_SEND_COMMAND)". Mercedes sends that code
+ * with an empty message field, so the card showed the user a backend symbol
+ * and no indication of what to do about it.
+ */
+test('a known backend failure code is reported in plain language', async () => {
+  const ws = makeWs();
+
+  const rejected = new Promise((resolve, reject) => {
+    ws.pendingCommands.set('req-1', {
+      resolve,
+      reject,
+      timeout: setTimeout(() => {}, 0),
+    });
+  });
+
+  ws._handleCommandStatusUpdates({
+    updatesByVin: {
+      VIN1: {
+        updatesByPid: {
+          pid1: {
+            requestId: 'req-1',
+            state: 6, // FAILED
+            errors: [{ code: 'RIS_COULD_NOT_SEND_COMMAND', message: '' }],
+          },
+        },
+      },
+    },
+  });
+
+  const error = await rejected.then(() => null, (err) => err);
+
+  assert.ok(error, 'the command must reject');
+  assert.match(error.message, /still busy with an earlier command/);
+  // The raw code stays in the message - it is what makes a future report searchable.
+  assert.match(error.message, /RIS_COULD_NOT_SEND_COMMAND/);
+});
+
+test('an unknown backend failure code still reports code and message', async () => {
+  const ws = makeWs();
+
+  const rejected = new Promise((resolve, reject) => {
+    ws.pendingCommands.set('req-2', {
+      resolve,
+      reject,
+      timeout: setTimeout(() => {}, 0),
+    });
+  });
+
+  ws._handleCommandStatusUpdates({
+    updatesByVin: {
+      VIN1: {
+        updatesByPid: {
+          pid1: {
+            requestId: 'req-2',
+            state: 6,
+            errors: [{ code: 'RIS_SOMETHING_NEW', message: 'backend said no' }],
+          },
+        },
+      },
+    },
+  });
+
+  const error = await rejected.then(() => null, (err) => err);
+
+  assert.ok(error);
+  assert.match(error.message, /backend said no \(RIS_SOMETHING_NEW\)/);
+});
