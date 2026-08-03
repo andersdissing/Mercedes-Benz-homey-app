@@ -117,7 +117,7 @@ async function waitFor(predicate, message, timeoutMs = 2000) {
  * Use the real shutdown path rather than clearing timers by hand: it also
  * releases the socket, so a command still queued behind the chain fails
  * immediately instead of sending on a fake socket that still claims to be
- * OPEN and arming a 90-second completion timer that outlives the test.
+ * OPEN and arming an acceptance timer that outlives the test.
  */
 function cleanup(ws) {
   ws.disconnect();
@@ -611,6 +611,235 @@ test('a command on a stale-but-open socket closes it before opening a replacemen
     assert.equal(ws.ws, sockets[1], 'the live socket must be the replacement');
     // The warmup vepUpdate is acknowledged before the command is sent.
     assert.deepEqual(sockets[1].sent, [Buffer.from('ack'), Buffer.from('command')]);
+  } finally {
+    cleanup(ws);
+  }
+});
+
+/**
+ * What a Flow action is told, and when.
+ *
+ * A Flow card cannot wait for the vehicle. Five captured commands each
+ * reached FINISHED 11.9-12.7s after being sent, and Homey aborts the card
+ * before that - waiting turned commands that demonstrably worked into Flow
+ * timeouts. So the card is answered on acceptance, and the vehicle's real
+ * answer is followed up afterwards rather than discarded: a windowsClose once
+ * acked in 81ms, sat in Mercedes' queue for eight and a half minutes and came
+ * back FAILED/CMD_TIMEOUT with nothing listening.
+ */
+
+const STATE = { WAITING: 4, FINISHED: 5, FAILED: 6, ACKED_BY_APPTWIN: 7, PIN_VALID: 8 };
+
+/** Feed one command status update through the real handler. */
+function emitStatus(ws, requestId, state, errors = []) {
+  ws._handleCommandStatusUpdates({
+    updatesByVin: {
+      WDB0000000A000000: { updatesByPid: { [requestId]: { requestId, state, errors } } },
+    },
+  });
+}
+
+/**
+ * Send a command on an open session and wait until it is being tracked.
+ *
+ * The promise comes back wrapped: returning it bare would make `await` on this
+ * helper unwrap it, blocking until the command settles - which is the very
+ * thing each test is here to control.
+ */
+async function sendTrackedCommand(ws) {
+  const command = ws.sendCommand(Buffer.from('command'), 'req-1');
+  command.catch(() => {}); // settled by the assertions below
+  await waitFor(() => ws.pendingCommands.has('req-1'), 'the command is in flight');
+  return { command };
+}
+
+test('acceptance answers the Flow, and says it is not confirmed', async () => {
+  const ws = makeWs();
+  scriptSockets(ws);
+  await ws.connect(() => {});
+
+  const { command } = await sendTrackedCommand(ws);
+
+  try {
+    emitStatus(ws, 'req-1', STATE.ACKED_BY_APPTWIN);
+
+    const result = await command;
+    assert.equal(result.success, true);
+    assert.equal(result.state, 'ACKED_BY_APPTWIN');
+    // Mercedes took the request; the car has not acted on it yet. Callers that
+    // care about the difference have to be able to see it.
+    assert.equal(result.confirmed, false, 'acceptance must not claim the vehicle completed the command');
+  } finally {
+    cleanup(ws);
+  }
+});
+
+test('a command still in flight is followed past the Flow answer', async () => {
+  const ws = makeWs();
+  scriptSockets(ws);
+  await ws.connect(() => {});
+
+  const { command } = await sendTrackedCommand(ws);
+
+  try {
+    emitStatus(ws, 'req-1', STATE.ACKED_BY_APPTWIN);
+    await command;
+
+    assert.equal(ws.pendingCommands.has('req-1'), false, 'the Flow is no longer waiting');
+    assert.equal(ws._awaitingOutcome.has('req-1'), true, 'but the outcome is still being watched');
+  } finally {
+    cleanup(ws);
+  }
+});
+
+test('completion reported up front is passed on as confirmed', async () => {
+  const ws = makeWs();
+  scriptSockets(ws);
+  await ws.connect(() => {});
+
+  const { command } = await sendTrackedCommand(ws);
+
+  try {
+    emitStatus(ws, 'req-1', STATE.FINISHED);
+
+    const result = await command;
+    assert.equal(result.success, true);
+    assert.equal(result.confirmed, true, 'a finished command must say the vehicle completed it');
+    assert.equal(ws._awaitingOutcome.has('req-1'), false, 'nothing left to follow up');
+  } finally {
+    cleanup(ws);
+  }
+});
+
+test('a refusal reaches the Flow', async () => {
+  const ws = makeWs();
+  scriptSockets(ws);
+  await ws.connect(() => {});
+
+  const { command } = await sendTrackedCommand(ws);
+
+  try {
+    // What Mercedes answered for a windowsClose sent with a door open.
+    emitStatus(ws, 'req-1', STATE.FAILED, [{ code: 'RIS_COULD_NOT_SEND_COMMAND', message: '' }]);
+
+    await assert.rejects(command, /RIS_COULD_NOT_SEND_COMMAND/, 'the Flow must see a refusal');
+  } finally {
+    cleanup(ws);
+  }
+});
+
+test('a failure after the Flow returned is reported, not dropped', async () => {
+  const ws = makeWs();
+  const errors = [];
+  ws.homey.app.error = (...args) => errors.push(args.map(String).join(' '));
+  scriptSockets(ws);
+  await ws.connect(() => {});
+
+  const { command } = await sendTrackedCommand(ws);
+  emitStatus(ws, 'req-1', STATE.ACKED_BY_APPTWIN);
+  await command; // the Flow has its answer
+
+  try {
+    // Eight and a half minutes later, in the real capture.
+    emitStatus(ws, 'req-1', STATE.FAILED, [{ code: 'CMD_TIMEOUT', message: '' }]);
+
+    assert.ok(
+      errors.some((line) => /req-1 \(.*\) FAILED at the vehicle/.test(line)),
+      'the late failure must be logged at error level',
+    );
+    assert.ok(
+      errors.some((line) => /CMD_TIMEOUT/.test(line)),
+      'with the reason Mercedes gave',
+    );
+    assert.equal(ws._awaitingOutcome.has('req-1'), false, 'the command is no longer outstanding');
+  } finally {
+    cleanup(ws);
+  }
+});
+
+test('a silent backend is reported as unacknowledged, not as success', async () => {
+  const ws = makeWs();
+  scriptSockets(ws);
+  await ws.connect(() => {});
+
+  ws.COMMAND_ACCEPTANCE_TIMEOUT = 50; // keep the test quick
+  const { command } = await sendTrackedCommand(ws);
+
+  try {
+    await assert.rejects(command, /not acknowledged within/, 'silence must never resolve as success');
+    assert.equal(ws.pendingCommands.has('req-1'), false, 'the timed-out command is released');
+    assert.equal(ws._awaitingOutcome.has('req-1'), true, 'a late answer is still watched for');
+  } finally {
+    cleanup(ws);
+  }
+});
+
+test('a late failure is handed to the command-failed handler', async () => {
+  const ws = makeWs();
+  const reported = [];
+  ws.setCommandFailedHandler((failure) => reported.push(failure));
+  scriptSockets(ws);
+  await ws.connect(() => {});
+
+  const command = ws.sendCommand(Buffer.from('command'), 'req-1', 'windowsClose');
+  command.catch(() => {});
+  await waitFor(() => ws.pendingCommands.has('req-1'), 'the command is in flight');
+  emitStatus(ws, 'req-1', STATE.ACKED_BY_APPTWIN);
+  await command;
+
+  try {
+    emitStatus(ws, 'req-1', STATE.FAILED, [{ code: 'CMD_TIMEOUT', message: '' }]);
+
+    assert.equal(reported.length, 1, 'the failure must be reported exactly once');
+    // Which command failed has to survive: by the time this lands the Flow is
+    // long gone, and the request id alone means nothing to a user.
+    assert.equal(reported[0].commandName, 'windowsClose');
+    assert.equal(reported[0].code, 'CMD_TIMEOUT');
+    assert.equal(reported[0].requestId, 'req-1');
+  } finally {
+    cleanup(ws);
+  }
+});
+
+test('a command that succeeds never reports a failure', async () => {
+  const ws = makeWs();
+  const reported = [];
+  ws.setCommandFailedHandler((failure) => reported.push(failure));
+  scriptSockets(ws);
+  await ws.connect(() => {});
+
+  const command = ws.sendCommand(Buffer.from('command'), 'req-1', 'windowsClose');
+  command.catch(() => {});
+  await waitFor(() => ws.pendingCommands.has('req-1'), 'the command is in flight');
+  emitStatus(ws, 'req-1', STATE.ACKED_BY_APPTWIN);
+  await command;
+
+  try {
+    // Late, but successful: the car did do it, the telling was just slow.
+    emitStatus(ws, 'req-1', STATE.FINISHED);
+    assert.equal(reported.length, 0, 'completion must not be reported as a failure');
+    assert.equal(ws._awaitingOutcome.has('req-1'), false, 'and nothing is left outstanding');
+  } finally {
+    cleanup(ws);
+  }
+});
+
+test('a throwing failure handler does not escape the message loop', async () => {
+  const ws = makeWs();
+  ws.setCommandFailedHandler(() => { throw new Error('flow card unavailable'); });
+  scriptSockets(ws);
+  await ws.connect(() => {});
+
+  const command = ws.sendCommand(Buffer.from('command'), 'req-1', 'doorsLock');
+  command.catch(() => {});
+  await waitFor(() => ws.pendingCommands.has('req-1'), 'the command is in flight');
+  emitStatus(ws, 'req-1', STATE.ACKED_BY_APPTWIN);
+  await command;
+
+  try {
+    // This runs inside the WebSocket message loop. A Flow that cannot be
+    // triggered must not take the connection down with it.
+    assert.doesNotThrow(() => emitStatus(ws, 'req-1', STATE.FAILED, [{ code: 'CMD_TIMEOUT', message: '' }]));
   } finally {
     cleanup(ws);
   }
