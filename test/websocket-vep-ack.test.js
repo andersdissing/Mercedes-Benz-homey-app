@@ -84,3 +84,62 @@ test('a handler that throws still leaves the update acknowledged', async () => {
   // Otherwise one failing capability write earns an endless re-send loop.
   assert.deepEqual(order, [['ack', 7]]);
 });
+
+/**
+ * The same "0 is a real sequence number" fault existed on the other three ack
+ * paths. It matters most on the command channel: a command status update the
+ * backend considers undelivered is one it keeps re-sending.
+ */
+function instrumentAck(ws, message, ackFactoryName) {
+  const acked = [];
+
+  ws.protoParser = {
+    parsePushMessage: () => message,
+    [ackFactoryName]: (seq) => ({ ack: seq }),
+  };
+  ws._sendMessage = async (msg) => { acked.push(msg.ack); };
+
+  return acked;
+}
+
+test('command status update with sequenceNumber 0 is acknowledged', async () => {
+  const ws = makeWs();
+  const acked = instrumentAck(
+    ws,
+    {
+      msg: 'apptwinCommandStatusUpdatesByVin',
+      apptwinCommandStatusUpdatesByVin: { sequenceNumber: 0, updatesByVin: {} },
+    },
+    'createAcknowledgeAppTwinCommandStatusUpdateByVin',
+  );
+
+  await ws._processMessage(Buffer.alloc(0));
+
+  assert.deepEqual(acked, [0]);
+});
+
+test('service status update with sequenceNumber 0 is acknowledged', async () => {
+  const ws = makeWs();
+  const acked = instrumentAck(
+    ws,
+    { msg: 'serviceStatusUpdates', serviceStatusUpdates: { sequenceNumber: 0 } },
+    'createAcknowledgeServiceStatusUpdate',
+  );
+
+  await ws._processMessage(Buffer.alloc(0));
+
+  assert.deepEqual(acked, [0]);
+});
+
+test('user data update with sequenceNumber 0 is acknowledged', async () => {
+  const ws = makeWs();
+  const acked = instrumentAck(
+    ws,
+    { msg: 'userDataUpdate', userDataUpdate: { sequenceNumber: 0 } },
+    'createAcknowledgeUserDataUpdate',
+  );
+
+  await ws._processMessage(Buffer.alloc(0));
+
+  assert.deepEqual(acked, [0]);
+});

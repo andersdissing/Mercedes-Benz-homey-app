@@ -477,3 +477,195 @@ test('a healthy but idle connection is not mistaken for a zombie', async () => {
     cleanup(ws);
   }
 });
+
+/**
+ * Reported on issue #57: a flow action failed with nothing but
+ * "Command failed (RIS_COULD_NOT_SEND_COMMAND)". Mercedes sends that code
+ * with an empty message field, so the card showed the user a backend symbol
+ * and no indication of what to do about it.
+ */
+test('a known backend failure code is reported in plain language', async () => {
+  const ws = makeWs();
+
+  const rejected = new Promise((resolve, reject) => {
+    ws.pendingCommands.set('req-1', {
+      resolve,
+      reject,
+      callerTimeout: setTimeout(() => {}, 0),
+    });
+  });
+
+  ws._handleCommandStatusUpdates({
+    updatesByVin: {
+      VIN1: {
+        updatesByPid: {
+          pid1: {
+            requestId: 'req-1',
+            state: 6, // FAILED
+            errors: [{ code: 'RIS_COULD_NOT_SEND_COMMAND', message: '' }],
+          },
+        },
+      },
+    },
+  });
+
+  const error = await rejected.then(() => null, (err) => err);
+
+  assert.ok(error, 'the command must reject');
+  assert.match(error.message, /still busy with an earlier command/);
+  // The raw code stays in the message - it is what makes a future report searchable.
+  assert.match(error.message, /RIS_COULD_NOT_SEND_COMMAND/);
+});
+
+test('an unknown backend failure code still reports code and message', async () => {
+  const ws = makeWs();
+
+  const rejected = new Promise((resolve, reject) => {
+    ws.pendingCommands.set('req-2', {
+      resolve,
+      reject,
+      callerTimeout: setTimeout(() => {}, 0),
+    });
+  });
+
+  ws._handleCommandStatusUpdates({
+    updatesByVin: {
+      VIN1: {
+        updatesByPid: {
+          pid1: {
+            requestId: 'req-2',
+            state: 6,
+            errors: [{ code: 'RIS_SOMETHING_NEW', message: 'backend said no' }],
+          },
+        },
+      },
+    },
+  });
+
+  const error = await rejected.then(() => null, (err) => err);
+
+  assert.ok(error);
+  assert.match(error.message, /backend said no \(RIS_SOMETHING_NEW\)/);
+});
+
+/** Feed a command status update in, the way the backend would. */
+function commandStatus(ws, requestId, state, errors) {
+  ws._handleCommandStatusUpdates({
+    updatesByVin: {
+      VIN1: { updatesByPid: { pid1: { requestId, state, errors } } },
+    },
+  });
+}
+
+test('a second command waits for the first to finish, not just to be accepted', async () => {
+  const ws = makeWs();
+  const sockets = scriptSockets(ws);
+
+  await ws.connect(() => {});
+
+  const first = ws.sendCommand(Buffer.from('first'), 'req-1');
+  const second = ws.sendCommand(Buffer.from('second'), 'req-2');
+  first.catch(() => {});
+  second.catch(() => {});
+
+  await waitFor(() => ws.pendingCommands.has('req-1'), 'the first command is in flight');
+
+  try {
+    // Acceptance settles the caller, so the flow card returns promptly...
+    commandStatus(ws, 'req-1', 7); // ACKED_BY_APPTWIN
+    assert.deepEqual(await first, { success: true, state: 'ACKED_BY_APPTWIN' });
+
+    // ...but Mercedes still has the command open, and refuses an overlapping
+    // one with RIS_COULD_NOT_SEND_COMMAND. Reported on issue #57 as "cannot
+    // run two actions in a row".
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    assert.deepEqual(sockets[0].sent, [Buffer.from('first')], 'the second command must wait');
+
+    commandStatus(ws, 'req-1', 5); // FINISHED
+    await waitFor(() => sockets[0].sent.length === 2, 'the second command is released');
+    assert.deepEqual(sockets[0].sent[1], Buffer.from('second'));
+  } finally {
+    cleanup(ws);
+  }
+});
+
+test('a failed command releases the next one immediately', async () => {
+  const ws = makeWs();
+  const sockets = scriptSockets(ws);
+
+  await ws.connect(() => {});
+
+  const first = ws.sendCommand(Buffer.from('first'), 'req-1');
+  const second = ws.sendCommand(Buffer.from('second'), 'req-2');
+  first.catch(() => {});
+  second.catch(() => {});
+
+  await waitFor(() => ws.pendingCommands.has('req-1'), 'the first command is in flight');
+
+  try {
+    commandStatus(ws, 'req-1', 6, [{ code: 'RIS_SOMETHING', message: 'nope' }]);
+    await assert.rejects(first, /nope/);
+
+    // Nothing is left running at Mercedes, so there is nothing to wait for.
+    await waitFor(() => sockets[0].sent.length === 2, 'the second command is released');
+  } finally {
+    cleanup(ws);
+  }
+});
+
+test('a command still open past the wait fails with how long it has been open', async () => {
+  const ws = makeWs();
+  const sockets = scriptSockets(ws);
+  ws.COMMAND_COMPLETION_WAIT = 60;
+
+  await ws.connect(() => {});
+
+  const first = ws.sendCommand(Buffer.from('first'), 'req-1');
+  first.catch(() => {});
+
+  await waitFor(() => ws.pendingCommands.has('req-1'), 'the first command is in flight');
+
+  try {
+    commandStatus(ws, 'req-1', 7); // accepted, then silence
+    await first;
+
+    // Waiting longer would only postpone the refusal Mercedes has already
+    // effectively given, and the raw RIS_COULD_NOT_SEND_COMMAND told the user
+    // nothing. Name the fact that matters instead: how long it has been open.
+    await assert.rejects(
+      ws.sendCommand(Buffer.from('second'), 'req-2'),
+      /has had a command open for this vehicle for \d+s/,
+    );
+    assert.deepEqual(sockets[0].sent, [Buffer.from('first')], 'the doomed command is not sent');
+  } finally {
+    cleanup(ws);
+  }
+});
+
+test('tracking a command past its caller does not relax the liveness watchdog', async () => {
+  const ws = makeWs();
+  scriptSockets(ws);
+
+  await ws.connect(() => {});
+
+  const first = ws.sendCommand(Buffer.from('first'), 'req-1');
+  first.catch(() => {});
+
+  await waitFor(() => ws.pendingCommands.has('req-1'), 'the first command is in flight');
+
+  try {
+    assert.equal(ws._hasCommandAwaitingCaller(), true, 'a flow is waiting on this command');
+
+    commandStatus(ws, 'req-1', 7); // accepted: the caller is done, tracking is not
+    await first;
+
+    // The command is still tracked so the next one can't collide with it, but
+    // nobody is waiting on it any more. Letting that keep the watchdog at the
+    // relaxed command timeout would buy a dead socket three extra minutes -
+    // the silent-socket fault behind #56.
+    assert.equal(ws.pendingCommands.has('req-1'), true, 'still tracked');
+    assert.equal(ws._hasCommandAwaitingCaller(), false, 'but nobody is waiting on it');
+  } finally {
+    cleanup(ws);
+  }
+});
