@@ -688,7 +688,7 @@ function emitCommandStatus(ws, requestId, state, errors = []) {
 }
 
 /** A tracked command whose caller has already been answered at acceptance. */
-function trackAnsweredCommand(ws, requestId) {
+function trackAnsweredCommand(ws, requestId, commandName) {
   ws.pendingCommands.set(requestId, {
     resolve() {},
     reject() {},
@@ -697,6 +697,7 @@ function trackAnsweredCommand(ws, requestId) {
     settleCompletion() {},
     sentAt: 0,
     awaitingCaller: false, // resolved at ACKED_BY_APPTWIN
+    commandName,
   });
 }
 
@@ -711,26 +712,23 @@ function captureErrors(ws) {
  * The `command_failed` trigger card was removed (issue #68) - it fired twice
  * in testing, both times for a cause an earlier overlap fix already prevents.
  * The error-level log is what remains, and it is the only account of what the
- * vehicle did with a command the user was told had been sent.
- *
- * It reports the request id rather than the command name: the name is no
- * longer carried through the send path, and `[PARSER] Created command
- * message: ... requestId: <id>` already ties that id to a named command
- * earlier in the same log.
+ * vehicle did with a command the user was told had been sent, so it has to
+ * carry enough to diagnose from.
  */
-test('a failure after the caller returned is logged with request id and code', async () => {
+test('a failure after the caller returned is logged with command and code', async () => {
   const ws = makeWs();
   const errors = captureErrors(ws);
 
-  trackAnsweredCommand(ws, 'req-1');
+  trackAnsweredCommand(ws, 'req-1', 'windowsClose');
   emitCommandStatus(ws, 'req-1', 6, [{ code: 'CMD_TIMEOUT', message: '' }]);
 
   const late = errors.filter((line) => /after its caller had already returned/.test(line));
   assert.equal(late.length, 1, 'the failure must be logged exactly once');
-  // The id is what ties this back to the command that was sent - without it
-  // the line says only that something failed.
-  assert.match(late[0], /req-1/);
+  // Which command failed has to survive: by the time this lands the caller is
+  // gone, and a request id alone means nothing to whoever reads the log.
+  assert.match(late[0], /windowsClose/);
   assert.match(late[0], /CMD_TIMEOUT/);
+  assert.match(late[0], /req-1/);
 });
 
 test('a failure the caller is still waiting for is not logged as a late one', async () => {
@@ -743,6 +741,7 @@ test('a failure the caller is still waiting for is not logged as a late one', as
       reject,
       callerTimeout: setTimeout(() => {}, 0),
       awaitingCaller: true, // still listening
+      commandName: 'doorsLock',
     });
   });
 
@@ -762,7 +761,7 @@ test('a known code is explained in the late-failure log too', async () => {
   const ws = makeWs();
   const errors = captureErrors(ws);
 
-  trackAnsweredCommand(ws, 'req-1');
+  trackAnsweredCommand(ws, 'req-1', 'windowsClose');
   emitCommandStatus(ws, 'req-1', 6, [{ code: 'RIS_COULD_NOT_SEND_COMMAND', message: '' }]);
 
   const late = errors.filter((line) => /after its caller had already returned/.test(line));
@@ -773,7 +772,7 @@ test('a known code is explained in the late-failure log too', async () => {
 test('a late failure does not escape the message loop', async () => {
   const ws = makeWs();
 
-  trackAnsweredCommand(ws, 'req-1');
+  trackAnsweredCommand(ws, 'req-1', 'doorsLock');
 
   // This runs inside the WebSocket message loop: reporting a failure must
   // never take the connection down with it.
@@ -783,7 +782,7 @@ test('a late failure does not escape the message loop', async () => {
 test('a command that fails late still completes normally', async () => {
   const ws = makeWs();
 
-  trackAnsweredCommand(ws, 'req-1');
+  trackAnsweredCommand(ws, 'req-1', 'windowsClose');
   assert.doesNotThrow(() => emitCommandStatus(ws, 'req-1', 6, [{ code: 'CMD_TIMEOUT', message: '' }]));
   assert.equal(ws.pendingCommands.has('req-1'), false, 'the command is no longer tracked');
 });
