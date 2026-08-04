@@ -453,6 +453,14 @@ class MercedesVehicleDevice extends Homey.Device {
       // state machine can strand the connection unnoticed again.
       this._startWebSocketHealthCheck();
 
+      // Start with a clean slate. The staleness clock restarts with the app
+      // (`_wsDownSince` is memory), so any warning still on the device was
+      // written by a run that has ended - possibly by an older version, about
+      // a block that has since cleared, in wording this version would not
+      // use. It is re-raised on its own merits if push is still down an hour
+      // from now.
+      await this._clearPushStaleWarning();
+
       // Do initial poll
       await this.pollVehicleData();
 
@@ -590,10 +598,7 @@ class MercedesVehicleDevice extends Homey.Device {
   async _reportPushStaleness() {
     if (this.api.isWebSocketHealthy()) {
       this._wsDownSince = null;
-      if (this._pushStaleWarned) {
-        this._pushStaleWarned = false;
-        await this.unsetWarning().catch(() => {});
-      }
+      await this._clearPushStaleWarning();
       return;
     }
 
@@ -632,6 +637,23 @@ class MercedesVehicleDevice extends Homey.Device {
     await this.setWarning(
       `No live connection to Mercedes for ${minutes} minutes. ${detail}`
     ).catch(() => {});
+  }
+
+  /**
+   * Retract the staleness warning now that push is confirmed live.
+   *
+   * Deliberately not gated on "did *this* process raise it". A Homey warning
+   * outlives the app that set it, while `_pushStaleWarned` is memory and
+   * starts undefined - so after an app update the banner from before the
+   * restart could never be cleared, and users installing a fix were greeted
+   * by the warning it fixed. `undefined` here means "there may be one left
+   * over", and unsetWarning() on a device with no warning is a no-op.
+   */
+  async _clearPushStaleWarning() {
+    if (this._pushStaleWarned === false) return;
+
+    this._pushStaleWarned = false;
+    await this.unsetWarning().catch(() => {});
   }
 
   /**
@@ -781,10 +803,7 @@ class MercedesVehicleDevice extends Homey.Device {
       // Live data is flowing again - retract the staleness warning now rather
       // than leaving it up until the next health tick.
       this._wsDownSince = null;
-      if (this._pushStaleWarned) {
-        this._pushStaleWarned = false;
-        await this.unsetWarning().catch(() => {});
-      }
+      await this._clearPushStaleWarning();
       this.log(`[WEBSOCKET] Data keys: ${Object.keys(vehicleData).slice(0, 20).join(', ')}`);
 
       // One-time verbose log: dump ALL data keys to identify geofence-related fields

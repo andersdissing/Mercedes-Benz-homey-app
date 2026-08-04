@@ -99,6 +99,13 @@ unlock ~4 s. Faster when the car is already awake.
 - **Mercedes refuses a command while one is open** for the vehicle
   (`RIS_COULD_NOT_SEND_COMMAND`). The app holds a new command rather than
   letting it be refused — see `_awaitPreviousCommandCompletion()`.
+- **A refreshed token does not clear a WebSocket 429; a full login does.**
+  Measured on a live block (4 Aug 2026): three consecutive refusals, each one
+  after a successfully refreshed token, then one `oauth.login()` and the
+  socket opened in 194 ms. The refusal is about the session, and a refresh
+  returns a token for the session being refused. Hence the re-login
+  escalation on the second strike — bounded to one per episode, because a
+  login is the heaviest request the app makes.
 - **The 429 on the WebSocket upgrade is not an account-wide block.** Every
   capture says so: the upgrade is refused while the widget and geofencing
   endpoints answer 200 in the same second, and the three-day outage in issue
