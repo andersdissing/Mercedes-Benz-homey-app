@@ -70,14 +70,26 @@ returns only a subset (battery, ranges, position, fuel). Door, window,
 tire-pressure and odometer updates therefore depend on the WebSocket being
 connected.
 
-If Mercedes rate-limits the account (HTTP 429), the app backs off for
-progressively longer after each refusal — 10 minutes, then 20, 40, up to a
-two-hour cap — and **pauses the REST poll as well** until the block clears.
-Nothing updates during that window, which is deliberate: Mercedes limits the
-account rather than one endpoint, so continuing to poll spends the request
-budget the app is waiting to get back. The device shows a warning explaining
-the pause, and the manual "refresh data" card refuses with the time
-remaining rather than reporting a refresh that did not happen.
+Mercedes rate-limits the push connection and the data endpoints separately,
+and the app treats them separately.
+
+When the **push connection** is refused (HTTP 429 on the upgrade), the app
+retries after 30 seconds and triples the wait after each further refusal, up
+to a half-hour cap. A refusal is usually about the session rather than the
+account — a refreshed token belongs to the session being refused — so after
+the second one the app logs in from scratch, which in practice clears it
+immediately. The REST poll keeps running throughout, so battery, range and
+position stay current; only the capabilities that arrive over the socket
+(doors, windows, lock, sunroof) go stale.
+
+When the **data endpoints** are refused, which is rarer, the poll stands
+down for 10 minutes and doubles after each further refusal, up to two hours.
+Nothing updates during that window. The manual "refresh data" card refuses
+with the time remaining rather than reporting a refresh that did not happen.
+
+Either way, once the live connection has been down for an hour the device
+shows a warning naming what is actually stale, and retracts it as soon as
+data flows again.
 
 ## Requirements
 
@@ -179,7 +191,11 @@ only the capabilities that arrive over the socket (doors, windows, lock,
 sunroof) are stale.
 
 This resolves itself. A short refusal after an app update is normal: the
-previous session is still open at Mercedes when the new one connects.
+previous session is still open at Mercedes when the new one connects. If it
+persists, the app logs in from scratch after the second refusal
+(`[WS] Re-authenticating from scratch before reconnect`), which opens a new
+session and typically reconnects within a second.
+
 **Restarting the app repeatedly makes it worse**, because each restart
 handshakes immediately and earns a fresh refusal. Leave it alone and it
 reconnects on its own.
