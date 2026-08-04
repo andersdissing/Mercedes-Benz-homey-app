@@ -170,17 +170,26 @@ attributes. Look for `[WS]` lines in the app logs: a healthy connection
 reconnects on its own (`[WS] Scheduling reconnect attempt ...`), and a
 `[WS-HEALTH]` line indicates the periodic health check stepped in.
 
-### Nothing Updates At All, and the Device Shows a Warning
-Mercedes is rate-limiting the account. The log shows
-`[WS] Account rate-limited (HTTP 429) - backing off for N min`, and each
-consecutive refusal doubles the wait up to two hours. The REST poll stands
-down too (`[POLL] Skipped - rate-limited ...`), so every value is
-last-known until the block clears.
+### The Device Shows a Warning About the Live Connection
+Mercedes is refusing the push connection. The log shows
+`[WS] Push connection rate-limited (HTTP 429) - backing off for 30s`; the
+first retry is 30 seconds later and each further refusal triples the wait,
+up to half an hour. Battery, range and position keep updating throughout —
+only the capabilities that arrive over the socket (doors, windows, lock,
+sunroof) are stale.
 
-This resolves itself — the point of the growing backoff is to give the
-account the quiet period Mercedes wants. **Restarting the app repeatedly
-makes it worse**, because each restart handshakes immediately and earns a
-fresh refusal. Leave it alone and it reconnects on its own.
+This resolves itself. A short refusal after an app update is normal: the
+previous session is still open at Mercedes when the new one connects.
+**Restarting the app repeatedly makes it worse**, because each restart
+handshakes immediately and earns a fresh refusal. Leave it alone and it
+reconnects on its own.
+
+### Nothing Updates At All
+The data endpoints are rate-limited too, which is rarer. The log shows
+`[API] REST endpoints rate-limited (HTTP 429)` and
+`[POLL] Skipped - Mercedes is rate-limiting the data endpoints ...`. The
+poll stands down for 10 minutes, doubling with each further refusal up to
+two hours, so every value is last-known until the block clears.
 
 ### HTTP 418 Errors
 Mercedes periodically updates their API requirements. If you see HTTP 418 errors, the app's API headers may need updating to match the current Mercedes mobile app version. Check the [mbapi2020](https://github.com/ReneNulschDE/mbapi2020) integration for reference.

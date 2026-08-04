@@ -48,6 +48,23 @@ class MercedesVehicleDevice extends Homey.Device {
       // acceptance. This trigger is what makes the real outcome reachable.
       this.api.setCommandFailedHandler((failure) => this.onCommandFailed(failure));
 
+      // Last resort when Mercedes keeps refusing the push connection with
+      // HTTP 429: a refreshed token belongs to the session being refused, so
+      // only a fresh login can be given a new one. The WebSocket client calls
+      // this at most once per episode - it is the heaviest request the app
+      // makes, and hammering login at a rate limiter would be the fault in
+      // miniature.
+      this.api.setReloginHandler(async () => {
+        const credentials = this.getStore();
+        if (!credentials.username || !credentials.password) {
+          throw new Error('No stored credentials - re-pair the vehicle to enable re-login');
+        }
+
+        await this.oauth.login(credentials.username, credentials.password);
+        await this.setStoreValue('token', this.oauth.token);
+        this.log('[INIT] Re-login completed, token stored');
+      });
+
       // Check if token is expired and refresh if needed
       if (!this.oauth.token || MercedesOAuth.isTokenExpired(this.oauth.token)) {
         this.log('Token expired, refreshing...');
@@ -587,16 +604,28 @@ class MercedesVehicleDevice extends Homey.Device {
     if (this._pushStaleWarned) return;
 
     const minutes = Math.round(downFor / 60000);
-    const blockedFor = this.api.getWebSocketRateLimitRemaining();
+    const wsBlockedFor = this.api.getWebSocketRateLimitRemaining();
+    const restBlockedFor = this.api.getRestRateLimitRemaining();
 
-    // Say which of the two states this is. While rate-limited the poll is
-    // paused too, so nothing at all is updating - claiming battery and range
-    // are still fresh would be the same half-truth the warning exists to end.
-    const detail = blockedFor > 0
-      ? `Mercedes is rate-limiting this account (HTTP 429), so the app has paused all updates for another `
-        + `~${Math.ceil(blockedFor / 60000)} min to let the limit clear. Every value shown is last-known.`
-      : 'Battery, range and position still update, but doors, windows, lock state and sunroof are '
-        + 'showing their last known values.';
+    // Name what is actually stale. The two limits fail differently: a refused
+    // push connection leaves the polled values (battery, range, position)
+    // live, and only a REST block stops everything - so saying "all updates
+    // are paused" for the common case was the same half-truth the warning
+    // exists to end.
+    let detail;
+    if (restBlockedFor > 0) {
+      detail = 'Mercedes is rate-limiting this account (HTTP 429), so the app has paused its data '
+        + `requests for another ~${Math.ceil(restBlockedFor / 60000)} min to let the limit clear. `
+        + 'Every value shown is last-known.';
+    } else if (wsBlockedFor > 0) {
+      detail = 'Doors, windows, lock state and sunroof are showing their last known values, because '
+        + 'Mercedes is refusing the push connection (HTTP 429). The app retries in '
+        + `~${Math.max(1, Math.round(wsBlockedFor / 60000))} min; battery, range and position keep `
+        + 'updating meanwhile.';
+    } else {
+      detail = 'Battery, range and position still update, but doors, windows, lock state and '
+        + 'sunroof are showing their last known values.';
+    }
 
     this._pushStaleWarned = true;
     this.log(`[WS-HEALTH] Push connection down for ${minutes} min - warning the user`);
@@ -618,26 +647,23 @@ class MercedesVehicleDevice extends Homey.Device {
   /**
    * Poll vehicle data from Mercedes API.
    *
-   * Skipped entirely while an HTTP 429 backoff window is open. Mercedes
-   * rate-limits the account, not one endpoint, so continuing to poll through
-   * a block spends the very request budget the app is waiting to get back -
-   * and the reported three-day outage polled steadily throughout.
-   *
-   * Pausing also makes the state honest. The poll only ever returns the
-   * reduced widget set (battery, ranges, position), so a blocked app kept
-   * those few values fresh while doors, windows, lock and sunroof silently
-   * froze. That half-working display is what made the fault look like a car
-   * that had stopped reporting rather than a connection that needed fixing.
-   * Paired with the staleness warning, stopping is clearer than half-updating.
+   * Skipped only while REST itself is rate-limited - not while the WebSocket
+   * is. They are separate limits: every capture of a blocked account shows the
+   * push connection refused with 429 while these same endpoints answer 200 in
+   * the same second. Standing the poll down for a refused *socket* was a
+   * mistake that cost the user everything and bought nothing - battery, range
+   * and position went stale on top of the capabilities that were already
+   * frozen, for as long as the block lasted.
    *
    * @returns {Boolean} false if the poll was skipped because of a rate limit
    */
   async pollVehicleData() {
-    const blockedFor = this.api ? this.api.getWebSocketRateLimitRemaining() : 0;
+    const blockedFor = this.api ? this.api.getRestRateLimitRemaining() : 0;
     if (blockedFor > 0) {
       this.log(
-        `[POLL] Skipped - rate-limited by Mercedes for another ${Math.ceil(blockedFor / 60000)} min. `
-        + 'Polling through a block spends the budget the app is waiting to recover.'
+        `[POLL] Skipped - Mercedes is rate-limiting the data endpoints for another `
+        + `${Math.ceil(blockedFor / 60000)} min. Polling through a block spends the budget `
+        + 'the app is waiting to recover.'
       );
       return false;
     }
@@ -2008,7 +2034,11 @@ class MercedesVehicleDevice extends Homey.Device {
     // is the same lie the app already told about commands. Deliberately not
     // forcing the poll through - one card retried on a schedule would keep
     // the account blocked, which is the whole fault being fixed.
-    const blockedFor = this.api ? this.api.getWebSocketRateLimitRemaining() : 0;
+    //
+    // Gated on the REST window only. A refused push connection does not stop
+    // these endpoints answering, and refusing to refresh because of it left
+    // the one manual escape hatch broken exactly when it was wanted.
+    const blockedFor = this.api ? this.api.getRestRateLimitRemaining() : 0;
     if (blockedFor > 0) {
       const minutes = Math.ceil(blockedFor / 60000);
       this.error(`[FLOW] Refresh refused - rate-limited for another ${minutes} min`);

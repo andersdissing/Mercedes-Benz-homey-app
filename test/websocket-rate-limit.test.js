@@ -22,6 +22,22 @@ function makeWs() {
   return new MercedesWebSocket(homey, oauth, 'Europe', {});
 }
 
+test('the first window is short enough to survive a restart', () => {
+  const ws = makeWs();
+
+  ws._registerRateLimit();
+
+  // Nearly every 429 the app sees is the one it earns by restarting while its
+  // previous session is still open at Mercedes; that clears in seconds. A
+  // ten-minute opening window charged every app update for a block that was
+  // already over - and, with the poll standing down too, showed the user a
+  // frozen car for ten minutes each time.
+  assert.ok(
+    ws.getRateLimitRemaining() <= 60000,
+    `first window (${ws.getRateLimitRemaining()} ms) must not punish a restart`,
+  );
+});
+
 test('consecutive 429s widen the backoff window', () => {
   const ws = makeWs();
 
@@ -172,6 +188,103 @@ test('a reconnect firing into a live window re-arms instead of handshaking', asy
   } finally {
     if (ws.reconnectTimer) clearTimeout(ws.reconnectTimer);
   }
+});
+
+test('the backoff cap still lets the app knock regularly', () => {
+  const ws = makeWs();
+
+  for (let i = 0; i < 20; i++) ws._registerRateLimit();
+
+  // The cap is the app's steady state for a block that never lifts. At two
+  // hours the user was told to wait longer than most outages last; the point
+  // of the cap is quiet, not silence.
+  assert.ok(
+    ws.getRateLimitRemaining() <= 1800000,
+    'a blocked account must still be retried at least half-hourly',
+  );
+});
+
+test('repeated refusals escalate from refreshing the token to logging in', async () => {
+  const ws = makeWs();
+
+  let relogins = 0;
+  let refreshes = 0;
+  ws.setReloginHandler(async () => { relogins++; });
+  ws.oauth.refreshToken = async () => { refreshes++; };
+
+  // Drive real 429s through the socket error handler, which is where the
+  // escalation is decided.
+  const refuse = async () => {
+    ws._createSocket = () => {
+      const socket = {
+        handlers: {},
+        on(event, fn) { (this.handlers[event] = this.handlers[event] || []).push(fn); return this; },
+        close() {},
+        removeAllListeners() { this.handlers = {}; },
+      };
+      // The upgrade is refused before anything is connected.
+      setImmediate(() => {
+        for (const fn of socket.handlers.error || []) {
+          fn(new Error('Unexpected server response: 429'));
+        }
+      });
+      return socket;
+    };
+    ws.accountBlocked = false; // let this attempt reach the handshake
+    await ws.connectOrThrow(() => {}).catch(() => {});
+    if (ws.reconnectTimer) {
+      clearTimeout(ws.reconnectTimer);
+      ws.reconnectTimer = null;
+    }
+  };
+
+  // A refreshed token belongs to the session Mercedes is refusing, so the
+  // first strikes only re-authenticate.
+  await refuse();
+  assert.equal(ws._needsRelogin, false, 'one refusal is not yet worth a login');
+
+  // It takes a full login to be given a new session - the app's last lever
+  // before it can only wait.
+  for (let i = 1; i < ws.RELOGIN_AFTER_STRIKES; i++) await refuse();
+  assert.equal(ws._needsRelogin, true, 'a block that outlasts refreshed tokens must escalate');
+
+  await refuse();
+  assert.ok(refreshes > 0, 'precondition: the cheap recovery was tried first');
+  assert.equal(relogins, 1, 'the escalation must actually log in');
+
+  await refuse();
+  assert.equal(relogins, 1, 'and must not log in again on every later attempt');
+});
+
+test('the login budget survives the client being replaced', () => {
+  const old = makeWs();
+  old.setReloginHandler(async () => {});
+  old._registerRateLimit();
+  old._reloginAttempts = old.MAX_RELOGIN_ATTEMPTS;
+
+  const replacement = makeWs();
+  replacement.restoreRateLimitState(old.getRateLimitState());
+
+  // The health check rebuilds the client every 5 minutes. A fresh budget each
+  // time would turn "one login per episode" into a login every 5 minutes -
+  // the heaviest request the app makes, aimed at a rate limiter.
+  assert.equal(replacement._reloginAttempts, old.MAX_RELOGIN_ATTEMPTS);
+});
+
+test('a rebuilt client keeps the same push session identity', () => {
+  const first = makeWs();
+  const second = new (require('../lib/websocket'))(
+    { app: { log() {}, error() {} } },
+    { getAccessToken: async () => 'token' },
+    'Europe',
+    {},
+    first.sessionId,
+  );
+
+  // Mercedes counts app sessions. Minting a new APP-SESSION-ID on every
+  // rebuild meant an outage opened a new session every 5 minutes while the
+  // earlier ones were still live - which is what a 429 on the upgrade says.
+  assert.equal(second.sessionId, first.sessionId);
 });
 
 test('a disposed client does not handshake anyway', async () => {
