@@ -701,26 +701,39 @@ function trackAnsweredCommand(ws, requestId, commandName) {
   });
 }
 
-test('a failure after the caller returned is reported out of band', async () => {
+/** Capture what the client writes at error level. */
+function captureErrors(ws) {
+  const lines = [];
+  ws.homey.app.error = (...args) => lines.push(args.join(' '));
+  return lines;
+}
+
+/**
+ * The `command_failed` trigger card was removed (issue #68) - it fired twice
+ * in testing, both times for a cause an earlier overlap fix already prevents.
+ * The error-level log is what remains, and it is the only account of what the
+ * vehicle did with a command the user was told had been sent, so it has to
+ * carry enough to diagnose from.
+ */
+test('a failure after the caller returned is logged with command and code', async () => {
   const ws = makeWs();
-  const reported = [];
-  ws.setCommandFailedHandler((failure) => reported.push(failure));
+  const errors = captureErrors(ws);
 
   trackAnsweredCommand(ws, 'req-1', 'windowsClose');
   emitCommandStatus(ws, 'req-1', 6, [{ code: 'CMD_TIMEOUT', message: '' }]);
 
-  assert.equal(reported.length, 1, 'the failure must be reported exactly once');
+  const late = errors.filter((line) => /after its caller had already returned/.test(line));
+  assert.equal(late.length, 1, 'the failure must be logged exactly once');
   // Which command failed has to survive: by the time this lands the caller is
-  // gone, and a request id alone means nothing to a user.
-  assert.equal(reported[0].commandName, 'windowsClose');
-  assert.equal(reported[0].code, 'CMD_TIMEOUT');
-  assert.equal(reported[0].requestId, 'req-1');
+  // gone, and a request id alone means nothing to whoever reads the log.
+  assert.match(late[0], /windowsClose/);
+  assert.match(late[0], /CMD_TIMEOUT/);
+  assert.match(late[0], /req-1/);
 });
 
-test('a failure the caller is still waiting for is not reported twice', async () => {
+test('a failure the caller is still waiting for is not logged as a late one', async () => {
   const ws = makeWs();
-  const reported = [];
-  ws.setCommandFailedHandler((failure) => reported.push(failure));
+  const errors = captureErrors(ws);
 
   const rejected = new Promise((resolve, reject) => {
     ws.pendingCommands.set('req-1', {
@@ -736,34 +749,37 @@ test('a failure the caller is still waiting for is not reported twice', async ()
 
   const error = await rejected.then(() => null, (err) => err);
   assert.ok(error, 'the caller still gets the failure directly');
-  // Reporting it again out of band would surface one failure as two.
-  assert.equal(reported.length, 0, 'an answered caller needs no out-of-band report');
+  // Logging it as a late failure too would present one failure as two.
+  assert.equal(
+    errors.filter((line) => /after its caller had already returned/.test(line)).length,
+    0,
+    'an answered caller needs no late-failure line',
+  );
 });
 
-test('a known code is explained in the out-of-band report too', async () => {
+test('a known code is explained in the late-failure log too', async () => {
   const ws = makeWs();
-  const reported = [];
-  ws.setCommandFailedHandler((failure) => reported.push(failure));
+  const errors = captureErrors(ws);
 
   trackAnsweredCommand(ws, 'req-1', 'windowsClose');
   emitCommandStatus(ws, 'req-1', 6, [{ code: 'RIS_COULD_NOT_SEND_COMMAND', message: '' }]);
 
-  assert.equal(reported.length, 1);
-  assert.match(reported[0].message, /still busy with an earlier command/);
+  const late = errors.filter((line) => /after its caller had already returned/.test(line));
+  assert.equal(late.length, 1);
+  assert.match(late[0], /still busy with an earlier command/);
 });
 
-test('a throwing failure handler does not escape the message loop', async () => {
+test('a late failure does not escape the message loop', async () => {
   const ws = makeWs();
-  ws.setCommandFailedHandler(() => { throw new Error('flow card unavailable'); });
 
   trackAnsweredCommand(ws, 'req-1', 'doorsLock');
 
-  // This runs inside the WebSocket message loop: a flow that cannot be
-  // triggered must not take the connection down with it.
+  // This runs inside the WebSocket message loop: reporting a failure must
+  // never take the connection down with it.
   assert.doesNotThrow(() => emitCommandStatus(ws, 'req-1', 6, [{ code: 'CMD_TIMEOUT', message: '' }]));
 });
 
-test('a command with no failure handler still completes normally', async () => {
+test('a command that fails late still completes normally', async () => {
   const ws = makeWs();
 
   trackAnsweredCommand(ws, 'req-1', 'windowsClose');
