@@ -528,6 +528,15 @@ class MercedesVehicleDevice extends Homey.Device {
       try {
         if (!this.api) return;
 
+        // Tell the user when push has been down long enough to matter.
+        //
+        // Without this the failure is invisible: the device stays available
+        // and its polled capabilities (battery, ranges, position) keep
+        // updating, so the only symptom is that doors, windows, lock and
+        // sunroof quietly stop changing. One report of this ran three days
+        // before anyone realised the app was not simply idle.
+        await this._reportPushStaleness();
+
         // api.connectWebSocket() is a no-op when the socket is healthy, so
         // this only acts when the connection is actually down or stale.
         //
@@ -554,6 +563,49 @@ class MercedesVehicleDevice extends Homey.Device {
   }
 
   /**
+   * Warn the user once the real-time connection has been down long enough
+   * that the capabilities it carries are meaningfully stale.
+   *
+   * Keyed off how long the socket has been down rather than how long since
+   * the last push: a parked car legitimately pushes nothing for hours, so
+   * silence alone is not a fault.
+   */
+  async _reportPushStaleness() {
+    if (this.api.isWebSocketHealthy()) {
+      this._wsDownSince = null;
+      if (this._pushStaleWarned) {
+        this._pushStaleWarned = false;
+        await this.unsetWarning().catch(() => {});
+      }
+      return;
+    }
+
+    if (!this._wsDownSince) this._wsDownSince = Date.now();
+
+    const downFor = Date.now() - this._wsDownSince;
+    if (downFor < (this.PUSH_STALE_WARNING_AFTER || 3600000)) return;
+    if (this._pushStaleWarned) return;
+
+    const minutes = Math.round(downFor / 60000);
+    const blockedFor = this.api.getWebSocketRateLimitRemaining();
+
+    // Say which of the two states this is. While rate-limited the poll is
+    // paused too, so nothing at all is updating - claiming battery and range
+    // are still fresh would be the same half-truth the warning exists to end.
+    const detail = blockedFor > 0
+      ? `Mercedes is rate-limiting this account (HTTP 429), so the app has paused all updates for another `
+        + `~${Math.ceil(blockedFor / 60000)} min to let the limit clear. Every value shown is last-known.`
+      : 'Battery, range and position still update, but doors, windows, lock state and sunroof are '
+        + 'showing their last known values.';
+
+    this._pushStaleWarned = true;
+    this.log(`[WS-HEALTH] Push connection down for ${minutes} min - warning the user`);
+    await this.setWarning(
+      `No live connection to Mercedes for ${minutes} minutes. ${detail}`
+    ).catch(() => {});
+  }
+
+  /**
    * Stop the WebSocket health check timer.
    */
   _stopWebSocketHealthCheck() {
@@ -564,9 +616,32 @@ class MercedesVehicleDevice extends Homey.Device {
   }
 
   /**
-   * Poll vehicle data from Mercedes API
+   * Poll vehicle data from Mercedes API.
+   *
+   * Skipped entirely while an HTTP 429 backoff window is open. Mercedes
+   * rate-limits the account, not one endpoint, so continuing to poll through
+   * a block spends the very request budget the app is waiting to get back -
+   * and the reported three-day outage polled steadily throughout.
+   *
+   * Pausing also makes the state honest. The poll only ever returns the
+   * reduced widget set (battery, ranges, position), so a blocked app kept
+   * those few values fresh while doors, windows, lock and sunroof silently
+   * froze. That half-working display is what made the fault look like a car
+   * that had stopped reporting rather than a connection that needed fixing.
+   * Paired with the staleness warning, stopping is clearer than half-updating.
+   *
+   * @returns {Boolean} false if the poll was skipped because of a rate limit
    */
   async pollVehicleData() {
+    const blockedFor = this.api ? this.api.getWebSocketRateLimitRemaining() : 0;
+    if (blockedFor > 0) {
+      this.log(
+        `[POLL] Skipped - rate-limited by Mercedes for another ${Math.ceil(blockedFor / 60000)} min. `
+        + 'Polling through a block spends the budget the app is waiting to recover.'
+      );
+      return false;
+    }
+
     try {
       this.log('[POLL] Starting vehicle data poll for VIN:', this.vin);
 
@@ -676,6 +751,14 @@ class MercedesVehicleDevice extends Homey.Device {
       }
 
       this.log(`[WEBSOCKET] Received ${isFullUpdate ? 'FULL' : 'PARTIAL'} update for vehicle`);
+
+      // Live data is flowing again - retract the staleness warning now rather
+      // than leaving it up until the next health tick.
+      this._wsDownSince = null;
+      if (this._pushStaleWarned) {
+        this._pushStaleWarned = false;
+        await this.unsetWarning().catch(() => {});
+      }
       this.log(`[WEBSOCKET] Data keys: ${Object.keys(vehicleData).slice(0, 20).join(', ')}`);
 
       // One-time verbose log: dump ALL data keys to identify geofence-related fields
@@ -1919,6 +2002,22 @@ class MercedesVehicleDevice extends Homey.Device {
    */
   async refreshDataAction() {
     this.log('[FLOW] Refresh data action triggered');
+
+    // A blocked refresh must fail loudly rather than return true having done
+    // nothing: a Flow that reports success for a refresh that never happened
+    // is the same lie the app already told about commands. Deliberately not
+    // forcing the poll through - one card retried on a schedule would keep
+    // the account blocked, which is the whole fault being fixed.
+    const blockedFor = this.api ? this.api.getWebSocketRateLimitRemaining() : 0;
+    if (blockedFor > 0) {
+      const minutes = Math.ceil(blockedFor / 60000);
+      this.error(`[FLOW] Refresh refused - rate-limited for another ${minutes} min`);
+      throw new Error(
+        `Mercedes is rate-limiting this account. Vehicle data cannot be refreshed for another `
+        + `~${minutes} min, and refreshing now would extend the block.`
+      );
+    }
+
     try {
       await this.pollVehicleData();
       this.log('[FLOW] Vehicle data refreshed successfully');

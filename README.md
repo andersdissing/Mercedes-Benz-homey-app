@@ -70,6 +70,15 @@ returns only a subset (battery, ranges, position, fuel). Door, window,
 tire-pressure and odometer updates therefore depend on the WebSocket being
 connected.
 
+If Mercedes rate-limits the account (HTTP 429), the app backs off for
+progressively longer after each refusal — 10 minutes, then 20, 40, up to a
+two-hour cap — and **pauses the REST poll as well** until the block clears.
+Nothing updates during that window, which is deliberate: Mercedes limits the
+account rather than one endpoint, so continuing to poll spends the request
+budget the app is waiting to get back. The device shows a warning explaining
+the pause, and the manual "refresh data" card refuses with the time
+remaining rather than reporting a refresh that did not happen.
+
 ## Requirements
 
 - Homey Pro (Early 2023) or later
@@ -160,6 +169,18 @@ is down and only the REST poll is running — the poll does not carry those
 attributes. Look for `[WS]` lines in the app logs: a healthy connection
 reconnects on its own (`[WS] Scheduling reconnect attempt ...`), and a
 `[WS-HEALTH]` line indicates the periodic health check stepped in.
+
+### Nothing Updates At All, and the Device Shows a Warning
+Mercedes is rate-limiting the account. The log shows
+`[WS] Account rate-limited (HTTP 429) - backing off for N min`, and each
+consecutive refusal doubles the wait up to two hours. The REST poll stands
+down too (`[POLL] Skipped - rate-limited ...`), so every value is
+last-known until the block clears.
+
+This resolves itself — the point of the growing backoff is to give the
+account the quiet period Mercedes wants. **Restarting the app repeatedly
+makes it worse**, because each restart handshakes immediately and earns a
+fresh refusal. Leave it alone and it reconnects on its own.
 
 ### HTTP 418 Errors
 Mercedes periodically updates their API requirements. If you see HTTP 418 errors, the app's API headers may need updating to match the current Mercedes mobile app version. Check the [mbapi2020](https://github.com/ReneNulschDE/mbapi2020) integration for reference.
