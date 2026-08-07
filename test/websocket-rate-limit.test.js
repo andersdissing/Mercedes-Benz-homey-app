@@ -287,6 +287,67 @@ test('a rebuilt client keeps the same push session identity', () => {
   assert.equal(second.sessionId, first.sessionId);
 });
 
+test('Mercedes\' own answer replaces the guessed window', () => {
+  const ws = makeWs();
+
+  ws._registerRateLimit(20000);
+
+  const remaining = ws.getRateLimitRemaining();
+  assert.ok(
+    remaining > 15000 && remaining <= 20000,
+    `window (${remaining} ms) must be the 20s asked for, not the 30s the app made up`,
+  );
+});
+
+test('an honoured window is not rounded back up when the client is replaced', () => {
+  const old = makeWs();
+  old._registerRateLimit(10000);
+
+  const replacement = makeWs();
+  replacement.restoreRateLimitState(old.getRateLimitState());
+
+  // The device health check rebuilds the client every 5 minutes. Inheriting
+  // the strike count but not the window would put the app back on its own
+  // ladder and undo the shorter wait Mercedes actually asked for.
+  assert.ok(
+    replacement.getRateLimitRemaining() <= 10000,
+    'the inherited window must still be the one the server named',
+  );
+});
+
+test('a Retry-After that keeps being refused through stops shortening the wait', () => {
+  const ws = makeWs();
+
+  // A limiter that says "5 seconds", refuses, says "5 seconds" again is the
+  // fixed-window loop that froze an account for three days (#69) wearing a
+  // header. The app's own ladder keeps widening underneath and takes over.
+  ws._registerRateLimit(5000);
+  const first = ws.getRateLimitRemaining();
+  assert.ok(first <= 5000, `first window (${first}) should honour the header`);
+
+  ws._registerRateLimit(5000);
+  ws._registerRateLimit(5000);
+
+  const third = ws.getRateLimitRemaining();
+  assert.ok(
+    third > 60000,
+    `third window (${third}) must fall back to the escalating ladder, not stay at 5s`,
+  );
+});
+
+test('a longer Retry-After is honoured even once the ladder has taken over', () => {
+  const ws = makeWs();
+
+  for (let i = 0; i < 3; i++) ws._registerRateLimit(600000);
+
+  const remaining = ws.getRateLimitRemaining();
+  assert.ok(
+    remaining > 300000,
+    `the ladder is a floor (${remaining} ms), not a ceiling - a server asking for longer gets it`,
+  );
+  assert.ok(remaining <= ws.MAX_RATE_LIMIT_BACKOFF, 'and the cap still applies');
+});
+
 test('a disposed client does not handshake anyway', async () => {
   const ws = makeWs();
 

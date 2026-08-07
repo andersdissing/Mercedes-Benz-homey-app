@@ -114,6 +114,35 @@ unlock ~4 s. Faster when the car is already awake.
   top of the capabilities that were already stale and bought nothing back.
   The two windows are tracked separately — `getWebSocketRateLimitRemaining()`
   and `getRestRateLimitRemaining()`. Don't merge them again.
+- **The 429's own answer beats any ladder — and reading it means owning the
+  teardown.** Every backoff window used to be invented: the only thing taken
+  off a refused upgrade was the status code, scraped out of `ws`'s error
+  *message*. The response itself is reachable only through an
+  `unexpected-response` listener, and `emit()` returning true is exactly what
+  makes `ws` skip its own `abortHandshake()` — so listening for it means the
+  request is never destroyed and the failure never reported, and the connect
+  promise hangs forever (the dead-end class of #47 and #57). The listener
+  drains the body and calls `socket.terminate()`, which runs the same abort
+  `ws` would have; destroying the request by hand instead leaves the client
+  stuck in CONNECTING with no `close` ever emitted. It then reports the
+  failure itself, because that abort announces itself as "WebSocket was closed
+  before the connection was established" with no status in it — a 429 reported
+  that way is a transport blip, and neither the backoff, the token refresh nor
+  the re-login escalation runs.
+- **Mercedes sends no `Retry-After` on the WebSocket 429 — measured, so stop
+  wondering.** Captured on the routine restart 429 (7 Aug 2026), the refusal
+  carried exactly: `content-security-policy, referrer-policy,
+  strict-transport-security, vary, x-content-type-options, x-frame-options,
+  x-permitted-cross-domain-policies, date, content-length`. No `Retry-After`,
+  no `x-ratelimit-*`, nothing about the limit at all. The escalating ladder is
+  therefore the real mechanism on this path and not a placeholder. The app
+  reads the header anyway and prefers it when present, which costs nothing and
+  is the only way a change on Mercedes' side gets noticed; whether the *REST*
+  429 carries one is still unmeasured, because REST answers 200 through a
+  refused upgrade. Both paths log what they were sent
+  (`[WS] Handshake refused with HTTP 429 - rate-limit headers: ...`,
+  `[API] REST refused with HTTP 429 - ...`), so the next block re-checks this
+  for free.
 - **APP-SESSION-ID must outlive the WebSocket client object.** The client is
   rebuilt on every recovery (`MercedesAPI.connectWebSocket`), so a session id
   minted in its constructor meant a new app session every few minutes during
