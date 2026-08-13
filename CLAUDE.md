@@ -106,6 +106,22 @@ unlock ~4 s. Faster when the car is already awake.
   returns a token for the session being refused. Hence the re-login
   escalation on the second strike — bounded to one per episode, because a
   login is the heaviest request the app makes.
+- **The re-login only ever worked when the SSO session had already expired.**
+  While the identity provider still recognises the previous login — the
+  normal state during an outage, since a login already ran in that process —
+  `/as/authorization.oauth2` skips the login form and 302s straight to
+  `rismycar://login-callback?code=...`. follow-redirects cannot follow that
+  scheme and threw `ERR_FR_REDIRECTION_FAILURE`, killing the login and
+  discarding the code Mercedes had just issued. That is how a user sat behind
+  a WebSocket 429 for 4 h 50 min on v1.1.44 (12 Aug 2026 report): every
+  escalation crashed, and only a Homey restart cleared it. Two-part fix in
+  `lib/oauth.js`: `login()` calls `_resetSession()` first (drops the old
+  session's cookies, so a *new* session — the whole point of the escalation —
+  is actually opened), and `_getAuthorizationResume()` captures a
+  `rismycar://` Location via axios' `beforeRedirect` hook and returns
+  `{code}` so a short-circuit becomes a code grant instead of a crash. The
+  hook is the only place that Location is reachable; tested against a real
+  local server in `test/oauth-sso-short-circuit.test.js`.
 - **The 429 on the WebSocket upgrade is not an account-wide block.** Every
   capture says so: the upgrade is refused while the widget and geofencing
   endpoints answer 200 in the same second, and the three-day outage in issue
