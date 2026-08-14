@@ -91,6 +91,66 @@ test('an elapsed REST window reopens polling', () => {
   assert.equal(api.getRestRateLimitRemaining(), 0, 'the window must expire on its own');
 });
 
+test('a Retry-After on the 429 replaces the ten-minute guess', () => {
+  const api = makeApi();
+
+  api._noteRestResult({ response: { status: 429, headers: { 'retry-after': '45' } } });
+
+  const remaining = api.getRestRateLimitRemaining();
+  assert.ok(
+    remaining > 40000 && remaining <= 45000,
+    `window (${remaining} ms) must be the 45s Mercedes asked for - pausing for ten minutes `
+    + 'instead costs the user nine and a half minutes of stale battery, range and position',
+  );
+});
+
+test('an absurd or zero Retry-After is clamped', () => {
+  const hot = makeApi();
+  hot._noteRestResult({ response: { status: 429, headers: { 'retry-after': '0' } } });
+  assert.ok(
+    hot.getRestRateLimitRemaining() > 1000,
+    'Retry-After: 0 must not turn the poll into a hot retry loop',
+  );
+
+  const forever = makeApi();
+  forever._noteRestResult({ response: { status: 429, headers: { 'retry-after': '999999' } } });
+  assert.ok(
+    forever.getRestRateLimitRemaining() <= forever.MAX_REST_RATE_LIMIT_BACKOFF,
+    'nothing the server says may pause polling past the app\'s own cap',
+  );
+});
+
+test('an unreadable Retry-After falls back to the app\'s own backoff', () => {
+  const api = makeApi();
+
+  api._noteRestResult({ response: { status: 429, headers: { 'retry-after': 'soon' } } });
+
+  const remaining = api.getRestRateLimitRemaining();
+  assert.ok(
+    remaining > 500000,
+    `a value the app cannot read is no answer (${remaining} ms must be the 10-minute window)`,
+  );
+});
+
+test('a REST header that keeps being refused through stops shortening the wait', () => {
+  const api = makeApi();
+
+  const refuse = () => api._noteRestResult({
+    response: { status: 429, headers: { 'retry-after': '10' } },
+  });
+
+  refuse();
+  assert.ok(api.getRestRateLimitRemaining() <= 10000, 'the first one is taken at its word');
+
+  refuse();
+  refuse();
+
+  assert.ok(
+    api.getRestRateLimitRemaining() > 60000,
+    'a limiter that keeps saying "ten seconds" and refusing anyway is the fixed-window loop again',
+  );
+});
+
 test('a WebSocket 429 does not pause REST', () => {
   const api = makeApi();
 

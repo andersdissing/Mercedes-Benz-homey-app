@@ -4,6 +4,7 @@ const Homey = require('homey');
 const MercedesOAuth = require('../../lib/oauth');
 const MercedesAPI = require('../../lib/api');
 const { installRedactedLogging } = require('../../lib/log-redactor');
+const { describePushStaleness } = require('../../lib/staleness-message');
 
 class MercedesVehicleDevice extends Homey.Device {
   /**
@@ -606,37 +607,30 @@ class MercedesVehicleDevice extends Homey.Device {
 
     const downFor = Date.now() - this._wsDownSince;
     if (downFor < (this.PUSH_STALE_WARNING_AFTER || 3600000)) return;
-    if (this._pushStaleWarned) return;
 
-    const minutes = Math.round(downFor / 60000);
-    const wsBlockedFor = this.api.getWebSocketRateLimitRemaining();
-    const restBlockedFor = this.api.getRestRateLimitRemaining();
+    const message = describePushStaleness({
+      downForMs: downFor,
+      wsBlockedFor: this.api.getWebSocketRateLimitRemaining(),
+      restBlockedFor: this.api.getRestRateLimitRemaining(),
+    });
 
-    // Name what is actually stale. The two limits fail differently: a refused
-    // push connection leaves the polled values (battery, range, position)
-    // live, and only a REST block stops everything - so saying "all updates
-    // are paused" for the common case was the same half-truth the warning
-    // exists to end.
-    let detail;
-    if (restBlockedFor > 0) {
-      detail = 'Mercedes is rate-limiting this account (HTTP 429), so the app has paused its data '
-        + `requests for another ~${Math.ceil(restBlockedFor / 60000)} min to let the limit clear. `
-        + 'Every value shown is last-known.';
-    } else if (wsBlockedFor > 0) {
-      detail = 'Doors, windows, lock state and sunroof are showing their last known values, because '
-        + 'Mercedes is refusing the push connection (HTTP 429). The app retries in '
-        + `~${Math.max(1, Math.round(wsBlockedFor / 60000))} min; battery, range and position keep `
-        + 'updating meanwhile.';
-    } else {
-      detail = 'Battery, range and position still update, but doors, windows, lock state and '
-        + 'sunroof are showing their last known values.';
-    }
+    // Re-rendered on every health tick and written whenever it has changed.
+    //
+    // This used to return early once the warning had been raised, which froze
+    // the whole message at the moment it first crossed the hour: the elapsed
+    // time stopped counting and the retry countdown stopped counting down, so
+    // a banner read "for 60 minutes ... retries in ~30 min" for the rest of
+    // the outage, however long that was. Both numbers were correct when
+    // written and never written again.
+    //
+    // Comparing the text rather than warning unconditionally keeps a tick
+    // where nothing moved from rewriting the device's warning for no reason.
+    if (this._pushStaleWarningText === message) return;
 
     this._pushStaleWarned = true;
-    this.log(`[WS-HEALTH] Push connection down for ${minutes} min - warning the user`);
-    await this.setWarning(
-      `No live connection to Mercedes for ${minutes} minutes. ${detail}`
-    ).catch(() => {});
+    this._pushStaleWarningText = message;
+    this.log(`[WS-HEALTH] Push connection down for ${Math.round(downFor / 60000)} min - warning the user`);
+    await this.setWarning(message).catch(() => {});
   }
 
   /**
@@ -653,6 +647,7 @@ class MercedesVehicleDevice extends Homey.Device {
     if (this._pushStaleWarned === false) return;
 
     this._pushStaleWarned = false;
+    this._pushStaleWarningText = null;
     await this.unsetWarning().catch(() => {});
   }
 
