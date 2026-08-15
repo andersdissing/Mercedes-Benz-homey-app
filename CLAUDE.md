@@ -104,8 +104,19 @@ unlock ~4 s. Faster when the car is already awake.
   after a successfully refreshed token, then one `oauth.login()` and the
   socket opened in 194 ms. The refusal is about the session, and a refresh
   returns a token for the session being refused. Hence the re-login
-  escalation on the second strike — bounded to one per episode, because a
-  login is the heaviest request the app makes.
+  escalation on the second strike — bounded to three per episode, at most one
+  per backoff window, because a login is the heaviest request the app makes.
+  It was one per episode until the 12 Aug 2026 outage showed a single failed
+  login ending recovery for a five-hour block; mbapi2020 budgets three the
+  same way (`MAX_RELOGIN_ATTEMPTS`, incremented on failure).
+- **There is no REST source for doors, windows, lock or sunroof.** Checked
+  against mbapi2020's `webapi.py` (Aug 2026): the only vehicle-state REST
+  endpoint anyone knows is the widget `vehicleattributes` one the app already
+  polls, and it carries only the ~15-attribute subset (position, ranges, SoC
+  — visible in any `[POLL]` log line). Commands likewise travel only over the
+  push session. So during a WebSocket 429 block those capabilities *cannot*
+  be refreshed from anywhere; the only lever on their staleness is how fast
+  the episode ends. Don't go looking for a fallback endpoint again.
 - **The re-login only ever worked when the SSO session had already expired.**
   While the identity provider still recognises the previous login — the
   normal state during an outage, since a login already ran in that process —
