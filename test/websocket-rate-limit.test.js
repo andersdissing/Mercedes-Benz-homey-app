@@ -204,6 +204,34 @@ test('the backoff cap still lets the app knock regularly', () => {
   );
 });
 
+/**
+ * Drive one real 429 through the socket error handler, which is where the
+ * escalation is decided.
+ */
+async function refuse(ws) {
+  ws._createSocket = () => {
+    const socket = {
+      handlers: {},
+      on(event, fn) { (this.handlers[event] = this.handlers[event] || []).push(fn); return this; },
+      close() {},
+      removeAllListeners() { this.handlers = {}; },
+    };
+    // The upgrade is refused before anything is connected.
+    setImmediate(() => {
+      for (const fn of socket.handlers.error || []) {
+        fn(new Error('Unexpected server response: 429'));
+      }
+    });
+    return socket;
+  };
+  ws.accountBlocked = false; // let this attempt reach the handshake
+  await ws.connectOrThrow(() => {}).catch(() => {});
+  if (ws.reconnectTimer) {
+    clearTimeout(ws.reconnectTimer);
+    ws.reconnectTimer = null;
+  }
+}
+
 test('repeated refusals escalate from refreshing the token to logging in', async () => {
   const ws = makeWs();
 
@@ -212,48 +240,48 @@ test('repeated refusals escalate from refreshing the token to logging in', async
   ws.setReloginHandler(async () => { relogins++; });
   ws.oauth.refreshToken = async () => { refreshes++; };
 
-  // Drive real 429s through the socket error handler, which is where the
-  // escalation is decided.
-  const refuse = async () => {
-    ws._createSocket = () => {
-      const socket = {
-        handlers: {},
-        on(event, fn) { (this.handlers[event] = this.handlers[event] || []).push(fn); return this; },
-        close() {},
-        removeAllListeners() { this.handlers = {}; },
-      };
-      // The upgrade is refused before anything is connected.
-      setImmediate(() => {
-        for (const fn of socket.handlers.error || []) {
-          fn(new Error('Unexpected server response: 429'));
-        }
-      });
-      return socket;
-    };
-    ws.accountBlocked = false; // let this attempt reach the handshake
-    await ws.connectOrThrow(() => {}).catch(() => {});
-    if (ws.reconnectTimer) {
-      clearTimeout(ws.reconnectTimer);
-      ws.reconnectTimer = null;
-    }
-  };
-
   // A refreshed token belongs to the session Mercedes is refusing, so the
   // first strikes only re-authenticate.
-  await refuse();
+  await refuse(ws);
   assert.equal(ws._needsRelogin, false, 'one refusal is not yet worth a login');
 
   // It takes a full login to be given a new session - the app's last lever
   // before it can only wait.
-  for (let i = 1; i < ws.RELOGIN_AFTER_STRIKES; i++) await refuse();
+  for (let i = 1; i < ws.RELOGIN_AFTER_STRIKES; i++) await refuse(ws);
   assert.equal(ws._needsRelogin, true, 'a block that outlasts refreshed tokens must escalate');
 
-  await refuse();
+  await refuse(ws);
   assert.ok(refreshes > 0, 'precondition: the cheap recovery was tried first');
   assert.equal(relogins, 1, 'the escalation must actually log in');
 
-  await refuse();
-  assert.equal(relogins, 1, 'and must not log in again on every later attempt');
+  // The budget is per episode, not per attempt: a few logins paced by the
+  // widening windows, and after that only waiting.
+  for (let i = 0; i < 6; i++) await refuse(ws);
+  assert.equal(
+    relogins,
+    ws.MAX_RELOGIN_ATTEMPTS,
+    'the login budget must be spent one per attempt and then respected',
+  );
+});
+
+test('a crashed login spends one attempt, not the whole recovery', async () => {
+  // 12 Aug 2026: the app's single re-login crashed (see lib/oauth.js) and
+  // with it the episode's only escalation - the user sat refused for five
+  // hours until they restarted their Homey. A login that fails must leave
+  // budget for another try on a later window, or one transient failure ends
+  // the recovery for the whole outage.
+  const ws = makeWs();
+
+  let attempts = 0;
+  ws.setReloginHandler(async () => {
+    attempts++;
+    throw new Error('login crashed');
+  });
+
+  for (let i = 0; i < 10; i++) await refuse(ws);
+
+  assert.ok(attempts >= 2, `a failed login must be retried on a later window (attempts: ${attempts})`);
+  assert.equal(attempts, ws.MAX_RELOGIN_ATTEMPTS, 'and the retries must still be bounded');
 });
 
 test('the login budget survives the client being replaced', () => {

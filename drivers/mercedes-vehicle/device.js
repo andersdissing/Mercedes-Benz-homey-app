@@ -52,9 +52,9 @@ class MercedesVehicleDevice extends Homey.Device {
       // Last resort when Mercedes keeps refusing the push connection with
       // HTTP 429: a refreshed token belongs to the session being refused, so
       // only a fresh login can be given a new one. The WebSocket client calls
-      // this at most once per episode - it is the heaviest request the app
-      // makes, and hammering login at a rate limiter would be the fault in
-      // miniature.
+      // this at most three times per episode, one per backoff window - it is
+      // the heaviest request the app makes, and hammering login at a rate
+      // limiter would be the fault in miniature.
       this.api.setReloginHandler(async () => {
         const credentials = this.getStore();
         if (!credentials.username || !credentials.password) {
