@@ -191,7 +191,7 @@ test('a command does not handshake through a 429 backoff', async () => {
 
   await assert.rejects(
     ws.sendCommand(Buffer.from('command'), 'req-1'),
-    /rate-limiting this account \(HTTP 429\)/,
+    /rate-limiting the push connection \(HTTP 429\)/,
   );
 
   try {

@@ -4,6 +4,7 @@ const Homey = require('homey');
 const MercedesOAuth = require('../../lib/oauth');
 const MercedesAPI = require('../../lib/api');
 const { installRedactedLogging } = require('../../lib/log-redactor');
+const { describePushStaleness } = require('../../lib/staleness-message');
 
 class MercedesVehicleDevice extends Homey.Device {
   /**
@@ -47,6 +48,23 @@ class MercedesVehicleDevice extends Homey.Device {
       // before Mercedes reports completion, so the card can only ever report
       // acceptance. This trigger is what makes the real outcome reachable.
       this.api.setCommandFailedHandler((failure) => this.onCommandFailed(failure));
+
+      // Last resort when Mercedes keeps refusing the push connection with
+      // HTTP 429: a refreshed token belongs to the session being refused, so
+      // only a fresh login can be given a new one. The WebSocket client calls
+      // this at most three times per episode, one per backoff window - it is
+      // the heaviest request the app makes, and hammering login at a rate
+      // limiter would be the fault in miniature.
+      this.api.setReloginHandler(async () => {
+        const credentials = this.getStore();
+        if (!credentials.username || !credentials.password) {
+          throw new Error('No stored credentials - re-pair the vehicle to enable re-login');
+        }
+
+        await this.oauth.login(credentials.username, credentials.password);
+        await this.setStoreValue('token', this.oauth.token);
+        this.log('[INIT] Re-login completed, token stored');
+      });
 
       // Check if token is expired and refresh if needed
       if (!this.oauth.token || MercedesOAuth.isTokenExpired(this.oauth.token)) {
@@ -436,6 +454,14 @@ class MercedesVehicleDevice extends Homey.Device {
       // state machine can strand the connection unnoticed again.
       this._startWebSocketHealthCheck();
 
+      // Start with a clean slate. The staleness clock restarts with the app
+      // (`_wsDownSince` is memory), so any warning still on the device was
+      // written by a run that has ended - possibly by an older version, about
+      // a block that has since cleared, in wording this version would not
+      // use. It is re-raised on its own merits if push is still down an hour
+      // from now.
+      await this._clearPushStaleWarning();
+
       // Do initial poll
       await this.pollVehicleData();
 
@@ -528,6 +554,15 @@ class MercedesVehicleDevice extends Homey.Device {
       try {
         if (!this.api) return;
 
+        // Tell the user when push has been down long enough to matter.
+        //
+        // Without this the failure is invisible: the device stays available
+        // and its polled capabilities (battery, ranges, position) keep
+        // updating, so the only symptom is that doors, windows, lock and
+        // sunroof quietly stop changing. One report of this ran three days
+        // before anyone realised the app was not simply idle.
+        await this._reportPushStaleness();
+
         // api.connectWebSocket() is a no-op when the socket is healthy, so
         // this only acts when the connection is actually down or stale.
         //
@@ -554,6 +589,69 @@ class MercedesVehicleDevice extends Homey.Device {
   }
 
   /**
+   * Warn the user once the real-time connection has been down long enough
+   * that the capabilities it carries are meaningfully stale.
+   *
+   * Keyed off how long the socket has been down rather than how long since
+   * the last push: a parked car legitimately pushes nothing for hours, so
+   * silence alone is not a fault.
+   */
+  async _reportPushStaleness() {
+    if (this.api.isWebSocketHealthy()) {
+      this._wsDownSince = null;
+      await this._clearPushStaleWarning();
+      return;
+    }
+
+    if (!this._wsDownSince) this._wsDownSince = Date.now();
+
+    const downFor = Date.now() - this._wsDownSince;
+    if (downFor < (this.PUSH_STALE_WARNING_AFTER || 3600000)) return;
+
+    const message = describePushStaleness({
+      downForMs: downFor,
+      wsBlockedFor: this.api.getWebSocketRateLimitRemaining(),
+      restBlockedFor: this.api.getRestRateLimitRemaining(),
+    });
+
+    // Re-rendered on every health tick and written whenever it has changed.
+    //
+    // This used to return early once the warning had been raised, which froze
+    // the whole message at the moment it first crossed the hour: the elapsed
+    // time stopped counting and the retry countdown stopped counting down, so
+    // a banner read "for 60 minutes ... retries in ~30 min" for the rest of
+    // the outage, however long that was. Both numbers were correct when
+    // written and never written again.
+    //
+    // Comparing the text rather than warning unconditionally keeps a tick
+    // where nothing moved from rewriting the device's warning for no reason.
+    if (this._pushStaleWarningText === message) return;
+
+    this._pushStaleWarned = true;
+    this._pushStaleWarningText = message;
+    this.log(`[WS-HEALTH] Push connection down for ${Math.round(downFor / 60000)} min - warning the user`);
+    await this.setWarning(message).catch(() => {});
+  }
+
+  /**
+   * Retract the staleness warning now that push is confirmed live.
+   *
+   * Deliberately not gated on "did *this* process raise it". A Homey warning
+   * outlives the app that set it, while `_pushStaleWarned` is memory and
+   * starts undefined - so after an app update the banner from before the
+   * restart could never be cleared, and users installing a fix were greeted
+   * by the warning it fixed. `undefined` here means "there may be one left
+   * over", and unsetWarning() on a device with no warning is a no-op.
+   */
+  async _clearPushStaleWarning() {
+    if (this._pushStaleWarned === false) return;
+
+    this._pushStaleWarned = false;
+    this._pushStaleWarningText = null;
+    await this.unsetWarning().catch(() => {});
+  }
+
+  /**
    * Stop the WebSocket health check timer.
    */
   _stopWebSocketHealthCheck() {
@@ -564,9 +662,29 @@ class MercedesVehicleDevice extends Homey.Device {
   }
 
   /**
-   * Poll vehicle data from Mercedes API
+   * Poll vehicle data from Mercedes API.
+   *
+   * Skipped only while REST itself is rate-limited - not while the WebSocket
+   * is. They are separate limits: every capture of a blocked account shows the
+   * push connection refused with 429 while these same endpoints answer 200 in
+   * the same second. Standing the poll down for a refused *socket* was a
+   * mistake that cost the user everything and bought nothing - battery, range
+   * and position went stale on top of the capabilities that were already
+   * frozen, for as long as the block lasted.
+   *
+   * @returns {Boolean} false if the poll was skipped because of a rate limit
    */
   async pollVehicleData() {
+    const blockedFor = this.api ? this.api.getRestRateLimitRemaining() : 0;
+    if (blockedFor > 0) {
+      this.log(
+        `[POLL] Skipped - Mercedes is rate-limiting the data endpoints for another `
+        + `${Math.ceil(blockedFor / 60000)} min. Polling through a block spends the budget `
+        + 'the app is waiting to recover.'
+      );
+      return false;
+    }
+
     try {
       this.log('[POLL] Starting vehicle data poll for VIN:', this.vin);
 
@@ -676,6 +794,11 @@ class MercedesVehicleDevice extends Homey.Device {
       }
 
       this.log(`[WEBSOCKET] Received ${isFullUpdate ? 'FULL' : 'PARTIAL'} update for vehicle`);
+
+      // Live data is flowing again - retract the staleness warning now rather
+      // than leaving it up until the next health tick.
+      this._wsDownSince = null;
+      await this._clearPushStaleWarning();
       this.log(`[WEBSOCKET] Data keys: ${Object.keys(vehicleData).slice(0, 20).join(', ')}`);
 
       // One-time verbose log: dump ALL data keys to identify geofence-related fields
@@ -1919,6 +2042,26 @@ class MercedesVehicleDevice extends Homey.Device {
    */
   async refreshDataAction() {
     this.log('[FLOW] Refresh data action triggered');
+
+    // A blocked refresh must fail loudly rather than return true having done
+    // nothing: a Flow that reports success for a refresh that never happened
+    // is the same lie the app already told about commands. Deliberately not
+    // forcing the poll through - one card retried on a schedule would keep
+    // the account blocked, which is the whole fault being fixed.
+    //
+    // Gated on the REST window only. A refused push connection does not stop
+    // these endpoints answering, and refusing to refresh because of it left
+    // the one manual escape hatch broken exactly when it was wanted.
+    const blockedFor = this.api ? this.api.getRestRateLimitRemaining() : 0;
+    if (blockedFor > 0) {
+      const minutes = Math.ceil(blockedFor / 60000);
+      this.error(`[FLOW] Refresh refused - rate-limited for another ${minutes} min`);
+      throw new Error(
+        `Mercedes is rate-limiting this account. Vehicle data cannot be refreshed for another `
+        + `~${minutes} min, and refreshing now would extend the block.`
+      );
+    }
+
     try {
       await this.pollVehicleData();
       this.log('[FLOW] Vehicle data refreshed successfully');

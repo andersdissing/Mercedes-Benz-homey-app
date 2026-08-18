@@ -70,8 +70,10 @@ unlock ~4 s. Faster when the car is already awake.
 ## Things that look like bugs but are not
 
 - **HTTP 429 on every app restart.** Restarting tears down the old session
-  and handshakes seconds later; Mercedes answers 429. Recovery does a full
-  re-login and reconnects in ~12 s. Expected.
+  and handshakes seconds later; Mercedes answers 429. Recovery re-authenticates
+  and reconnects in ~12 s. Expected — and the reason the first backoff window
+  is 30 s, not minutes: a long opening window bills every app update for a
+  block that was already over.
 - **1001 "Going away" every ~13 minutes.** Mercedes rotates connections;
   reconnect takes ~150 ms.
 - **The Flow editor's Test button reports timeouts that never happened.** It
@@ -97,6 +99,82 @@ unlock ~4 s. Faster when the car is already awake.
 - **Mercedes refuses a command while one is open** for the vehicle
   (`RIS_COULD_NOT_SEND_COMMAND`). The app holds a new command rather than
   letting it be refused — see `_awaitPreviousCommandCompletion()`.
+- **A refreshed token does not clear a WebSocket 429; a full login does.**
+  Measured on a live block (4 Aug 2026): three consecutive refusals, each one
+  after a successfully refreshed token, then one `oauth.login()` and the
+  socket opened in 194 ms. The refusal is about the session, and a refresh
+  returns a token for the session being refused. Hence the re-login
+  escalation on the second strike — bounded to three per episode, at most one
+  per backoff window, because a login is the heaviest request the app makes.
+  It was one per episode until the 12 Aug 2026 outage showed a single failed
+  login ending recovery for a five-hour block; mbapi2020 budgets three the
+  same way (`MAX_RELOGIN_ATTEMPTS`, incremented on failure).
+- **There is no REST source for doors, windows, lock or sunroof.** Checked
+  against mbapi2020's `webapi.py` (Aug 2026): the only vehicle-state REST
+  endpoint anyone knows is the widget `vehicleattributes` one the app already
+  polls, and it carries only the ~15-attribute subset (position, ranges, SoC
+  — visible in any `[POLL]` log line). Commands likewise travel only over the
+  push session. So during a WebSocket 429 block those capabilities *cannot*
+  be refreshed from anywhere; the only lever on their staleness is how fast
+  the episode ends. Don't go looking for a fallback endpoint again.
+- **The re-login only ever worked when the SSO session had already expired.**
+  While the identity provider still recognises the previous login — the
+  normal state during an outage, since a login already ran in that process —
+  `/as/authorization.oauth2` skips the login form and 302s straight to
+  `rismycar://login-callback?code=...`. follow-redirects cannot follow that
+  scheme and threw `ERR_FR_REDIRECTION_FAILURE`, killing the login and
+  discarding the code Mercedes had just issued. That is how a user sat behind
+  a WebSocket 429 for 4 h 50 min on v1.1.44 (12 Aug 2026 report): every
+  escalation crashed, and only a Homey restart cleared it. Two-part fix in
+  `lib/oauth.js`: `login()` calls `_resetSession()` first (drops the old
+  session's cookies, so a *new* session — the whole point of the escalation —
+  is actually opened), and `_getAuthorizationResume()` captures a
+  `rismycar://` Location via axios' `beforeRedirect` hook and returns
+  `{code}` so a short-circuit becomes a code grant instead of a crash. The
+  hook is the only place that Location is reachable; tested against a real
+  local server in `test/oauth-sso-short-circuit.test.js`.
+- **The 429 on the WebSocket upgrade is not an account-wide block.** Every
+  capture says so: the upgrade is refused while the widget and geofencing
+  endpoints answer 200 in the same second, and the three-day outage in issue
+  #69 polled successfully throughout. v1.1.42 assumed one limit and stood the
+  poll down for a refused socket, which froze battery, range and position on
+  top of the capabilities that were already stale and bought nothing back.
+  The two windows are tracked separately — `getWebSocketRateLimitRemaining()`
+  and `getRestRateLimitRemaining()`. Don't merge them again.
+- **The 429's own answer beats any ladder — and reading it means owning the
+  teardown.** Every backoff window used to be invented: the only thing taken
+  off a refused upgrade was the status code, scraped out of `ws`'s error
+  *message*. The response itself is reachable only through an
+  `unexpected-response` listener, and `emit()` returning true is exactly what
+  makes `ws` skip its own `abortHandshake()` — so listening for it means the
+  request is never destroyed and the failure never reported, and the connect
+  promise hangs forever (the dead-end class of #47 and #57). The listener
+  drains the body and calls `socket.terminate()`, which runs the same abort
+  `ws` would have; destroying the request by hand instead leaves the client
+  stuck in CONNECTING with no `close` ever emitted. It then reports the
+  failure itself, because that abort announces itself as "WebSocket was closed
+  before the connection was established" with no status in it — a 429 reported
+  that way is a transport blip, and neither the backoff, the token refresh nor
+  the re-login escalation runs.
+- **Mercedes sends no `Retry-After` on the WebSocket 429 — measured, so stop
+  wondering.** Captured on the routine restart 429 (7 Aug 2026), the refusal
+  carried exactly: `content-security-policy, referrer-policy,
+  strict-transport-security, vary, x-content-type-options, x-frame-options,
+  x-permitted-cross-domain-policies, date, content-length`. No `Retry-After`,
+  no `x-ratelimit-*`, nothing about the limit at all. The escalating ladder is
+  therefore the real mechanism on this path and not a placeholder. The app
+  reads the header anyway and prefers it when present, which costs nothing and
+  is the only way a change on Mercedes' side gets noticed; whether the *REST*
+  429 carries one is still unmeasured, because REST answers 200 through a
+  refused upgrade. Both paths log what they were sent
+  (`[WS] Handshake refused with HTTP 429 - rate-limit headers: ...`,
+  `[API] REST refused with HTTP 429 - ...`), so the next block re-checks this
+  for free.
+- **APP-SESSION-ID must outlive the WebSocket client object.** The client is
+  rebuilt on every recovery (`MercedesAPI.connectWebSocket`), so a session id
+  minted in its constructor meant a new app session every few minutes during
+  an outage while the earlier ones were still live at Mercedes. `MercedesAPI`
+  owns it now; mbapi2020 keeps one per integration lifetime.
 - **Nil attributes never reach `data`.** The parser drops attributes Mercedes
   sends as `nilValue`, so `if (data.x !== undefined)` never runs for them.
   `chargingPower` is nil whenever the car is not charging, which left

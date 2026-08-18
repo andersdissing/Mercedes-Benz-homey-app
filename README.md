@@ -70,6 +70,35 @@ returns only a subset (battery, ranges, position, fuel). Door, window,
 tire-pressure and odometer updates therefore depend on the WebSocket being
 connected.
 
+Mercedes rate-limits the push connection and the data endpoints separately,
+and the app treats them separately.
+
+A refusal can say how long to wait (`Retry-After`), and the app waits exactly
+that long when it does — clamped, so a nonsense value cannot pin the app
+offline or spin it into an instant retry. Mercedes does not currently send it
+on the push connection: a capture of a refused upgrade carries no rate-limit
+headers at all. The waits below are what applies in practice, and they are
+what the app falls back to whenever it is not told better.
+
+When the **push connection** is refused (HTTP 429 on the upgrade), the app
+retries after 30 seconds and triples the wait after each further refusal, up
+to a half-hour cap. A refusal is usually about the session rather than the
+account — a refreshed token belongs to the session being refused — so after
+the second one the app logs in from scratch, which in practice clears it
+immediately. The REST poll keeps running throughout, so battery, range and
+position stay current; only the capabilities that arrive over the socket
+(doors, windows, lock, sunroof) go stale.
+
+When the **data endpoints** are refused, which is rarer, the poll stands
+down for 10 minutes and doubles after each further refusal, up to two hours.
+Nothing updates during that window. The manual "refresh data" card refuses
+with the time remaining rather than reporting a refresh that did not happen.
+
+Either way, once the live connection has been down for an hour the device
+shows a warning naming what is actually stale. It keeps counting while the
+outage lasts — how long the connection has been down, and how long until the
+next attempt — and is retracted as soon as data flows again.
+
 ## Requirements
 
 - Homey Pro (Early 2023) or later
@@ -160,6 +189,41 @@ is down and only the REST poll is running — the poll does not carry those
 attributes. Look for `[WS]` lines in the app logs: a healthy connection
 reconnects on its own (`[WS] Scheduling reconnect attempt ...`), and a
 `[WS-HEALTH]` line indicates the periodic health check stepped in.
+
+### The Device Shows a Warning About the Live Connection
+Mercedes is refusing the push connection. The log shows
+`[WS] Push connection rate-limited (HTTP 429) - backing off for 30s (no
+Retry-After sent, using own backoff; ...)`; the first retry is 30 seconds
+later and each further refusal triples the wait, up to half an hour. If
+Mercedes ever does send a wait, the line says so and that wait is used
+instead. Battery, range and position keep updating throughout — only the
+capabilities that arrive over the socket (doors, windows, lock, sunroof) are
+stale.
+
+The warning on the device counts up while this lasts and names how long
+until the next attempt, so a banner that has stopped moving means the app
+has stopped, not that the outage has.
+
+This resolves itself. A short refusal after an app update is normal: the
+previous session is still open at Mercedes when the new one connects. If it
+persists, the app logs in from scratch after the second refusal
+(`[WS] Re-authenticating from scratch before reconnect`), which opens a new
+session and typically reconnects within a second.
+
+**Restarting the app repeatedly makes it worse**, because each restart
+handshakes immediately and earns a fresh refusal. Leave it alone and it
+reconnects on its own.
+
+### Nothing Updates At All
+The data endpoints are rate-limited too, which is rarer. The log shows
+`[API] REST refused with HTTP 429 - rate-limit headers: ...`,
+`[API] REST endpoints rate-limited (HTTP 429)` and
+`[POLL] Skipped - Mercedes is rate-limiting the data endpoints ...`. The
+poll stands down for 10 minutes, doubling with each further refusal up to
+two hours, so every value is last-known until the block clears — unless the
+refusal named a shorter wait, in which case that one is used. The first of
+those lines reports whatever the refusal carried, so it is worth reading if
+this ever happens to you.
 
 ### HTTP 418 Errors
 Mercedes periodically updates their API requirements. If you see HTTP 418 errors, the app's API headers may need updating to match the current Mercedes mobile app version. Check the [mbapi2020](https://github.com/ReneNulschDE/mbapi2020) integration for reference.
