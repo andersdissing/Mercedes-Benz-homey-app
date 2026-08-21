@@ -386,10 +386,22 @@ class MercedesVehicleDevice extends Homey.Device {
         await this.addCapability('text_departure_time_mode');
       }
 
+      // Add weekly departure times capability
+      if (!this.hasCapability('text_weekly_departure_times')) {
+        await this.addCapability('text_weekly_departure_times');
+      }
+
+      // Add climate setpoint capability
+      if (!this.hasCapability('measure_climate_setpoint')) {
+        this.log('[INIT] Adding missing measure_climate_setpoint capability');
+        await this.addCapability('measure_climate_setpoint');
+      }
+
       // Initialize text capabilities with default values if not set
       const textCapabilities = [
         'text_departure_time',
         'text_departure_time_mode',
+        'text_weekly_departure_times',
         'text_geofence_last_event',
         'text_geofence_last_zone',
         'time_geofence_last_event'
@@ -1370,6 +1382,52 @@ class MercedesVehicleDevice extends Homey.Device {
         }
       } catch (e) {
         this.error('[UPDATE] Error updating departure time/mode:', e.message);
+      }
+
+      // Weekly departure times (one entry per weekday, minutes from midnight)
+      try {
+        if (Array.isArray(data.weeklySetHU) && data.weeklySetHU.length > 0) {
+          // Day indices follow Mercedes' own weekday enum: MONDAY = 0 .. SUNDAY = 6
+          const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+          const toTime = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+          const entries = data.weeklySetHU
+            .filter(e => e.index >= 0 && e.index <= 6 && Number.isFinite(Number(e.minutesFromMidnight)))
+            .sort((a, b) => a.index - b.index);
+          // Consecutive days sharing a time collapse to a range: "Mon-Fri 06:20"
+          const groups = [];
+          for (const entry of entries) {
+            const time = toTime(Number(entry.minutesFromMidnight));
+            const last = groups[groups.length - 1];
+            if (last && last.time === time && entry.index === last.end + 1) {
+              last.end = entry.index;
+            } else {
+              groups.push({ start: entry.index, end: entry.index, time });
+            }
+          }
+          const weeklyStr = groups
+            .map(g => `${dayNames[g.start]}${g.end > g.start ? `-${dayNames[g.end]}` : ''} ${g.time}`)
+            .join(', ');
+          if (weeklyStr) {
+            this.log(`[UPDATE] Setting weekly departure times to: ${weeklyStr}`);
+            await this.setCapabilityValue('text_weekly_departure_times', weeklyStr);
+          }
+        }
+      } catch (e) {
+        this.error('[UPDATE] Error updating weekly departure times:', e.message);
+      }
+
+      // Cabin climate setpoint (per zone; the driver-side zone is shown)
+      try {
+        if (Array.isArray(data.temperaturePoints) && data.temperaturePoints.length > 0) {
+          const point = data.temperaturePoints.find(p => p.zone === 'frontLeft') || data.temperaturePoints[0];
+          const setpoint = Number(point.temperature);
+          if (Number.isFinite(setpoint)) {
+            this.log(`[UPDATE] Setting climate setpoint to: ${setpoint}°C (zone: ${point.zone})`);
+            await this.setCapabilityValue('measure_climate_setpoint', setpoint);
+          }
+        }
+      } catch (e) {
+        this.error('[UPDATE] Error updating climate setpoint:', e.message);
       }
 
       // Position latitude/longitude are NOT available in vehicle attributes API

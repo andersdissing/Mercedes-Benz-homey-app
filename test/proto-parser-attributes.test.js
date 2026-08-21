@@ -193,3 +193,112 @@ test('a decoded chargePrograms attribute is no longer reported as unreadable', a
   assert.deepEqual(data.chargePrograms, [{ chargeProgram: 3, maxSoc: 80 }]);
   assert.equal(lines.filter(l => l.includes('No value read for "chargePrograms"')).length, 0);
 });
+
+async function decodeAttribute(parser, key, bytes) {
+  const frame = parser.PushMessageRaw.encode({
+    vepUpdates: { updates: { VIN1: { vin: 'VIN1', attributes: { [key]: bytes } } } },
+  }).finish();
+
+  const message = parser.parsePushMessage(frame);
+  return parser.extractVehicleData(message.vepUpdates.updates.VIN1, frame);
+}
+
+test('temperaturePoints decodes from the bytes a real vehicle sent', async () => {
+  const { parser, lines } = makeParser();
+  await parser.initialize();
+
+  // These are captured bytes, not bytes encoded through our own schema, so a
+  // wrong field number fails here instead of agreeing with itself. This is the
+  // attribute issue #61 could not get a usable dump of at all.
+  const { temperaturePoints } = require('./fixtures/issue-61-attributes');
+  const data = await decodeAttribute(parser, 'temperaturePoints', temperaturePoints.bytes);
+
+  assert.deepEqual(data.temperaturePoints, [
+    { zone: 'frontLeft', temperature: 21.5, displayValue: '21.5' },
+    { zone: 'frontRight', temperature: 21.5, displayValue: '21.5' },
+  ]);
+  assert.equal(lines.filter(l => l.includes('No value read for "temperaturePoints"')).length, 0);
+});
+
+test('weeklySetHU decodes from the bytes a real vehicle sent', async () => {
+  const { parser, lines } = makeParser();
+  await parser.initialize();
+
+  const { weeklySetHU } = require('./fixtures/issue-61-attributes');
+  const data = await decodeAttribute(parser, 'weeklySetHU', weeklySetHU.bytes);
+
+  // The first entry omits field 1, so its index is the proto3 default of 0 -
+  // the same shape chargePrograms arrives in.
+  assert.deepEqual(data.weeklySetHU, [
+    { index: 0, minutesFromMidnight: 380 },
+    { index: 1, minutesFromMidnight: 380 },
+    { index: 2, minutesFromMidnight: 380 },
+    { index: 3, minutesFromMidnight: 380 },
+    { index: 4, minutesFromMidnight: 380 },
+  ]);
+  assert.equal(lines.filter(l => l.includes('No value read for "weeklySetHU"')).length, 0);
+
+  // 380 minutes from midnight is 06:20, in the unit device.js already renders
+  // departure times with.
+  const minutes = data.weeklySetHU[0].minutesFromMidnight;
+  assert.equal(`${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`, '06:20');
+});
+
+test('weeklyProfile decodes from the bytes a real vehicle sent', async () => {
+  const { parser, lines } = makeParser();
+  await parser.initialize();
+
+  const { weeklyProfile } = require('./fixtures/issue-61-attributes');
+  const data = await decodeAttribute(parser, 'weeklyProfile', weeklyProfile.bytes);
+
+  assert.deepEqual(data.weeklyProfile, {
+    unknown2: 21,
+    unknown3: -1,
+    unknown4: 5,
+    unknown5: -1,
+    entries: [{
+      unknown1: 1,
+      // Kept as the bytes it arrived as. Packed varints [0,1,2,3,4] and an
+      // opaque blob are the same five bytes on the wire, so declaring either
+      // reading would be a guess; hex loses neither.
+      unknown4: '0001020304',
+      unknown6: -1,
+      unknown7: 6,
+      unknown8: 20,
+      unknown9: 1,
+    }],
+  });
+  assert.equal(lines.filter(l => l.includes('No value read for "weeklyProfile"')).length, 0);
+});
+
+test('precondState and tcuConnectionStateLowChannel decode to plain values', async () => {
+  const { parser } = makeParser();
+  await parser.initialize();
+
+  const { precondState, tcuConnectionStateLowChannel } = require('./fixtures/issue-61-attributes');
+
+  assert.equal((await decodeAttribute(parser, 'precondState', precondState.bytes)).precondState, 1);
+
+  // A bare varint in the oneof rather than a message.
+  const tcu = await decodeAttribute(parser, 'tcuConnectionStateLowChannel', tcuConnectionStateLowChannel.bytes);
+  assert.equal(tcu.tcuConnectionStateLowChannel, 3);
+});
+
+test('a diagnostic never breaks the update path', async () => {
+  const { parser } = makeParser();
+  await parser.initialize();
+
+  // An attribute always decodes as a VehicleAttributeStatus by the time it
+  // reaches here - a frame that did not would have failed in parsePushMessage
+  // first - so the bytes are fed to the describer directly. Whatever it is
+  // handed, an update must not be lost to its own diagnostic.
+  for (const bytes of [
+    Buffer.alloc(0),
+    Buffer.from([0xff]),
+    Buffer.from([0x0a, 0x28]), // claims 40 bytes that are not there
+    Buffer.from([(12 << 3) | 6]), // the impossible wire type from issue #61
+    null,
+  ]) {
+    assert.doesNotThrow(() => parser._describeRawAttribute(bytes));
+  }
+});

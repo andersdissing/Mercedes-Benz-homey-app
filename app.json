@@ -1,7 +1,7 @@
 {
   "_comment": "This file is generated. Please edit .homeycompose/app.json instead.",
   "id": "com.mercedes.mbapi",
-  "version": "1.1.46",
+  "version": "1.1.47",
   "compatibility": ">=12.3.0",
   "sdk": 3,
   "platforms": [
@@ -2090,6 +2090,24 @@
       "uiComponent": "sensor",
       "icon": "/assets/energy.svg"
     },
+    "measure_climate_setpoint": {
+      "type": "number",
+      "title": {
+        "en": "Climate Setpoint",
+        "nl": "Ingestelde temperatuur",
+        "de": "Solltemperatur"
+      },
+      "units": {
+        "en": "°C"
+      },
+      "decimals": 1,
+      "min": 0,
+      "max": 35,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/icons/precond.svg"
+    },
     "measure_fuel": {
       "type": "number",
       "title": {
@@ -2481,6 +2499,18 @@
       "setable": false,
       "uiComponent": "sensor",
       "icon": "/assets/icons/geofence.svg"
+    },
+    "text_weekly_departure_times": {
+      "type": "string",
+      "title": {
+        "en": "Weekly Departure Times",
+        "nl": "Wekelijkse vertrektijden",
+        "de": "Wöchentliche Abfahrtszeiten"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/icons/driven_time.svg"
     },
     "theft_system_armed": {
       "type": "boolean",
