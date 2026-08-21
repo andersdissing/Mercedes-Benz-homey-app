@@ -1,0 +1,18 @@
+{
+  "type": "number",
+  "title": {
+    "en": "Climate Setpoint",
+    "nl": "Ingestelde temperatuur",
+    "de": "Solltemperatur"
+  },
+  "units": {
+    "en": "°C"
+  },
+  "decimals": 1,
+  "min": 0,
+  "max": 35,
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/icons/precond.svg"
+}

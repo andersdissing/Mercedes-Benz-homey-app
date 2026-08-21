@@ -1,0 +1,12 @@
+{
+  "type": "string",
+  "title": {
+    "en": "Weekly Departure Times",
+    "nl": "Wekelijkse vertrektijden",
+    "de": "Wöchentliche Abfahrtszeiten"
+  },
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/icons/driven_time.svg"
+}

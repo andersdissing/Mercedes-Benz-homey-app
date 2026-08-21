@@ -39,6 +39,7 @@
     "window_sunroof",
     "text_departure_time",
     "text_departure_time_mode",
+    "text_weekly_departure_times",
     "measure_latitude",
     "measure_longitude",
     "measure_heading",
@@ -68,7 +69,8 @@
     "onoff_remote_start",
     "theft_system_armed",
     "engine_running",
-    "climate_active"
+    "climate_active",
+    "measure_climate_setpoint"
   ],
   "capabilitiesOptions": {
     "tire_pressure_bar.tire_fl": {
