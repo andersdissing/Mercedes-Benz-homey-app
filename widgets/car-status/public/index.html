@@ -40,6 +40,22 @@
     color: var(--homey-text-color);
 }
 
+  /* The headline doubles as the link to the device card once the app has
+     told us where that lives; the chevron is the only visual hint. */
+  .model-name.linked {
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .model-name .model-name-chevron {
+    display: none;
+    margin-left: 4px;
+    color: var(--color-text-secondary);
+    font-weight: 400;
+  }
+
+  .model-name.linked .model-name-chevron { display: inline; }
+
   .energy-section {
     display: flex;
     flex-direction: column;
@@ -201,7 +217,7 @@
     <p>Edit the widget and select a car to display.</p>
   </div>
   <div id="content" class="hidden">
-<div class="model-name homey-text-bold homey-font-size-default" id="modelName">test</div>
+<div class="model-name homey-text-bold homey-font-size-default" id="modelName" role="link" tabindex="0"><span id="modelNameText">Mercedes-Benz</span><span class="model-name-chevron" aria-hidden="true">›</span></div>
 
     <div class="energy-section" id="energySection">
       <div class="energy-row" id="batteryRow">
@@ -286,7 +302,14 @@
     document.getElementById('notConfigured').classList.add('hidden');
     document.getElementById('content').classList.remove('hidden');
 
-    document.getElementById('modelName').textContent = data.model || 'Mercedes-Benz';
+    document.getElementById('modelNameText').textContent = data.model || 'Mercedes-Benz';
+
+    // Headline -> device card. The device id is the one the user picked for
+    // this widget (a Homey device UUID); the app supplies the Homey id.
+    deviceUrl = (data.homeyId && selectedDeviceId)
+      ? 'https://my.homey.app/homeys/' + encodeURIComponent(data.homeyId) + '/devices/' + encodeURIComponent(selectedDeviceId)
+      : null;
+    document.getElementById('modelName').classList.toggle('linked', deviceUrl !== null);
 
     // Lock tile
     var locked = data.locked === true;
@@ -366,6 +389,18 @@
 
   var selectedDeviceId = null;
   var _homey = null;
+  var deviceUrl = null;
+
+  // Homey.popup() is the widget API's only way out of the widget frame: the
+  // web app opens the URL in a popup window, the mobile app in an in-app
+  // browser view. hapticFeedback() must be called inside the touch handler.
+  function openDeviceCard() {
+    if (!deviceUrl || !_homey) return;
+    try { _homey.hapticFeedback(); } catch (e) { /* not on every platform */ }
+    Promise.resolve(_homey.popup(deviceUrl)).catch(function (error) {
+      console.error('Failed to open the device card:', error);
+    });
+  }
 
   // The widget endpoint only reads already-cached capability values from
   // Homey - it never calls the Mercedes API - so it is deliberately NOT tied
@@ -416,6 +451,15 @@
   async function onHomeyReady(Homey) {
     _homey = Homey;
     await Homey.ready({ height: 160 });
+
+    var headline = document.getElementById('modelName');
+    headline.addEventListener('click', openDeviceCard);
+    headline.addEventListener('keydown', function (event) {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        openDeviceCard();
+      }
+    });
 
     var deviceIds = Homey.getDeviceIds();
     if (deviceIds && deviceIds.length > 0) {

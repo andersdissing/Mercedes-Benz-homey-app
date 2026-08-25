@@ -165,8 +165,27 @@ class MercedesMeApp extends Homey.App {
       engineRunning: getValue('engine_running'),
       climateOn: getValue('climate_active'),
       model: device.getName(),
+      homeyId: await this._getHomeyId(),
       pollingInterval: (device.getSetting('polling_interval') || 180) * 1000,
     };
+  }
+
+  // The widget turns its headline into a link to the device card, which the
+  // Homey apps open at https://my.homey.app/homeys/<homeyId>/devices/<deviceId>.
+  // The widget knows the device id from its own device picker; the Homey id
+  // is the one part it cannot get on its own. Cached once read - it never
+  // changes - and a failure is retried on the next status call rather than
+  // remembered, so a hiccup at startup does not leave the headline dead.
+  async _getHomeyId() {
+    if (this._homeyId === undefined) {
+      try {
+        this._homeyId = await this.homey.cloud.getHomeyId();
+      } catch (e) {
+        this.error('Could not read the Homey id for the widget device link:', e.message);
+        return null;
+      }
+    }
+    return this._homeyId;
   }
 }
 
