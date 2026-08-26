@@ -275,9 +275,15 @@ test('precondState and tcuConnectionStateLowChannel decode to plain values', asy
   const { parser } = makeParser();
   await parser.initialize();
 
-  const { precondState, tcuConnectionStateLowChannel } = require('./fixtures/issue-61-attributes');
+  const { precondState, tcuConnectionStateLowChannel, vint, len, cat } = require('./fixtures/issue-61-attributes');
 
-  assert.equal((await decodeAttribute(parser, 'precondState', precondState.bytes)).precondState, 1);
+  // The captured bytes are field 3 = 1: precond_immediate_support on an idle
+  // car (layout from mbapi2020's descriptor). The value is the running flag,
+  // activation_state at field 1, which proto3 omits when false - so the idle
+  // capture must decode to false, not to the 1 it was once read as (#73).
+  assert.equal((await decodeAttribute(parser, 'precondState', precondState.bytes)).precondState, false);
+  const active = len(44, cat(vint(1, 1), vint(3, 1)));
+  assert.equal((await decodeAttribute(parser, 'precondState', active)).precondState, true);
 
   // A bare varint in the oneof rather than a message.
   const tcu = await decodeAttribute(parser, 'tcuConnectionStateLowChannel', tcuConnectionStateLowChannel.bytes);

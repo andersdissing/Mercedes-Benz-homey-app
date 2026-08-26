@@ -5,6 +5,7 @@ const MercedesOAuth = require('../../lib/oauth');
 const MercedesAPI = require('../../lib/api');
 const { installRedactedLogging } = require('../../lib/log-redactor');
 const { describePushStaleness } = require('../../lib/staleness-message');
+const { mergePrecondState, isPrecondRunning, describePrecondState } = require('../../lib/precond-status');
 
 class MercedesVehicleDevice extends Homey.Device {
   /**
@@ -1029,13 +1030,26 @@ class MercedesVehicleDevice extends Homey.Device {
         this.error('[UPDATE] Error updating engine state:', e.message);
       }
 
-      // Climate control status
+      // Preconditioning - running or not. Not one attribute: a manual start
+      // (Mercedes me app's Preheat button, or our own command) flips
+      // precondNow, a departure-time start flips precondActive. Reading only
+      // precondActive left climate_active off for every manual start (#73).
+      // The last-known values are merged because a partial push carries only
+      // what changed - see lib/precond-status.js.
       try {
-        if (data.precondActive !== undefined) {
-          await this.setCapabilityValue('climate_active', data.precondActive === true);
+        const { state, seen } = mergePrecondState(this._precondState, data);
+        if (seen) {
+          this._precondState = state;
+          const running = isPrecondRunning(state);
+          const was = this.getCapabilityValue('climate_active');
+          if (was !== running) {
+            this.log(`[UPDATE] Preconditioning ${running ? 'running' : 'off'} (${describePrecondState(state)}, was: ${was})`);
+          }
+          await this.setCapabilityValue('climate_active', running);
+          await this.setCapabilityValue('onoff_precond', running);
         }
       } catch (e) {
-        this.error('[UPDATE] Error updating climate control status:', e.message);
+        this.error('[UPDATE] Error updating preconditioning status:', e.message);
       }
 
       // Tire pressures (already converted from kPa to bar in parser)
@@ -1594,14 +1608,9 @@ class MercedesVehicleDevice extends Homey.Device {
         this.error('[UPDATE] Error updating battery temperature:', e.message);
       }
 
-      // Preconditioning / auxiliary heating / remote start status - check both lowercase and camelCase variants
+      // Auxiliary heating / remote start status - check both lowercase and camelCase variants.
+      // (Preconditioning is derived above, from precondNow and precondActive together.)
       try {
-        const precondActiveValue = data.precondactive ?? data.precondActive;
-        if (precondActiveValue !== undefined) {
-          const precondActive = precondActiveValue === true || precondActiveValue === 'true' || precondActiveValue === 1;
-          await this.setCapabilityValue('onoff_precond', precondActive);
-        }
-
         const auxheatActiveValue = data.auxheatactive ?? data.auxheatActive;
         if (auxheatActiveValue !== undefined) {
           const auxheatActive = auxheatActiveValue === true || auxheatActiveValue === 'true' || auxheatActiveValue === 1;
