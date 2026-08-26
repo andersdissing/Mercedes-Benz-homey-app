@@ -87,16 +87,22 @@ message WeeklySetHUValue {
 
 // PrecondStateValue - the `precondState` attribute.
 //
-// A single varint at field 3, observed as 1. Whether it is a boolean or a state
-// enum cannot be told from one value, so it is typed as an int rather than a
-// bool: an int decodes a bool's wire form correctly, and the reverse silently
-// flattens every non-zero state to true.
+// Layout from mbapi2020's compiled descriptor (vehicle_events_pb2.py,
+// message PrecondState):
 //
-// Nothing consumes this. onoff_precond and climate_active are already driven by
-// the `precondactive` attribute, so this is only worth wiring up if it turns out
-// to carry more than that boolean does.
+//   1  bool activation_state
+//   2  repeated PrecondStateType precond_state_types   (enum, not decoded)
+//   3  bool precond_immediate_support
+//
+// The one varint ever observed here was field 3 = 1 on an idle car, and it
+// was read as "the state" for a while. It is the car saying it supports an
+// immediate preheat. The running flag is field 1, which proto3 omits when
+// false - which is why an idle car never showed it. The parser exposes
+// activation_state as the attribute's value; lib/precond-status.js ORs it
+// with precondNow and precondActive, as mbapi2020's precondStatus does.
 message PrecondStateValue {
-  int32 state = 3;
+  bool activation_state = 1;
+  bool precond_immediate_support = 3;
 }
 
 // Wire-compatible stand-in for google.protobuf.Int32Value - a single int32 at

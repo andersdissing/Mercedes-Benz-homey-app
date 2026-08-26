@@ -175,6 +175,16 @@ unlock ~4 s. Faster when the car is already awake.
   minted in its constructor meant a new app session every few minutes during
   an outage while the earlier ones were still live at Mercedes. `MercedesAPI`
   owns it now; mbapi2020 keeps one per integration lifetime.
+- **`precondActive` is not "preconditioning is running".** A manual start -
+  the Preheat button in the Mercedes me app, or our own command - flips
+  `precondNow`; only a departure-time start flips `precondActive`. Driving
+  climate_active from `precondActive` alone meant every manual start from
+  the me app went unseen (#73). mbapi2020 ORs the two with precondState's
+  activation flag; `lib/precond-status.js` does the same, with last-known
+  values merged because partial pushes carry only what changed. And
+  `precondState` field 3 - the one varint ever seen, 1 on an idle car - is
+  `precond_immediate_support`, not a state; the running flag is field 1,
+  omitted when false (layout read out of mbapi2020's `vehicle_events_pb2.py`).
 - **Nil attributes never reach `data`.** The parser drops attributes Mercedes
   sends as `nilValue`, so `if (data.x !== undefined)` never runs for them.
   `chargingPower` is nil whenever the car is not charging, which left
