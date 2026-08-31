@@ -1,7 +1,7 @@
 {
   "_comment": "This file is generated. Please edit .homeycompose/app.json instead.",
   "id": "com.mercedes.mbapi",
-  "version": "1.1.49",
+  "version": "1.1.50",
   "compatibility": ">=12.3.0",
   "sdk": 3,
   "platforms": [
@@ -1598,7 +1598,6 @@
       ],
       "capabilities": [
         "locked",
-        "measure_battery",
         "measure_charge_power",
         "odometer",
         "distance_start",
@@ -1674,12 +1673,58 @@
           "id": "login_credentials"
         }
       ],
-      "energy": {
-        "batteries": [
-          "OTHER"
-        ]
-      },
       "settings": [
+        {
+          "type": "group",
+          "label": {
+            "en": "Vehicle",
+            "nl": "Voertuig",
+            "de": "Fahrzeug"
+          },
+          "children": [
+            {
+              "id": "powertrain",
+              "type": "dropdown",
+              "label": {
+                "en": "Powertrain",
+                "nl": "Aandrijflijn",
+                "de": "Antrieb"
+              },
+              "hint": {
+                "en": "Detected automatically from what Mercedes reports your car can do. Set it by hand if the battery and charging values are shown for a petrol or diesel car, or missing on an electric one.",
+                "nl": "Wordt automatisch bepaald op basis van wat Mercedes over uw auto meldt. Stel dit handmatig in als accu- en laadwaarden worden getoond bij een benzine- of dieselauto, of ontbreken bij een elektrische auto.",
+                "de": "Wird automatisch anhand der von Mercedes gemeldeten Fahrzeugfunktionen erkannt. Stellen Sie ihn manuell ein, wenn Batterie- und Ladewerte bei einem Benziner oder Diesel angezeigt werden oder bei einem Elektrofahrzeug fehlen."
+              },
+              "value": "auto",
+              "values": [
+                {
+                  "id": "auto",
+                  "label": {
+                    "en": "Detect automatically",
+                    "nl": "Automatisch detecteren",
+                    "de": "Automatisch erkennen"
+                  }
+                },
+                {
+                  "id": "ev",
+                  "label": {
+                    "en": "Electric / plug-in hybrid",
+                    "nl": "Elektrisch / plug-in hybride",
+                    "de": "Elektro / Plug-in-Hybrid"
+                  }
+                },
+                {
+                  "id": "ice",
+                  "label": {
+                    "en": "Petrol / diesel",
+                    "nl": "Benzine / diesel",
+                    "de": "Benzin / Diesel"
+                  }
+                }
+              ]
+            }
+          ]
+        },
         {
           "type": "group",
           "label": {

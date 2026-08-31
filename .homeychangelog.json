@@ -191,5 +191,10 @@
     "en": "Climate active now switches on when the preheater is started from the Mercedes me app. The car reports a manual start and a departure-time start through different attributes, and the app only read the departure-time one, so a preheat started by hand in the Mercedes me app never showed in Homey. Both are read now, and the Preconditioning sensor follows the same answer.",
     "nl": "Klimaat actief gaat nu aan wanneer de voorverwarming vanuit de Mercedes me-app wordt gestart. De auto meldt een handmatige start en een start op vertrektijd via verschillende attributen, en de app las alleen die van de vertrektijd, waardoor een handmatig gestarte voorverwarming vanuit de Mercedes me-app nooit in Homey zichtbaar werd. Beide worden nu gelezen, en de sensor Voorconditionering volgt hetzelfde antwoord.",
     "de": "Klimaanlage aktiv schaltet sich jetzt ein, wenn die Vorheizung aus der Mercedes me App gestartet wird. Das Fahrzeug meldet einen manuellen Start und einen Start zur Abfahrtszeit über verschiedene Attribute, und die App las nur das der Abfahrtszeit, sodass eine von Hand in der Mercedes me App gestartete Vorheizung in Homey nie sichtbar wurde. Jetzt werden beide gelesen, und der Sensor Vorklimatisierung folgt derselben Antwort."
+  },
+  "1.1.50": {
+    "en": "Petrol and diesel cars no longer report a battery level or raise low-battery alerts. The powertrain is detected from what Mercedes reports your car can do, and can be set by hand under Powertrain in the device settings.",
+    "nl": "Benzine- en dieselauto's melden geen accuniveau meer en geven geen waarschuwingen voor een lage accu. De aandrijflijn wordt bepaald op basis van wat Mercedes over uw auto meldt en kan handmatig worden ingesteld bij Aandrijflijn in de apparaatinstellingen.",
+    "de": "Benzin- und Dieselfahrzeuge melden keinen Batteriestand mehr und lösen keine Warnungen wegen niedriger Batterie aus. Der Antrieb wird anhand der von Mercedes gemeldeten Fahrzeugfunktionen erkannt und kann in den Geräteeinstellungen unter Antrieb manuell eingestellt werden."
   }
 }
