@@ -500,16 +500,21 @@ class MercedesVehicleDriver extends Homey.Driver {
 
         await this._migrateVehicleCapabilities(device);
 
-        if (device.pollInterval) {
+        // Let go of the account's push session rather than disconnecting it:
+        // the account's other cars are on that same connection, and the
+        // re-init below re-attaches this device with the token just minted
+        // (AccountSession.attach adopts the fresher one). Disconnecting here
+        // would drop every car on the account and earn the handshake-seconds-
+        // later 429 for all of them.
+        if (typeof device._releaseSession === 'function') {
+          try {
+            await device._releaseSession();
+          } catch (releaseError) {
+            this.error('Releasing the account session during repair failed (non-fatal):', releaseError.message);
+          }
+        } else if (device.pollInterval) {
           clearInterval(device.pollInterval);
           device.pollInterval = null;
-        }
-        if (device.api && typeof device.api.disconnectWebSocket === 'function') {
-          try {
-            await device.api.disconnectWebSocket();
-          } catch (wsError) {
-            this.error('WebSocket disconnect during repair failed (non-fatal):', wsError.message);
-          }
         }
 
         if (typeof device.onInit === 'function') {

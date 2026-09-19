@@ -254,14 +254,37 @@ test('repeated refusals escalate from refreshing the token to logging in', async
   assert.ok(refreshes > 0, 'precondition: the cheap recovery was tried first');
   assert.equal(relogins, 1, 'the escalation must actually log in');
 
-  // The budget is per episode, not per attempt: a few logins paced by the
-  // widening windows, and after that only waiting.
-  for (let i = 0; i < 6; i++) await refuse(ws);
-  assert.equal(
-    relogins,
-    ws.MAX_RELOGIN_ATTEMPTS,
-    'the login budget must be spent one per attempt and then respected',
-  );
+  // Paced by the windows: one login per refused attempt, never two for the
+  // same one. A login is the heaviest request the app makes.
+  const spent = relogins;
+  await refuse(ws);
+  assert.equal(relogins, spent + 1, 'at most one login per backoff window');
+});
+
+test('a block long enough to reach the cap keeps logging in', async () => {
+  // Issue #81: the budget was three per *episode*, and the ladder reaches its
+  // half-hour cap on the fifth strike - about ten minutes in. So a nine-hour
+  // block spent every login it had in its first ten minutes and then knocked
+  // half-hourly for the rest of the day with nothing but a refreshed token,
+  // which is measured never to clear a session-level 429. The user's report is
+  // that exact loop: `Will re-authenticate before the next attempt (1/3)`,
+  // `Token refresh successful`, 429, over and over for nine hours.
+  const ws = makeWs();
+
+  let relogins = 0;
+  ws.setReloginHandler(async () => { relogins++; });
+
+  // Five refusals: 30s, 90s, 4.5 min, 13.5 min, then the cap.
+  for (let i = 0; i < 5; i++) await refuse(ws);
+
+  assert.equal(ws.blockedFor, ws.MAX_RATE_LIMIT_BACKOFF, 'precondition: the ladder is at its cap');
+  assert.equal(relogins, ws.MAX_RELOGIN_ATTEMPTS, 'precondition: the early budget is spent');
+
+  // From here the app knocks once every half hour. Spending that knock on a
+  // login rather than a refresh costs nothing extra and is the only lever it
+  // has left.
+  for (let i = 0; i < 4; i++) await refuse(ws);
+  assert.equal(relogins, ws.MAX_RELOGIN_ATTEMPTS + 4, 'every half-hourly knock must be a login');
 });
 
 test('a crashed login spends one attempt, not the whole recovery', async () => {
@@ -278,10 +301,13 @@ test('a crashed login spends one attempt, not the whole recovery', async () => {
     throw new Error('login crashed');
   });
 
-  for (let i = 0; i < 10; i++) await refuse(ws);
+  const refusals = 10;
+  for (let i = 0; i < refusals; i++) await refuse(ws);
 
   assert.ok(attempts >= 2, `a failed login must be retried on a later window (attempts: ${attempts})`);
-  assert.equal(attempts, ws.MAX_RELOGIN_ATTEMPTS, 'and the retries must still be bounded');
+  // Bounded by the backoff rather than by a counter: one login per refused
+  // attempt at most, and the attempts themselves are half an hour apart.
+  assert.ok(attempts <= refusals, `and never more than one per window (attempts: ${attempts})`);
 });
 
 test('the login budget survives the client being replaced', () => {

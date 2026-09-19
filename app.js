@@ -2,6 +2,7 @@
 
 const Homey = require('homey');
 const { installRedactedLogging } = require('./lib/log-redactor');
+const { AccountSessionRegistry } = require('./lib/account-session');
 
 class MercedesMeApp extends Homey.App {
 
@@ -113,6 +114,22 @@ class MercedesMeApp extends Homey.App {
     } catch (e) {
       this.error('Failed to log last login diagnostic (non-fatal):', e.message);
     }
+  }
+
+  /**
+   * The account sessions every device shares.
+   *
+   * One Mercedes connection per account, not per car: see
+   * lib/account-session.js for what two connections on one account cost
+   * (issue #81). Created on first use rather than in onInit so a device
+   * initialising unusually early can never find it missing.
+   */
+  getAccountSessions() {
+    if (!this._accountSessions) {
+      this._accountSessions = new AccountSessionRegistry(this.homey);
+    }
+
+    return this._accountSessions;
   }
 
   _getDevices() {

@@ -1,8 +1,6 @@
 'use strict';
 
 const Homey = require('homey');
-const MercedesOAuth = require('../../lib/oauth');
-const MercedesAPI = require('../../lib/api');
 const { installRedactedLogging } = require('../../lib/log-redactor');
 const { describePushStaleness } = require('../../lib/staleness-message');
 const { mergePrecondState, isPrecondRunning, describePrecondState } = require('../../lib/precond-status');
@@ -23,57 +21,44 @@ class MercedesVehicleDevice extends Homey.Device {
     this.log(`VIN: ${this.vin}, Region: ${this.region}`);
 
     try {
-      // Initialize OAuth with stored deviceGuid
-      this.oauth = new MercedesOAuth(this.homey, this.region, store.deviceGuid);
+      // Join this account's connection rather than opening one of our own.
+      //
+      // One Mercedes push session serves every car on the account - the stream
+      // arrives keyed by VIN - and opening a second one is what left a two-car
+      // account rate-limited for nine hours with two backoff ladders knocking
+      // past each other (issue #81). The session owns the OAuth identity, the
+      // token, the API client and the push connection; this device owns its
+      // VIN's share of the updates. See lib/account-session.js.
+      this.session = this.homey.app.getAccountSessions().acquire({
+        vin: this.vin,
+        region: this.region,
+        deviceGuid: store.deviceGuid,
+        username: store.username,
+        password: store.password,
+        token: store.token,
+        onPushData: (vin, vehicleData, fullUpdate) => this.onWebSocketData(vin, vehicleData, fullUpdate),
 
-      // Restore stored token if available
-      if (store.token) {
-        this.oauth.token = store.token;
-        this.log('OAuth token restored from store');
-      }
+        // A command that fails at the vehicle does so ~12s after it was sent,
+        // long after its Flow action returned - Homey abandons an action card
+        // before Mercedes reports completion, so the card can only ever report
+        // acceptance. This trigger is what makes the real outcome reachable.
+        onCommandFailed: (failure) => this.onCommandFailed(failure),
 
-      // Register callback to persist token updates (fixes disconnection after token refresh)
-      this.oauth.setTokenUpdateCallback(async (newToken) => {
-        this.log('Token refreshed, persisting to store...');
-        await this.setStoreValue('token', newToken);
-        this.log('Refreshed token persisted successfully');
+        // Every device keeps its own copy of the account's token, so any one of
+        // them can stand the session back up after a restart.
+        onTokenRefresh: async (newToken) => {
+          this.log('Token refreshed, persisting to store...');
+          await this.setStoreValue('token', newToken);
+          this.log('Refreshed token persisted successfully');
+        },
       });
 
-      // Initialize API client
-      this.api = new MercedesAPI(this.homey, this.oauth, this.region);
-      await this.api.initialize();
+      this.api = this.session.api;
+
+      // Protobuf parser loaded and a usable token in hand - logging in if the
+      // account has no valid one. Shared, so a two-car account does it once.
+      await this.session.ensureReady();
       this.log('API client and protobuf parser initialized');
-
-      // A command that fails at the vehicle does so ~12s after it was sent,
-      // long after its Flow action returned - Homey abandons an action card
-      // before Mercedes reports completion, so the card can only ever report
-      // acceptance. This trigger is what makes the real outcome reachable.
-      this.api.setCommandFailedHandler((failure) => this.onCommandFailed(failure));
-
-      // Last resort when Mercedes keeps refusing the push connection with
-      // HTTP 429: a refreshed token belongs to the session being refused, so
-      // only a fresh login can be given a new one. The WebSocket client calls
-      // this at most three times per episode, one per backoff window - it is
-      // the heaviest request the app makes, and hammering login at a rate
-      // limiter would be the fault in miniature.
-      this.api.setReloginHandler(async () => {
-        const credentials = this.getStore();
-        if (!credentials.username || !credentials.password) {
-          throw new Error('No stored credentials - re-pair the vehicle to enable re-login');
-        }
-
-        await this.oauth.login(credentials.username, credentials.password);
-        await this.setStoreValue('token', this.oauth.token);
-        this.log('[INIT] Re-login completed, token stored');
-      });
-
-      // Check if token is expired and refresh if needed
-      if (!this.oauth.token || MercedesOAuth.isTokenExpired(this.oauth.token)) {
-        this.log('Token expired, refreshing...');
-        await this.oauth.login(store.username, store.password);
-        await this.setStoreValue('token', this.oauth.token);
-        this.log('Token refreshed and stored');
-      }
 
       // Register capability listeners
       this.registerCapabilityListener('locked', this.onCapabilityLocked.bind(this));
@@ -434,7 +419,7 @@ class MercedesVehicleDevice extends Homey.Device {
       // Connect to WebSocket for real-time updates
       this.log('[INIT] Connecting to WebSocket for real-time updates...');
       try {
-        await this.api.connectWebSocket(this.onWebSocketData.bind(this));
+        await this.session.ensurePushConnection();
         this.log('[INIT] WebSocket connection established');
       } catch (error) {
         this.error('[INIT] Failed to connect WebSocket:', error.message);
@@ -534,17 +519,48 @@ class MercedesVehicleDevice extends Homey.Device {
    */
   async onDeleted() {
     this.log('Mercedes Vehicle has been deleted');
+    await this._releaseSession();
+  }
 
-    // Clear polling interval
+  /**
+   * onUninit is called when the device is destroyed - an app update, a repair,
+   * or the device being disabled.
+   *
+   * Letting go of the session here is what stops a re-initialising device from
+   * leaking the previous incarnation's timers, and letting *go* rather than
+   * disconnecting is what keeps the account's other cars connected.
+   */
+  async onUninit() {
+    this.log('Mercedes Vehicle is shutting down');
+    await this._releaseSession();
+  }
+
+  /** Stop this device's timers and let go of the account's push session. */
+  async _releaseSession() {
     if (this.pollInterval) {
       clearInterval(this.pollInterval);
+      this.pollInterval = null;
     }
 
     this._stopWebSocketHealthCheck();
 
-    // Disconnect WebSocket if connected
-    if (this.api && this.api.websocket) {
-      await this.api.disconnectWebSocket();
+    if (!this.session) return;
+
+    // Detached from the session object itself rather than looked up by
+    // account: a repair can change the stored login between attaching and
+    // letting go, and a lookup would then release a session this device was
+    // never on while leaving its real one holding a device that no longer
+    // exists.
+    //
+    // The session closes itself once its last vehicle has let go - after a
+    // short linger, so a device that is only re-initialising does not cost the
+    // account a teardown and a fresh handshake seconds later.
+    const session = this.session;
+    this.session = null;
+    try {
+      await session.detach(this.vin);
+    } catch (error) {
+      this.error('Could not release the account session:', error.message);
     }
   }
 
@@ -565,7 +581,7 @@ class MercedesVehicleDevice extends Homey.Device {
       this._wsHealthCheckRunning = true;
 
       try {
-        if (!this.api) return;
+        if (!this.api || !this.session) return;
 
         // Tell the user when push has been down long enough to matter.
         //
@@ -576,7 +592,7 @@ class MercedesVehicleDevice extends Homey.Device {
         // before anyone realised the app was not simply idle.
         await this._reportPushStaleness();
 
-        // api.connectWebSocket() is a no-op when the socket is healthy, so
+        // ensurePushConnection() is a no-op when the socket is healthy, so
         // this only acts when the connection is actually down or stale.
         //
         // Staleness matters as much as disconnection: a socket whose TCP
@@ -589,7 +605,10 @@ class MercedesVehicleDevice extends Homey.Device {
             ? `stale (no traffic for ${Math.round((idle || 0) / 1000)}s)`
             : 'not connected';
           this.log(`[WS-HEALTH] WebSocket is ${why} - reconnecting`);
-          await this.api.connectWebSocket(this.onWebSocketData.bind(this));
+          // Deduplicated inside the session: both cars of an account notice the
+          // same dead socket, and two handshakes for it is how the account got
+          // rate-limited in the first place.
+          await this.session.ensurePushConnection();
           this.log('[WS-HEALTH] Reconnect attempt completed');
         }
       } catch (error) {
