@@ -878,6 +878,46 @@ class MercedesVehicleDevice extends Homey.Device {
   }
 
   /**
+   * Electric consumption since start, next to the trip distance it belongs
+   * with.
+   *
+   * Read the way mbapi2020 reads it: the attribute's display value, which is
+   * the figure the Mercedes app shows, in the unit the account displays
+   * consumption in. That unit travels with the value, and the capability is
+   * kWh/100 km - so a value in any other unit is skipped rather than shown
+   * under the wrong label.
+   *
+   * The capability is added the first time a car actually reports this, not
+   * at pairing: plenty of cars never do (any non-electric one), and a tile
+   * that stays empty forever is worse than none. Insights start with the
+   * first value.
+   */
+  async _updateElectricConsumptionStart(data) {
+    const shown = data.electricconsumptionstart_display ?? data.electricconsumptionstart;
+    if (shown === undefined || shown === null || shown === '') return;
+
+    const unit = data.electricconsumptionstart_unit;
+    if (unit && unit !== 'KWH_PER_100KM' && unit !== 'UNSPECIFIED_ELECTRICITY_CONSUMPTION_UNIT') {
+      if (!this._consumptionUnitSkipped) {
+        this._consumptionUnitSkipped = true;
+        this.log(`[UPDATE] Electric consumption arrives in ${unit}, not kWh/100 km - not shown`);
+      }
+      return;
+    }
+
+    const value = parseFloat(String(shown).replace(',', '.'));
+    if (!Number.isFinite(value)) return;
+
+    if (!this.hasCapability('electric_consumption_start')) {
+      this.log('[UPDATE] Car reports electric consumption - adding electric_consumption_start');
+      await this.addCapability('electric_consumption_start');
+    }
+
+    this.log(`[UPDATE] Setting trip consumption to: ${value} kWh/100 km`);
+    await this.setCapabilityValue('electric_consumption_start', value);
+  }
+
+  /**
    * Apply one update. Callers go through updateCapabilities(), which serializes.
    */
   async _applyCapabilityUpdate(data) {
@@ -1125,6 +1165,14 @@ class MercedesVehicleDevice extends Homey.Device {
         }
       } catch (e) {
         this.error('[UPDATE] Error updating trip distance/time:', e.message);
+      }
+
+      // Trip consumption - its own block, because it may add a capability and
+      // a failure there must not cost the trip distance and time above.
+      try {
+        await this._updateElectricConsumptionStart(data);
+      } catch (e) {
+        this.error('[UPDATE] Error updating trip consumption:', e.message);
       }
 
       // Average speed since start - check both lowercase and camelCase variants

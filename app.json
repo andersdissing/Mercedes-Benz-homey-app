@@ -1981,6 +1981,25 @@
       "uiComponent": "sensor",
       "icon": "/assets/icons/ecoscore.svg"
     },
+    "electric_consumption_start": {
+      "type": "number",
+      "title": {
+        "en": "Trip Consumption",
+        "nl": "Ritverbruik",
+        "de": "Fahrtverbrauch"
+      },
+      "units": {
+        "en": "kWh/100 km"
+      },
+      "decimals": 1,
+      "min": 0,
+      "max": 999,
+      "getable": true,
+      "setable": false,
+      "insights": true,
+      "uiComponent": "sensor",
+      "icon": "/assets/icons/electric_range.svg"
+    },
     "engine_running": {
       "type": "boolean",
       "title": {
