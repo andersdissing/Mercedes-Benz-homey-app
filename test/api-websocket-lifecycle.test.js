@@ -31,6 +31,7 @@ function blockedClient(blockedUntil) {
   return {
     disposed: false,
     isHealthy: () => false,
+    isResting: () => false,
     isConnected: () => false,
     getRateLimitState: () => (blockedUntil > Date.now() ? { blockedUntil } : null),
     getIdleTime: () => null,

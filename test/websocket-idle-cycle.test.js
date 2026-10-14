@@ -647,3 +647,215 @@ test('a connection that opens cancels the cycle armed for the one before it', as
     ws.disconnect();
   }
 });
+
+// --- Step 3: a connection resting between cycles is not a dead one ---------
+
+/**
+ * The real device class, loaded against a stand-in for the Homey runtime -
+ * device.js cannot be required outside Homey otherwise. Only the health
+ * check and the staleness warning are exercised, on a bare instance.
+ */
+function loadDeviceClass() {
+  const homeyPath = require.resolve('homey');
+  require.cache[homeyPath] = {
+    id: homeyPath, filename: homeyPath, loaded: true, exports: { Device: class {} },
+  };
+  return require('../drivers/mercedes-vehicle/device');
+}
+
+function makeDevice({ api, session }) {
+  const MercedesVehicleDevice = loadDeviceClass();
+  const device = Object.create(MercedesVehicleDevice.prototype);
+  device.api = api;
+  device.session = session;
+  device.logs = [];
+  device.warnings = [];
+  device.log = (...args) => device.logs.push(args.join(' '));
+  device.error = (...args) => device.logs.push(args.join(' '));
+  device.setWarning = async (message) => { device.warnings.push(message); };
+  device.unsetWarning = async () => {};
+  return device;
+}
+
+/**
+ * A real MercedesAPI whose push client is the scripted one. Its own OAuth
+ * refuses to hand out a token, so if anything does rebuild the client the
+ * replacement fails before it can open a socket - nothing here reaches the
+ * network.
+ */
+function makeApiAround(ws) {
+  const homey = { app: { log() {}, error() {} } };
+  const oauth = {
+    endpoints: { rest: 'https://rest.invalid', widget: 'https://widget.invalid' },
+    getAccessToken: async () => { throw new Error('no token in tests'); },
+  };
+  const api = new MercedesAPI(homey, oauth, 'Europe');
+  api.protoParserInitialized = true;
+  api.websocket = ws;
+  return api;
+}
+
+test('isResting: only the cycle\'s own wait, or a connect already under way', async (t) => {
+  useFakeClock(t);
+  const { ws, sockets } = makeWs();
+
+  try {
+    assert.equal(ws.isResting(), false, 'never connected: nothing is coming back');
+
+    const sock = await connectAndOpen(ws, sockets);
+    assert.equal(ws.isResting(), false, 'open is healthy, not resting');
+
+    await advance(t, ws.IDLE_CLOSE_TIMEOUT);
+    assert.equal(ws.isResting(), true, 'closed idle, cycle pending');
+
+    await advance(t, ws.RECONNECT_AFTER_CLOSE);
+    assert.equal(ws.isConnecting, true);
+    assert.equal(ws.isResting(), true, 'the cycle is reconnecting');
+
+    // That handshake fails: the retry is the failure backoff, not the cycle.
+    sockets[1].emit('error', new Error('ECONNRESET'));
+    await flush();
+    assert.ok(ws.reconnectTimer);
+    assert.equal(ws.isResting(), false, 'a retry after a failure is not covered');
+
+    assert.ok(sock);
+  } finally {
+    ws.disconnect();
+  }
+  assert.equal(ws.isResting(), false, 'stopped is not resting');
+});
+
+test('a 1001 rotation rests on the cycle too', async (t) => {
+  useFakeClock(t);
+  const { ws, sockets } = makeWs();
+
+  try {
+    const sock = await connectAndOpen(ws, sockets);
+    sock.readyState = WebSocket.CLOSED;
+    sock.emit('close', 1001, Buffer.from('rotation'));
+    assert.equal(ws.isResting(), true);
+  } finally {
+    ws.disconnect();
+  }
+});
+
+test('a stranded client - closed, nothing pending - is not resting', async (t) => {
+  useFakeClock(t);
+  const { ws, sockets } = makeWs();
+
+  try {
+    await connectAndOpen(ws, sockets);
+    await advance(t, ws.IDLE_CLOSE_TIMEOUT);
+    cancelReconnect(ws);
+    assert.equal(ws.isResting(), false, 'this is what the health check is for');
+  } finally {
+    ws.disconnect();
+  }
+});
+
+test('the API leaves a resting client alone instead of rebuilding it', async (t) => {
+  useFakeClock(t);
+  const { ws, sockets } = makeWs();
+  const api = makeApiAround(ws);
+
+  try {
+    await connectAndOpen(ws, sockets);
+    await advance(t, ws.IDLE_CLOSE_TIMEOUT);
+    assert.equal(api.isWebSocketResting(), true);
+
+    await api.connectWebSocket(() => {});
+    assert.equal(api.websocket, ws, 'the resting client is kept');
+    assert.equal(ws.isStopping, false, 'and not disposed');
+    assert.equal(sockets.length, 1, 'no handshake inside the 60s wait');
+  } finally {
+    ws.disconnect();
+    await api.disconnectWebSocket();
+  }
+});
+
+test('the health check does not reconnect inside the 60s wait; the cycle does at 60s', async (t) => {
+  useFakeClock(t);
+  const { ws, sockets } = makeWs();
+  const api = makeApiAround(ws);
+  const device = makeDevice({
+    api,
+    session: { ensurePushConnection: () => api.connectWebSocket(() => {}) },
+  });
+  // A tick that lands 10s into the wait, and another 50s in.
+  device.WS_HEALTH_CHECK_INTERVAL = 40000;
+
+  try {
+    device._startWebSocketHealthCheck();
+    await connectAndOpen(ws, sockets);
+
+    await advance(t, ws.IDLE_CLOSE_TIMEOUT + ws.RECONNECT_AFTER_CLOSE - 1);
+    assert.equal(sockets.length, 1, 'no handshake from the health check');
+    assert.equal(api.websocket, ws, 'and no rebuilt client');
+    assert.equal(device.logs.filter((l) => l.includes('reconnecting')).length, 0);
+
+    await advance(t, 1);
+    assert.equal(sockets.length, 2, 'the cycle brings it back on time');
+  } finally {
+    device._stopWebSocketHealthCheck();
+    ws.disconnect();
+    await api.disconnectWebSocket();
+  }
+});
+
+test('the health check still rescues a stranded connection', async (t) => {
+  useFakeClock(t);
+  let rescues = 0;
+  const device = makeDevice({
+    api: {
+      isWebSocketHealthy: () => false,
+      isWebSocketResting: () => false,
+      isWebSocketConnected: () => false,
+      getWebSocketIdleTime: () => null,
+      getWebSocketRateLimitRemaining: () => 0,
+      getRestRateLimitRemaining: () => 0,
+    },
+    session: { ensurePushConnection: async () => { rescues++; } },
+  });
+
+  try {
+    device._startWebSocketHealthCheck();
+    await advance(t, 300000);
+    assert.equal(rescues, 1);
+  } finally {
+    device._stopWebSocketHealthCheck();
+  }
+});
+
+test('resting between cycles never raises the push-down warning; really down does', async (t) => {
+  useFakeClock(t);
+  let resting = true;
+  const device = makeDevice({
+    api: {
+      isWebSocketHealthy: () => false,
+      isWebSocketResting: () => resting,
+      isWebSocketConnected: () => false,
+      getWebSocketIdleTime: () => null,
+      getWebSocketRateLimitRemaining: () => 0,
+      getRestRateLimitRemaining: () => 0,
+    },
+    session: { ensurePushConnection: async () => {} },
+  });
+
+  try {
+    device._startWebSocketHealthCheck();
+
+    // A parked car: the health check catches it between cycles every time.
+    for (let i = 0; i < 24; i++) await advance(t, 300000); // 2 hours
+    assert.equal(device.warnings.length, 0);
+    assert.equal(device._wsDownSince, null);
+
+    // Really down: the hour counts from here.
+    resting = false;
+    for (let i = 0; i < 12; i++) await advance(t, 300000);
+    assert.equal(device.warnings.length, 0, 'not before the hour');
+    await advance(t, 300000);
+    assert.equal(device.warnings.length, 1);
+  } finally {
+    device._stopWebSocketHealthCheck();
+  }
+});

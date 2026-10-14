@@ -663,7 +663,11 @@ class MercedesVehicleDevice extends Homey.Device {
         // path was dropped without a close frame stays in readyState OPEN
         // indefinitely. Checking "connected" alone would keep declaring
         // that zombie healthy while no vehicle data ever arrives again.
-        if (!this.api.isWebSocketHealthy()) {
+        //
+        // A connection the app closed itself and will bring back on the idle
+        // cycle is neither. Reconnecting it from here would handshake inside
+        // the 60s wait - the always-on pattern again, five minutes at a time.
+        if (!this.api.isWebSocketHealthy() && !this.api.isWebSocketResting()) {
           const idle = this.api.getWebSocketIdleTime();
           const why = this.api.isWebSocketConnected()
             ? `stale (no traffic for ${Math.round((idle || 0) / 1000)}s)`
@@ -690,10 +694,11 @@ class MercedesVehicleDevice extends Homey.Device {
    *
    * Keyed off how long the socket has been down rather than how long since
    * the last push: a parked car legitimately pushes nothing for hours, so
-   * silence alone is not a fault.
+   * silence alone is not a fault. Nor is the idle cycle's rest between
+   * connections: that is the connection working as intended.
    */
   async _reportPushStaleness() {
-    if (this.api.isWebSocketHealthy()) {
+    if (this.api.isWebSocketHealthy() || this.api.isWebSocketResting()) {
       this._wsDownSince = null;
       await this._clearPushStaleWarning();
       return;
