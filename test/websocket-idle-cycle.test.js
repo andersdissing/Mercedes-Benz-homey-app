@@ -357,11 +357,11 @@ test('the API hands every client it builds the same ignition map', async () => {
   }
 });
 
-test('a pending command holds the connection open until Mercedes ends it', async (t) => {
+test('a command still waiting for its answer holds the connection open', async (t) => {
   useFakeClock(t);
   const { ws, sockets, push } = makeWs();
-  // Only the pending command under test here; the 180s hold after a command
-  // has tests of its own (step 4).
+  // Only the command under way is under test here; the 180s hold after a
+  // command has tests of its own (step 4).
   ws.COMMAND_HOLD_OPEN = 0;
 
   try {
@@ -1252,6 +1252,29 @@ test('after a block, two clean cycles keep the ladder; five clear it and the nex
     assert.equal(ws.rateLimitStrikes, 0);
     await refuseLatest(sockets);
     assert.equal(await untilNextHandshake(t, sockets), 30000, 'a fresh episode starts at the bottom');
+  } finally {
+    ws.disconnect();
+  }
+});
+
+test('an accepted command that never finishes holds the connection 180s, not its 5-minute tracking', async (t) => {
+  useFakeClock(t);
+  const { ws, sockets, push, logs } = makeWs();
+
+  try {
+    const sock = await connectAndOpen(ws, sockets);
+    const command = ws.sendCommand(Buffer.from('lock'), 'REQ1', 'lock', 'VIN1');
+    await flush();
+    await push(sock, commandStatus('REQ1', ACCEPTED));
+    await command;
+    assert.equal(ws.pendingCommands.size, 1, 'accepted, still open at Mercedes - FINISHED never comes');
+
+    await advance(t, 179000);
+    assert.equal(isOpen(ws), true);
+    await advance(t, 1000);
+    assert.equal(isOpen(ws), false, 'closed 180s after the command, not at the 300s tracking timeout');
+    assert.equal(ws.pendingCommands.size, 0, 'and its tracking is let go with the connection');
+    assert.ok(logs.some((l) => l.includes('still without a final status 180s after sending')));
   } finally {
     ws.disconnect();
   }
