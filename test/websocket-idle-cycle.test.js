@@ -307,6 +307,9 @@ test('the API hands every client it builds the same ignition map', async () => {
 test('a pending command holds the connection open until Mercedes ends it', async (t) => {
   useFakeClock(t);
   const { ws, sockets, push } = makeWs();
+  // Only the pending command under test here; the 180s hold after a command
+  // has tests of its own (step 4).
+  ws.COMMAND_HOLD_OPEN = 0;
 
   try {
     const sock = await connectAndOpen(ws, sockets);
@@ -857,5 +860,198 @@ test('resting between cycles never raises the push-down warning; really down doe
     assert.equal(device.warnings.length, 1);
   } finally {
     device._stopWebSocketHealthCheck();
+  }
+});
+
+// --- Step 4: commands skip the 60s wait (not a 429), and hold for 180s -----
+
+/** A command status frame for one request on VIN1 (7 accepted, 5 finished). */
+function commandStatus(requestId, state, sequenceNumber = 2) {
+  return {
+    msg: 'apptwinCommandStatusUpdatesByVin',
+    apptwinCommandStatusUpdatesByVin: {
+      sequenceNumber,
+      updatesByVin: { VIN1: { updatesByPid: { 1: { requestId, state } } } },
+    },
+  };
+}
+
+const ACCEPTED = 7;
+const FINISHED = 5;
+
+/** Has this socket carried the given command buffer? */
+const carried = (sock, text) => sock.sent.some((b) => Buffer.from(b).toString() === text);
+
+test('a command during the 60s wait connects at once instead of waiting for the cycle', async (t) => {
+  useFakeClock(t);
+  const { ws, sockets, push } = makeWs();
+
+  try {
+    await connectAndOpen(ws, sockets);
+    await advance(t, ws.IDLE_CLOSE_TIMEOUT); // idle close at 30s, cycle due at 90s
+    await advance(t, 10000);
+
+    const command = ws.sendCommand(Buffer.from('lock'), 'REQ1', 'lock', 'VIN1');
+    await flush();
+    assert.equal(sockets.length, 2, 'handshake at 40s, not at 90s');
+    assert.equal(ws.reconnectTimer, null, 'the cycle is cancelled, not left to fire on top');
+
+    const sock = await openLatest(sockets);
+    await push(sock, vep({ soc: 80 })); // the session warms up
+    await advance(t, 1000);
+    assert.ok(carried(sock, 'lock'), 'the command went out on the new connection');
+
+    await push(sock, commandStatus('REQ1', ACCEPTED));
+    assert.deepEqual(await command, { success: true, state: 'ACKED_BY_APPTWIN' });
+
+    await advance(t, 60000);
+    assert.equal(sockets.length, 2, 'and no second handshake when the old cycle would have fired');
+  } finally {
+    ws.disconnect();
+  }
+});
+
+test('inside a 429 window a command is refused at once, without a handshake', { timeout: 10000 }, async (t) => {
+  useFakeClock(t);
+  const { ws, sockets } = makeWs();
+
+  try {
+    await connectAndOpen(ws, sockets);
+    ws._registerRateLimit(300000);
+    await advance(t, ws.IDLE_CLOSE_TIMEOUT); // closed; the window has 270s left
+    await advance(t, 10000);
+
+    // Checked before awaiting the outcome: a command that did handshake would
+    // wait on a socket that never opens, and the test would hang, not fail.
+    const outcome = ws.sendCommand(Buffer.from('lock'), 'REQ1', 'lock', 'VIN1')
+      .then(() => null, (error) => error);
+    await flush();
+    assert.equal(sockets.length, 1, 'no handshake into the window');
+
+    const error = await outcome;
+    assert.ok(error, 'the command is refused');
+    assert.match(
+      error.message,
+      /rate-limiting the push connection \(HTTP 429\)\. Not reconnecting for another ~5 min/,
+    );
+    assert.ok(ws.reconnectTimer, 'and the wait for the window is left in place');
+
+    await advance(t, 260000 - 1);
+    assert.equal(sockets.length, 1);
+    await advance(t, 1);
+    assert.equal(sockets.length, 2, 'the connection comes back when the window ends');
+  } finally {
+    ws.disconnect();
+  }
+});
+
+test('the connection stays open 180s after a command, then closes', async (t) => {
+  useFakeClock(t);
+  const { ws, sockets, push } = makeWs();
+
+  try {
+    const sock = await connectAndOpen(ws, sockets);
+    await advance(t, 5000);
+
+    const command = ws.sendCommand(Buffer.from('lock'), 'REQ1', 'lock', 'VIN1');
+    await flush();
+    await push(sock, commandStatus('REQ1', ACCEPTED));
+    await command;
+
+    await advance(t, 10000);
+    await push(sock, commandStatus('REQ1', FINISHED, 3));
+    assert.equal(ws.pendingCommands.size, 0, 'finished at 15s');
+
+    // Nothing more from the car. Without the hold this closed at 45s.
+    await advance(t, 185000 - 15000 - 1000);
+    assert.equal(isOpen(ws), true, 'still open at 184s');
+    await advance(t, 1000);
+    assert.equal(isOpen(ws), false, 'closed at 185s: 180s after the command');
+    assert.equal(ws.stats.closes.idle, 1);
+
+    await advance(t, ws.RECONNECT_AFTER_CLOSE);
+    assert.equal(sockets.length, 2, 'and back on the cycle 60s later');
+  } finally {
+    ws.disconnect();
+  }
+});
+
+test('data near the end of the hold still gets its own 30s', async (t) => {
+  useFakeClock(t);
+  const { ws, sockets, push } = makeWs();
+
+  try {
+    const sock = await connectAndOpen(ws, sockets);
+    const command = ws.sendCommand(Buffer.from('lock'), 'REQ1', 'lock', 'VIN1');
+    await flush();
+    await push(sock, commandStatus('REQ1', FINISHED));
+    await command;
+
+    await advance(t, 170000);
+    await push(sock, vep({ doorlockstatusvehicle: 2 }));
+
+    await advance(t, 29000);
+    assert.equal(isOpen(ws), true, 'the hold has ended, but the data is only 29s old');
+    await advance(t, 1000);
+    assert.equal(isOpen(ws), false, '30s after the data');
+  } finally {
+    ws.disconnect();
+  }
+});
+
+test('a second command inside the hold uses the open connection and extends it', async (t) => {
+  useFakeClock(t);
+  const { ws, sockets, push } = makeWs();
+
+  try {
+    const sock = await connectAndOpen(ws, sockets);
+    const first = ws.sendCommand(Buffer.from('lock'), 'REQ1', 'lock', 'VIN1');
+    await flush();
+    await push(sock, commandStatus('REQ1', FINISHED));
+    await first;
+
+    await advance(t, 100000);
+    const second = ws.sendCommand(Buffer.from('windows'), 'REQ2', 'windows', 'VIN1');
+    await flush();
+    assert.ok(carried(sock, 'windows'), 'sent on the connection the hold kept');
+    assert.equal(sockets.length, 1, 'no handshake for the second command');
+    await push(sock, commandStatus('REQ2', FINISHED, 3));
+    await second;
+
+    await advance(t, 179000);
+    assert.equal(isOpen(ws), true, 'held 180s from the second command, not the first');
+    await advance(t, 1000);
+    assert.equal(isOpen(ws), false);
+  } finally {
+    ws.disconnect();
+  }
+});
+
+test('a command arriving while the cycle reconnects joins it and goes once it warms up', async (t) => {
+  useFakeClock(t);
+  const { ws, sockets, push } = makeWs();
+
+  try {
+    await connectAndOpen(ws, sockets);
+    await advance(t, ws.IDLE_CLOSE_TIMEOUT + ws.RECONNECT_AFTER_CLOSE);
+    assert.equal(ws.isConnecting, true, 'the cycle is mid-handshake');
+
+    const command = ws.sendCommand(Buffer.from('lock'), 'REQ1', 'lock', 'VIN1');
+    await flush();
+    assert.equal(sockets.length, 2, 'it joins the handshake under way, not a second one');
+
+    const sock = await openLatest(sockets);
+    await push(sock, vep({ soc: 80 }));
+    await advance(t, 1000);
+
+    // Joining an attempt that was already under way used to leave the warmup
+    // unseen - the attempt kept the handler it started with - so the command
+    // sat out the full 30s before going.
+    assert.ok(carried(sock, 'lock'), 'sent within a second of the session warming up');
+
+    await push(sock, commandStatus('REQ1', ACCEPTED));
+    await command;
+  } finally {
+    ws.disconnect();
   }
 });
