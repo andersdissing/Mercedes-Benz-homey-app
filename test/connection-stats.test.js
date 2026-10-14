@@ -128,7 +128,10 @@ test('an abnormal close and a dead socket both count as drops', async (t) => {
     ws.reconnectTimer = null;
 
     // The liveness watchdog tears a silent socket down without its 'close'
-    // ever reaching the handler, so it has to be counted on its own.
+    // ever reaching the handler, so it has to be counted on its own. Only a
+    // connection held open on purpose lives long enough for it to fire - an
+    // idle one is closed at 30s - so hold this one open with the ignition.
+    ws.ignitionStates.VIN1 = true;
     await connectAndOpen(ws, sockets);
     t.mock.timers.tick(ws.INITIAL_WATCHDOG_TIMEOUT);
     assert.equal(stats.closes.drop, 2, 'a socket the watchdog gave up on is a drop too');
