@@ -15,7 +15,15 @@ const MercedesAPI = require('../lib/api');
  * would make the suite take as long as a parked car.
  */
 
-/** Scriptable stand-in for a `ws` client that answers pings like a live one. */
+/**
+ * Scriptable stand-in for a `ws` client that answers pings like a live one.
+ *
+ * It fails the way `ws` fails, because that is where the reconnect logic has
+ * been fooled before: every failed upgrade - a refusal, ECONNREFUSED, a
+ * timeout - reports 'error' and then 'close' 1006, on a socket that never
+ * opened. A stand-in that stops at 'error' hides any close handler that
+ * mistakes that for a connection that was up.
+ */
 class ScriptedSocket {
   constructor() {
     this.readyState = WebSocket.CONNECTING;
@@ -39,10 +47,35 @@ class ScriptedSocket {
 
   close(code, reason) {
     this.closedWith = { code, reason };
-    this.readyState = WebSocket.CLOSED;
+    if (this.readyState === WebSocket.CONNECTING) {
+      this._abortHandshake();
+      return;
+    }
+    if (this.readyState === WebSocket.OPEN) {
+      this.readyState = WebSocket.CLOSED;
+      process.nextTick(() => this.emit('close', code, Buffer.from(reason || '')));
+    }
   }
 
-  terminate() { this.readyState = WebSocket.CLOSED; }
+  /** As ws: aborting a handshake reports itself on the next tick. */
+  terminate() {
+    if (this.readyState === WebSocket.CONNECTING) {
+      this._abortHandshake();
+      return;
+    }
+    if (this.readyState === WebSocket.OPEN) {
+      this.readyState = WebSocket.CLOSED;
+      process.nextTick(() => this.emit('close', 1006, Buffer.alloc(0)));
+    }
+  }
+
+  _abortHandshake() {
+    this.readyState = WebSocket.CLOSED;
+    process.nextTick(() => {
+      this.emit('error', new Error('WebSocket was closed before the connection was established'));
+      this.emit('close', 1006, Buffer.alloc(0));
+    });
+  }
 
   ping() {
     this.pings++;
@@ -56,6 +89,26 @@ class ScriptedSocket {
 }
 
 const flush = () => new Promise((resolve) => setImmediate(resolve));
+
+/**
+ * Deliver a network event the way the network does: from a macrotask.
+ *
+ * Order matters here. After a macrotask Node runs the nextTick queue before
+ * any promise continuation, so the 'close' 1006 that ws queues when it aborts
+ * a refused handshake reaches the close handler *before* connect() gets to
+ * its catch. Emitting from inside a test's own async code inverts that, and
+ * hid exactly the bug where that close was taken for an open connection's.
+ */
+function fromNetwork(fn) {
+  return new Promise((resolve) => setImmediate(() => { fn(); resolve(); }));
+}
+
+/** A transport failure on the upgrade, reported as ws reports it. */
+function failHandshake(sock, error = new Error('connect ECONNREFUSED')) {
+  sock.readyState = WebSocket.CLOSED;
+  sock.emit('error', error);
+  sock.emit('close', 1006, Buffer.alloc(0));
+}
 
 /** isConnected() answers null rather than false once the socket is gone. */
 const isOpen = (ws) => Boolean(ws.isConnected());
@@ -385,7 +438,9 @@ test('a 429 between clean cycles starts the count over', async (t) => {
 
     const refused = ws.connectOrThrow(ws.messageHandler);
     await flush();
-    sockets[sockets.length - 1].emit('unexpected-response', {}, { statusCode: 429, headers: {}, resume() {} });
+    await fromNetwork(() => sockets[sockets.length - 1].emit(
+      'unexpected-response', {}, { statusCode: 429, headers: {}, resume() {} },
+    ));
     await assert.rejects(refused, /429/);
     assert.equal(ws.rateLimitStrikes, 4);
 
@@ -608,7 +663,7 @@ test('a failed handshake keeps the escalating backoff, not the cycle', async (t)
     assert.equal(sockets.length, 2);
 
     // Not a 429: a transport failure on the handshake.
-    sockets[1].emit('error', new Error('ECONNRESET'));
+    failHandshake(sockets[1]);
     await flush();
 
     await advance(t, 10000 - 1);
@@ -716,7 +771,7 @@ test('isResting: only the cycle\'s own wait, or a connect already under way', as
     assert.equal(ws.isResting(), true, 'the cycle is reconnecting');
 
     // That handshake fails: the retry is the failure backoff, not the cycle.
-    sockets[1].emit('error', new Error('ECONNRESET'));
+    failHandshake(sockets[1]);
     await flush();
     assert.ok(ws.reconnectTimer);
     assert.equal(ws.isResting(), false, 'a retry after a failure is not covered');
@@ -1060,7 +1115,9 @@ test('a command arriving while the cycle reconnects joins it and goes once it wa
 
 /** Refuse the newest handshake the way Mercedes does. */
 async function refuseLatest(sockets, headers = {}) {
-  sockets[sockets.length - 1].emit('unexpected-response', {}, { statusCode: 429, headers, resume() {} });
+  await fromNetwork(() => sockets[sockets.length - 1].emit(
+    'unexpected-response', {}, { statusCode: 429, headers, resume() {} },
+  ));
   await flush();
 }
 

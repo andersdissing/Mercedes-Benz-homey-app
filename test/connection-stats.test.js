@@ -13,7 +13,10 @@ const MercedesAPI = require('../lib/api');
  * connections ended.
  */
 
-/** Minimal scriptable stand-in for a `ws` client. */
+/**
+ * Minimal scriptable stand-in for a `ws` client. Fails the way `ws` does: an
+ * aborted handshake reports 'error' then 'close' 1006 on the next tick.
+ */
 class ScriptedSocket {
   constructor() {
     this.readyState = WebSocket.CONNECTING;
@@ -31,9 +34,17 @@ class ScriptedSocket {
 
   removeAllListeners() { this.handlers = {}; }
 
-  close() { this.readyState = WebSocket.CLOSED; }
+  close() { this.terminate(); }
 
-  terminate() { this.readyState = WebSocket.CLOSED; }
+  terminate() {
+    const wasConnecting = this.readyState === WebSocket.CONNECTING;
+    this.readyState = WebSocket.CLOSED;
+    if (!wasConnecting) return;
+    process.nextTick(() => {
+      this.emit('error', new Error('WebSocket was closed before the connection was established'));
+      this.emit('close', 1006, Buffer.alloc(0));
+    });
+  }
 
   ping() {}
 }
@@ -149,14 +160,19 @@ test('a 429 on the upgrade is counted as a refusal, not as a failure', async (t)
   try {
     const attempt = ws.connectOrThrow(() => {});
     await flush();
-    sockets[0].emit('unexpected-response', {}, { statusCode: 429, headers: {}, resume() {} });
-    sockets[0].emit('error', new Error('socket hang up'));
+    // From a macrotask, as the network delivers it - see the idle-cycle tests.
+    await new Promise((resolve) => setImmediate(() => {
+      sockets[0].emit('unexpected-response', {}, { statusCode: 429, headers: {}, resume() {} });
+      resolve();
+    }));
     await assert.rejects(attempt, /429/);
+    await flush(); // the abort's 'error' and 'close' 1006 land on the next tick
 
     assert.equal(stats.handshakes, 1);
     assert.equal(stats.rateLimited, 1);
     assert.equal(stats.failed, 0, 'the teardown error after a 429 is not a second failure');
     assert.equal(stats.opened, 0);
+    assert.equal(stats.closes.drop, 0, 'a refused upgrade is not a lost connection');
   } finally {
     ws.disconnect();
   }
