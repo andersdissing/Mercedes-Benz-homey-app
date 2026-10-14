@@ -433,3 +433,217 @@ test('five minutes of stable connection still clears the ladder (1dab8c4)', asyn
     ws.disconnect();
   }
 });
+
+// --- Step 2: come back 60s after a close, never inside a 429 window --------
+
+/**
+ * Advance the fake clock a second at a time, letting the async connect path
+ * run as it goes.
+ *
+ * One big tick() is wrong for chained timers: the mock moves the clock to the
+ * *end* of the tick before running what fell due, so a close that fell due
+ * halfway through runs with Date.now() at the end - and arms its 60s wait
+ * from there.
+ */
+async function advance(t, ms) {
+  let left = ms;
+  while (left > 0) {
+    const step = Math.min(1000, left);
+    t.mock.timers.tick(step);
+    left -= step;
+    await flush();
+  }
+}
+
+/** Open the socket the reconnect timer just created. */
+async function openLatest(sockets) {
+  const sock = sockets[sockets.length - 1];
+  sock.readyState = WebSocket.OPEN;
+  sock.emit('open');
+  await flush();
+  return sock;
+}
+
+test('after an idle close the next connection comes 60s later, not sooner', async (t) => {
+  useFakeClock(t);
+  const { ws, sockets } = makeWs();
+
+  try {
+    await connectAndOpen(ws, sockets);
+    await advance(t, ws.IDLE_CLOSE_TIMEOUT);
+    assert.equal(sockets.length, 1);
+
+    await advance(t, ws.RECONNECT_AFTER_CLOSE - 1);
+    assert.equal(sockets.length, 1, 'no handshake inside the 60s');
+
+    await advance(t, 1);
+    assert.equal(sockets.length, 2, 'one handshake at 60s');
+    assert.equal(ws.reconnectAttempts, 0, 'a close is not a failed attempt');
+  } finally {
+    ws.disconnect();
+  }
+});
+
+test('a 1001 rotation, a 1000 and a drop all come back on the 60s cycle', async (t) => {
+  useFakeClock(t);
+
+  for (const code of [1001, 1000, 1006]) {
+    const { ws, sockets, push } = makeWs();
+    try {
+      const sock = await connectAndOpen(ws, sockets);
+      // While driving: held open, so it is Mercedes that ends it.
+      await push(sock, vep({ ignitionstate: 4 }));
+      await advance(t, 5000);
+
+      sock.readyState = WebSocket.CLOSED;
+      sock.emit('close', code, Buffer.from(''));
+
+      await advance(t, ws.RECONNECT_AFTER_CLOSE - 1);
+      assert.equal(sockets.length, 1, `close ${code} must not reconnect inside the cycle`);
+      await advance(t, 1);
+      assert.equal(sockets.length, 2, `close ${code} reconnects at 60s`);
+    } finally {
+      ws.disconnect();
+    }
+  }
+});
+
+test('a connection the liveness watchdog gave up on comes back on the cycle too', async (t) => {
+  useFakeClock(t);
+  const { ws, sockets, push } = makeWs();
+
+  try {
+    const sock = await connectAndOpen(ws, sockets);
+    await push(sock, vep({ ignitionstate: 4 }));
+    sock.answerPings = false; // half-open: nothing comes back
+
+    await advance(t, ws.INITIAL_WATCHDOG_TIMEOUT);
+    assert.equal(isOpen(ws), false, 'declared dead');
+    assert.equal(ws.stats.closes.drop, 1);
+
+    await advance(t, ws.RECONNECT_AFTER_CLOSE - 1);
+    assert.equal(sockets.length, 1);
+    await advance(t, 1);
+    assert.equal(sockets.length, 2);
+  } finally {
+    ws.disconnect();
+  }
+});
+
+test('a parked car cycles: one handshake every 90s', async (t) => {
+  useFakeClock(t);
+  const { ws, sockets } = makeWs();
+
+  try {
+    await connectAndOpen(ws, sockets);
+    for (let cycle = 0; cycle < 3; cycle++) {
+      await advance(t, ws.IDLE_CLOSE_TIMEOUT);
+      await advance(t, ws.RECONNECT_AFTER_CLOSE);
+      await openLatest(sockets);
+    }
+
+    // 30s open + 60s closed. Around 40 handshakes an hour, as mbapi2020.
+    assert.equal(ws.stats.handshakes, 4);
+    assert.equal(ws.stats.closes.idle, 3);
+    assert.equal(isOpen(ws), true);
+  } finally {
+    ws.disconnect();
+  }
+});
+
+test('a 429 window longer than the cycle is waited out in full', async (t) => {
+  useFakeClock(t);
+  const { ws, sockets } = makeWs();
+
+  try {
+    await connectAndOpen(ws, sockets);
+    await advance(t, ws.IDLE_CLOSE_TIMEOUT); // closed, cycle armed for 60s
+
+    // Another path collects a 429 ten seconds later: Mercedes asks for 2 min.
+    await advance(t, 10000);
+    ws._registerRateLimit(120000);
+
+    // The cycle timer fires at 60s, re-reads the window and keeps waiting.
+    await advance(t, 50000);
+    assert.equal(sockets.length, 1, 'the cycle must not handshake into a live window');
+
+    await advance(t, 120000 - 50000 - 1);
+    assert.equal(sockets.length, 1);
+    await advance(t, 1);
+    assert.equal(sockets.length, 2, 'and comes back the moment it ends');
+  } finally {
+    ws.disconnect();
+  }
+});
+
+test('a window already running when the connection closes sets the wait', async (t) => {
+  useFakeClock(t);
+  const { ws, sockets } = makeWs();
+
+  try {
+    await connectAndOpen(ws, sockets);
+    ws._registerRateLimit(300000);
+    await advance(t, ws.IDLE_CLOSE_TIMEOUT); // 270s of the window left
+
+    await advance(t, 270000 - 1);
+    assert.equal(sockets.length, 1);
+    await advance(t, 1);
+    assert.equal(sockets.length, 2);
+  } finally {
+    ws.disconnect();
+  }
+});
+
+test('a failed handshake keeps the escalating backoff, not the cycle', async (t) => {
+  useFakeClock(t);
+  const { ws, sockets } = makeWs();
+
+  try {
+    await connectAndOpen(ws, sockets);
+    await advance(t, ws.IDLE_CLOSE_TIMEOUT);
+    await advance(t, ws.RECONNECT_AFTER_CLOSE);
+    assert.equal(sockets.length, 2);
+
+    // Not a 429: a transport failure on the handshake.
+    sockets[1].emit('error', new Error('ECONNRESET'));
+    await flush();
+
+    await advance(t, 10000 - 1);
+    assert.equal(sockets.length, 2);
+    await advance(t, 1);
+    assert.equal(sockets.length, 3, 'first retry after a failure is 10s, as before');
+  } finally {
+    ws.disconnect();
+  }
+});
+
+test('a connection that opens cancels the cycle armed for the one before it', async (t) => {
+  useFakeClock(t);
+  const { ws, sockets } = makeWs();
+
+  try {
+    await connectAndOpen(ws, sockets);
+    await advance(t, ws.IDLE_CLOSE_TIMEOUT);
+    assert.ok(ws.reconnectTimer, 'the cycle is armed');
+
+    // Something connects in the meantime without cancelling the cycle.
+    await advance(t, 20000);
+    await connectAndOpen(ws, sockets);
+    assert.equal(sockets.length, 2);
+
+    assert.equal(ws.reconnectTimer, null, 'the stale cycle is cancelled by the open');
+
+    // The stale timer would have fired here, 60s after the *first* close -
+    // ten seconds after this connection idled out.
+    await advance(t, 40000);
+    assert.equal(isOpen(ws), false, 'idled out at 30s');
+    assert.equal(sockets.length, 2, 'and the old cycle did not cut the new wait short');
+
+    await advance(t, ws.RECONNECT_AFTER_CLOSE - 10000 - 1);
+    assert.equal(sockets.length, 2);
+    await advance(t, 1);
+    assert.equal(sockets.length, 3, '60s after its own close');
+  } finally {
+    ws.disconnect();
+  }
+});
