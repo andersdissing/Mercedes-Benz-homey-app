@@ -1055,3 +1055,147 @@ test('a command arriving while the cycle reconnects joins it and goes once it wa
     ws.disconnect();
   }
 });
+
+// --- Step 5: the 429 logic is unchanged, and the cycle goes through it -----
+
+/** Refuse the newest handshake the way Mercedes does. */
+async function refuseLatest(sockets, headers = {}) {
+  sockets[sockets.length - 1].emit('unexpected-response', {}, { statusCode: 429, headers, resume() {} });
+  await flush();
+}
+
+/** Advance a second at a time until the next handshake; how long it took. */
+async function untilNextHandshake(t, sockets, limitMs = 3600000) {
+  const before = sockets.length;
+  let waited = 0;
+  while (sockets.length === before) {
+    if (waited >= limitMs) assert.fail(`no handshake within ${limitMs / 1000}s`);
+    await advance(t, 1000);
+    waited += 1000;
+  }
+  return waited;
+}
+
+/** A client whose idle cycle has just made its first handshake, at 90s. */
+async function cycleIntoHandshake(t) {
+  const made = makeWs();
+  await connectAndOpen(made.ws, made.sockets);
+  await advance(t, made.ws.IDLE_CLOSE_TIMEOUT + made.ws.RECONNECT_AFTER_CLOSE);
+  assert.equal(made.sockets.length, 2);
+  return made;
+}
+
+test('refused cycle handshakes climb the ladder: 30s, 90s, 4.5 min, 13.5 min, then 30 min', async (t) => {
+  useFakeClock(t);
+  const { ws, sockets } = await cycleIntoHandshake(t);
+
+  try {
+    const waits = [];
+    for (let i = 0; i < 6; i++) {
+      await refuseLatest(sockets);
+      waits.push((await untilNextHandshake(t, sockets)) / 1000);
+    }
+
+    // The ladder, not the 60s cycle: a refusal is never retried on the cycle.
+    assert.deepEqual(waits, [30, 90, 270, 810, 1800, 1800]);
+    assert.equal(ws.rateLimitStrikes, 6);
+    assert.equal(ws.stats.rateLimited, 6, 'and the hourly line counts every one');
+  } finally {
+    ws.disconnect();
+  }
+});
+
+test('Retry-After decides the wait while it is trusted; from the third refusal the ladder is the floor', async (t) => {
+  useFakeClock(t);
+  const { ws, sockets } = await cycleIntoHandshake(t);
+
+  try {
+    await refuseLatest(sockets, { 'retry-after': '120' });
+    assert.equal(await untilNextHandshake(t, sockets), 120000, 'Mercedes\' answer, not the cycle\'s 60s');
+
+    await refuseLatest(sockets, { 'retry-after': '120' });
+    assert.equal(await untilNextHandshake(t, sockets), 120000, 'still trusted on the second');
+
+    await refuseLatest(sockets, { 'retry-after': '120' });
+    assert.equal(await untilNextHandshake(t, sockets), 270000, 'third: the ladder (4.5 min) is the floor');
+  } finally {
+    ws.disconnect();
+  }
+});
+
+test('a short Retry-After is honoured as before, cycle or not', async (t) => {
+  useFakeClock(t);
+  const { ws, sockets } = await cycleIntoHandshake(t);
+
+  try {
+    await refuseLatest(sockets, { 'retry-after': '10' });
+    assert.equal(await untilNextHandshake(t, sockets), 10000);
+  } finally {
+    ws.disconnect();
+  }
+});
+
+test('logins: the second refusal arms the first, one per window, and one per knock at the cap (issue-81)', async (t) => {
+  useFakeClock(t);
+  const { ws, sockets } = await cycleIntoHandshake(t);
+
+  let logins = 0;
+  ws.setReloginHandler(async () => { logins++; });
+
+  // The login runs before the handshake it was armed for, so the count seen
+  // as each handshake goes out says which attempts were made on a new login.
+  const loginsAtHandshake = [0];
+  const create = ws._createSocket;
+  ws._createSocket = (...args) => {
+    loginsAtHandshake.push(logins);
+    return create(...args);
+  };
+
+  try {
+    for (let i = 0; i < 7; i++) {
+      await refuseLatest(sockets);
+      await untilNextHandshake(t, sockets);
+    }
+
+    // Refusal 1: refresh only. Refusals 2-4: the budget of three. From 5 on
+    // the window is at its 30-minute cap, where each knock is spent on a
+    // login instead of a refresh - one per window, never two.
+    assert.deepEqual(loginsAtHandshake, [0, 0, 1, 2, 3, 4, 5, 6]);
+  } finally {
+    ws.disconnect();
+  }
+});
+
+test('after a block, two clean cycles keep the ladder; five clear it and the next 429 starts at 30s', async (t) => {
+  useFakeClock(t);
+  const { ws, sockets } = await cycleIntoHandshake(t);
+
+  /** Mercedes lets the handshake through; the car is parked, so it idles out. */
+  const acceptAndIdle = async () => {
+    await openLatest(sockets);
+    await untilNextHandshake(t, sockets); // 30s idle + 60s cycle
+  };
+
+  try {
+    for (let i = 0; i < 5; i++) {
+      await refuseLatest(sockets);
+      await untilNextHandshake(t, sockets);
+    }
+    assert.equal(ws.rateLimitStrikes, 5);
+
+    // Let through twice, then refused again: the climb continues at the cap.
+    await acceptAndIdle();
+    await acceptAndIdle();
+    await refuseLatest(sockets);
+    assert.equal(ws.rateLimitStrikes, 6);
+    assert.equal(await untilNextHandshake(t, sockets), 1800000, 'two clean cycles are not five');
+
+    // Five in a row: the block is over as far as the app is concerned.
+    for (let i = 0; i < 5; i++) await acceptAndIdle();
+    assert.equal(ws.rateLimitStrikes, 0);
+    await refuseLatest(sockets);
+    assert.equal(await untilNextHandshake(t, sockets), 30000, 'a fresh episode starts at the bottom');
+  } finally {
+    ws.disconnect();
+  }
+});
