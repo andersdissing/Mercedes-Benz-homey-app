@@ -4,6 +4,7 @@ https://pictogrammers.com/library/mdi/
 Used in this app, path data unchanged:
   map-marker-distance.svg  - distance driven from reset
   chart-line.svg           - average consumption, from start and from reset
+  car-battery.svg          - 12 V starter battery state
 
 The package's license notice, verbatim:
 

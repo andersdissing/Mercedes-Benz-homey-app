@@ -2458,6 +2458,55 @@
       "uiComponent": "sensor",
       "icon": "/assets/icons/parking_brake.svg"
     },
+    "starter_battery_state": {
+      "type": "enum",
+      "title": {
+        "en": "12 V battery",
+        "no": "12 V batteri"
+      },
+      "values": [
+        {
+          "id": "0",
+          "title": {
+            "en": "Green",
+            "no": "Grønn"
+          }
+        },
+        {
+          "id": "1",
+          "title": {
+            "en": "Yellow",
+            "no": "Gul"
+          }
+        },
+        {
+          "id": "2",
+          "title": {
+            "en": "Red",
+            "no": "Rød"
+          }
+        },
+        {
+          "id": "3",
+          "title": {
+            "en": "Orange",
+            "no": "Oransje"
+          }
+        },
+        {
+          "id": "4",
+          "title": {
+            "en": "Green-Yellow",
+            "no": "Grønn-gul"
+          }
+        }
+      ],
+      "getable": true,
+      "setable": false,
+      "insights": true,
+      "uiComponent": "sensor",
+      "icon": "/assets/icons/car-battery.svg"
+    },
     "text_charge_program": {
       "type": "string",
       "title": {
