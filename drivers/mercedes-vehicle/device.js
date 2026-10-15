@@ -9,13 +9,20 @@ const { parseDisplayNumber } = require('../../lib/display-value');
 const KWH_PER_100KM = ['KWH_PER_100KM', 'UNSPECIFIED_ELECTRICITY_CONSUMPTION_UNIT'];
 const KILOMETERS = ['KILOMETERS', 'UNSPECIFIED_DISTANCE_UNIT'];
 
+/** The app's built manifest, for titles a flow token should carry. */
+const MANIFEST = require('../../app.json');
+
 /**
- * Capabilities read from an attribute's display value, as mbapi2020 reads
- * them, and added only once a car reports the attribute. Both spellings are
- * accepted: mbapi2020 names these `distanceReset` but `electricconsumptionreset`,
- * and the trip distance has been seen as both `distancestart` and
- * `distanceStart`. See _updateDisplayValueCapabilities().
+ * "Trip ended": how long after the ignition goes off to wait for the trip's
+ * final figures before going with the latest ones. A connection that drops in
+ * between comes back with a full update carrying every figure, so this leaves
+ * room for a reconnect, and it is what keeps the card from waiting on a
+ * figure that never comes.
  */
+const TRIP_END_WAIT = 180000; // 3 minutes
+const TRIP_MIN_DISTANCE = 2; // km - shorter trips are skipped
+const TRIP_CONSUMPTION_INVALID = 99.9; // what the car shows when it has no figure
+
 /** starter_battery_state's enum ids; see _updateStarterBattery(). */
 const STARTER_BATTERY_STATES = ['0', '1', '2', '3', '4'];
 
@@ -27,6 +34,13 @@ const STARTER_BATTERY_STATES = ['0', '1', '2', '3', '4'];
  */
 const STARTER_BATTERY_SEVERITY = { 0: 0, 4: 1, 1: 2, 3: 3, 2: 4 };
 
+/**
+ * Capabilities read from an attribute's display value, as mbapi2020 reads
+ * them, and added only once a car reports the attribute. Both spellings are
+ * accepted: mbapi2020 names these `distanceReset` but `electricconsumptionreset`,
+ * and the trip distance has been seen as both `distancestart` and
+ * `distanceStart`. See _updateDisplayValueCapabilities().
+ */
 const DISPLAY_VALUE_CAPABILITIES = [
   {
     capability: 'electric_consumption_start',
@@ -588,6 +602,10 @@ class MercedesVehicleDevice extends Homey.Device {
       this.pollInterval = null;
     }
 
+    // A trip end still waiting for its figures must not fire on a device
+    // that is going away.
+    this._cancelTripEnd();
+
     this._stopWebSocketHealthCheck();
 
     if (!this.session) return;
@@ -890,6 +908,9 @@ class MercedesVehicleDevice extends Homey.Device {
 
       // Update capabilities with the new data
       await this.updateCapabilities(vehicleData);
+
+      // Push only - see _trackTrip().
+      this._trackTrip(vehicleData);
       this.log('[WEBSOCKET] Capabilities updated from WebSocket data');
 
     } catch (error) {
@@ -1010,9 +1031,153 @@ class MercedesVehicleDevice extends Homey.Device {
     }
 
     const severity = STARTER_BATTERY_SEVERITY[id];
+    const previous = this.getCapabilityValue('starter_battery_state');
     this.log(`[UPDATE] Setting 12 V battery state to: ${id} (severity ${severity})`);
     await this.setCapabilityValue('starter_battery_state', id);
     await this.setCapabilityValue('starter_battery_level', severity);
+
+    // Only a real change: not the first reading, not the same rating again.
+    if (previous !== null && previous !== undefined && previous !== id) {
+      this.log(`[TRIGGER] 12 V battery changed: ${previous} -> ${id} (level ${severity})`);
+      await this.homey.flow.getDeviceTriggerCard('starter_battery_changed')
+        .trigger(this, { level: severity, colour: this._starterBatteryColour(id) });
+    }
+  }
+
+  /** The colour's title in the Homey's language, from the capability's enum. */
+  _starterBatteryColour(id) {
+    const value = MANIFEST.capabilities.starter_battery_state.values.find((v) => v.id === id);
+    let language = 'en';
+    try { language = this.homey.i18n.getLanguage(); } catch (e) { /* English */ }
+    return (value && (value.title[language] || value.title.en)) || id;
+  }
+
+  /**
+   * Follow a drive from push updates, and fire "Trip ended" once it is over.
+   *
+   * A trip starts when the car is ready to drive (ignitionstate 4) and ends
+   * when the ignition goes off (0). The "from start" figures are what the car
+   * shows for the trip, but the last of them can arrive after the ignition
+   * has gone off - so the card waits for all four to be heard again, or for
+   * TRIP_END_WAIT, and then goes with the latest of each. A restart (4) before
+   * that cancels the end: the drive carries on.
+   *
+   * Push only: the widget poll can carry an older ignition state than the
+   * push already has, which would start a trip that is over.
+   */
+  _trackTrip(data) {
+    if (!this._trip) this._trip = { active: false, values: {}, ending: null };
+    const trip = this._trip;
+
+    const ignition = data.ignitionstate ?? data.ignitionState;
+    if (ignition !== undefined && ignition !== null) {
+      const state = Number(ignition);
+      if (state === 4) {
+        if (trip.ending) {
+          this.log('[TRIP] Ignition back on before the trip ended - carrying on');
+          this._cancelTripEnd();
+        }
+        trip.active = true;
+      } else if (state === 0 && trip.active) {
+        trip.active = false;
+        this.log('[TRIP] Ignition off - waiting for the trip\'s final figures');
+        trip.ending = {
+          heard: new Set(),
+          timer: setTimeout(() => this._finishTrip('timeout'), TRIP_END_WAIT),
+        };
+      }
+    }
+
+    const figures = this._tripFigures(data);
+    for (const [name, value] of Object.entries(figures)) {
+      trip.values[name] = value;
+      if (trip.ending) trip.ending.heard.add(name);
+    }
+
+    if (trip.ending && trip.ending.heard.size === 4) this._finishTrip('all figures in');
+  }
+
+  /** The trip figures an update carries, read as the capabilities read them. */
+  _tripFigures(data) {
+    const figures = {};
+    const distance = data.distanceStart ?? data.distancestart;
+    if (distance !== undefined && distance !== null) figures.distance = parseFloat(distance);
+
+    const time = data.drivenTimeStart ?? data.driventimestart;
+    if (time !== undefined && time !== null) figures.drivingTime = parseInt(time, 10);
+
+    const speed = data.averageSpeedStart ?? data.averagespeedstart;
+    if (speed !== undefined && speed !== null) figures.averageSpeed = parseFloat(speed);
+
+    const shown = data.electricconsumptionstart_display ?? data.electricconsumptionstart;
+    const unit = data.electricconsumptionstart_unit;
+    if (shown !== undefined && shown !== null && shown !== ''
+      && (!unit || KWH_PER_100KM.includes(unit))) {
+      const consumption = parseDisplayNumber(shown);
+      if (Number.isFinite(consumption)) figures.consumption = consumption;
+    }
+    return figures;
+  }
+
+  _cancelTripEnd() {
+    if (!this._trip || !this._trip.ending) return;
+    clearTimeout(this._trip.ending.timer);
+    this._trip.ending = null;
+  }
+
+  async _finishTrip(why) {
+    if (!this._trip || !this._trip.ending) return;
+    this._cancelTripEnd();
+
+    const { distance, drivingTime, consumption, averageSpeed } = this._trip.values;
+    const missing = [['distance', distance], ['driving time', drivingTime], ['consumption', consumption], ['average speed', averageSpeed]]
+      .filter(([, value]) => !Number.isFinite(value)).map(([name]) => name);
+
+    if (missing.length) {
+      this.log(`[TRIP] Trip ended (${why}) without ${missing.join(', ')} - not triggered`);
+      return;
+    }
+    if (distance < TRIP_MIN_DISTANCE) {
+      this.log(`[TRIP] Trip ended (${why}): ${distance} km is under ${TRIP_MIN_DISTANCE} km - skipped`);
+      return;
+    }
+    if (consumption === TRIP_CONSUMPTION_INVALID) {
+      this.log(`[TRIP] Trip ended (${why}): consumption ${TRIP_CONSUMPTION_INVALID} means none - skipped`);
+      return;
+    }
+
+    const energy = Math.round(distance * consumption) / 100;
+    const tokens = { distance, driving_time: drivingTime, consumption, energy, average_speed: averageSpeed };
+    this.log(`[TRIGGER] Trip ended (${why}): ${JSON.stringify(tokens)}`);
+    try {
+      await this.homey.flow.getDeviceTriggerCard('trip_ended').trigger(this, tokens);
+    } catch (error) {
+      this.error('[TRIGGER] Could not fire trip_ended:', error.message);
+    }
+  }
+
+  /** 12 V battery at least this severity (1 green-yellow ... 4 red)? */
+  async starterBatteryAtLeast(level) {
+    const value = this.getCapabilityValue('starter_battery_level');
+    const result = typeof value === 'number' && value >= level;
+    this.log(`[FLOW] 12 V battery at least ${level} checked: ${result} (level: ${value})`);
+    return result;
+  }
+
+  /** Consumption since reset above the threshold? */
+  async consumptionResetAbove(threshold) {
+    const value = this.getCapabilityValue('electric_consumption_reset');
+    const result = typeof value === 'number' && value > threshold;
+    this.log(`[FLOW] Consumption since reset above ${threshold} checked: ${result} (value: ${value})`);
+    return result;
+  }
+
+  /** Distance since reset above the threshold? */
+  async distanceResetAbove(threshold) {
+    const value = this.getCapabilityValue('distance_reset');
+    const result = typeof value === 'number' && value > threshold;
+    this.log(`[FLOW] Distance since reset above ${threshold} checked: ${result} (value: ${value})`);
+    return result;
   }
 
   /**

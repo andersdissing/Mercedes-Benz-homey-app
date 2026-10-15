@@ -1,0 +1,65 @@
+{
+  "id": "trip_ended",
+  "title": {
+    "en": "Trip ended",
+    "no": "Tur avsluttet"
+  },
+  "hint": {
+    "en": "Fires when the ignition is switched off after a drive, once the car has sent the trip's final figures (at most 3 minutes later, with the latest figures it has). Trips under 2 km, and consumption shown as 99.9, are skipped.",
+    "no": "Utløses når tenningen slås av etter en kjøretur, når bilen har sendt turens siste verdier (senest 3 minutter etter, med de siste verdiene den har). Turer under 2 km, og forbruk vist som 99,9, hoppes over."
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=mercedes-vehicle&capabilities=electric_consumption_start"
+    }
+  ],
+  "tokens": [
+    {
+      "name": "distance",
+      "type": "number",
+      "title": {
+        "en": "Distance driven (km)",
+        "no": "Kjørt strekning (km)"
+      },
+      "example": 52.5
+    },
+    {
+      "name": "driving_time",
+      "type": "number",
+      "title": {
+        "en": "Driving time (min)",
+        "no": "Kjøretid (min)"
+      },
+      "example": 101
+    },
+    {
+      "name": "consumption",
+      "type": "number",
+      "title": {
+        "en": "Average consumption (kWh/100 km)",
+        "no": "Gjennomsnittsforbruk (kWh/100 km)"
+      },
+      "example": 21.5
+    },
+    {
+      "name": "energy",
+      "type": "number",
+      "title": {
+        "en": "Energy (kWh)",
+        "no": "Energi (kWh)"
+      },
+      "example": 11.29
+    },
+    {
+      "name": "average_speed",
+      "type": "number",
+      "title": {
+        "en": "Average speed (km/h)",
+        "no": "Gjennomsnittshastighet (km/h)"
+      },
+      "example": 31
+    }
+  ]
+}

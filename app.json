@@ -419,6 +419,112 @@
         ]
       },
       {
+        "id": "starter_battery_changed",
+        "title": {
+          "en": "12 V battery changed",
+          "no": "12 V-batteriet endret seg"
+        },
+        "hint": {
+          "en": "Fires when the car's rating of its 12 V battery changes. Level by severity: green 0, green-yellow 1, yellow 2, orange 3, red 4.",
+          "no": "Utløses når bilens vurdering av 12 V-batteriet endrer seg. Nivå etter alvor: grønn 0, grønn-gul 1, gul 2, oransje 3, rød 4."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle&capabilities=starter_battery_level"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "level",
+            "type": "number",
+            "title": {
+              "en": "Level (0-4)",
+              "no": "Nivå (0–4)"
+            },
+            "example": 2
+          },
+          {
+            "name": "colour",
+            "type": "string",
+            "title": {
+              "en": "Colour",
+              "no": "Farge"
+            },
+            "example": {
+              "en": "Yellow",
+              "no": "Gul"
+            }
+          }
+        ]
+      },
+      {
+        "id": "trip_ended",
+        "title": {
+          "en": "Trip ended",
+          "no": "Tur avsluttet"
+        },
+        "hint": {
+          "en": "Fires when the ignition is switched off after a drive, once the car has sent the trip's final figures (at most 3 minutes later, with the latest figures it has). Trips under 2 km, and consumption shown as 99.9, are skipped.",
+          "no": "Utløses når tenningen slås av etter en kjøretur, når bilen har sendt turens siste verdier (senest 3 minutter etter, med de siste verdiene den har). Turer under 2 km, og forbruk vist som 99,9, hoppes over."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle&capabilities=electric_consumption_start"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "distance",
+            "type": "number",
+            "title": {
+              "en": "Distance driven (km)",
+              "no": "Kjørt strekning (km)"
+            },
+            "example": 52.5
+          },
+          {
+            "name": "driving_time",
+            "type": "number",
+            "title": {
+              "en": "Driving time (min)",
+              "no": "Kjøretid (min)"
+            },
+            "example": 101
+          },
+          {
+            "name": "consumption",
+            "type": "number",
+            "title": {
+              "en": "Average consumption (kWh/100 km)",
+              "no": "Gjennomsnittsforbruk (kWh/100 km)"
+            },
+            "example": 21.5
+          },
+          {
+            "name": "energy",
+            "type": "number",
+            "title": {
+              "en": "Energy (kWh)",
+              "no": "Energi (kWh)"
+            },
+            "example": 11.29
+          },
+          {
+            "name": "average_speed",
+            "type": "number",
+            "title": {
+              "en": "Average speed (km/h)",
+              "no": "Gjennomsnittshastighet (km/h)"
+            },
+            "example": 31
+          }
+        ]
+      },
+      {
         "id": "vehicle_alarm",
         "title": {
           "en": "Vehicle alarm triggered",
@@ -613,6 +719,72 @@
         "id": "battery_level"
       },
       {
+        "id": "consumption_reset_above",
+        "title": {
+          "en": "Consumption since reset !{{is|is not}} above ...",
+          "no": "Snittforbruk fra tilbakestilling !{{er|er ikke}} over ..."
+        },
+        "titleFormatted": {
+          "en": "Consumption since reset !{{is|is not}} above [[consumption]] kWh/100 km",
+          "no": "Snittforbruk fra tilbakestilling !{{er|er ikke}} over [[consumption]] kWh/100 km"
+        },
+        "hint": {
+          "en": "Compares the average consumption since the trip computer was last reset.",
+          "no": "Sammenligner gjennomsnittsforbruket siden tripptelleren sist ble tilbakestilt."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle&capabilities=electric_consumption_reset"
+          },
+          {
+            "type": "number",
+            "name": "consumption",
+            "title": {
+              "en": "kWh/100 km",
+              "no": "kWh/100 km"
+            },
+            "min": 0,
+            "max": 100,
+            "step": 0.1
+          }
+        ]
+      },
+      {
+        "id": "distance_reset_above",
+        "title": {
+          "en": "Distance since reset !{{is|is not}} above ...",
+          "no": "Kjørt strekning fra tilbakestilling !{{er|er ikke}} over ..."
+        },
+        "titleFormatted": {
+          "en": "Distance since reset !{{is|is not}} above [[distance]] km",
+          "no": "Kjørt strekning fra tilbakestilling !{{er|er ikke}} over [[distance]] km"
+        },
+        "hint": {
+          "en": "Compares the distance driven since the trip computer was last reset - useful as a reminder to reset it in the car.",
+          "no": "Sammenligner kjørt strekning siden tripptelleren sist ble tilbakestilt – nyttig som påminnelse om å nullstille den i bilen."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle&capabilities=distance_reset"
+          },
+          {
+            "type": "number",
+            "name": "distance",
+            "title": {
+              "en": "km",
+              "no": "km"
+            },
+            "min": 0,
+            "max": 1000000,
+            "step": 1
+          }
+        ]
+      },
+      {
         "icon": "/assets/icon.svg",
         "title": {
           "en": "Auxiliary heating !{{is|is not}} active",
@@ -800,6 +972,66 @@
           }
         ],
         "id": "is_preconditioning"
+      },
+      {
+        "id": "starter_battery_at_least",
+        "title": {
+          "en": "12 V battery !{{is|is not}} at least ...",
+          "no": "12 V-batteriet !{{er|er ikke}} minst ..."
+        },
+        "titleFormatted": {
+          "en": "12 V battery !{{is|is not}} at least [[colour]]",
+          "no": "12 V-batteriet !{{er|er ikke}} minst [[colour]]"
+        },
+        "hint": {
+          "en": "Compares the car's rating of its 12 V battery by severity: green, green-yellow, yellow, orange, red.",
+          "no": "Sammenligner bilens vurdering av 12 V-batteriet etter alvor: grønn, grønn-gul, gul, oransje, rød."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle&capabilities=starter_battery_level"
+          },
+          {
+            "type": "dropdown",
+            "name": "colour",
+            "title": {
+              "en": "Colour",
+              "no": "Farge"
+            },
+            "values": [
+              {
+                "id": "1",
+                "label": {
+                  "en": "Green-Yellow",
+                  "no": "Grønn-gul"
+                }
+              },
+              {
+                "id": "2",
+                "label": {
+                  "en": "Yellow",
+                  "no": "Gul"
+                }
+              },
+              {
+                "id": "3",
+                "label": {
+                  "en": "Orange",
+                  "no": "Oransje"
+                }
+              },
+              {
+                "id": "4",
+                "label": {
+                  "en": "Red",
+                  "no": "Rød"
+                }
+              }
+            ]
+          }
+        ]
       },
       {
         "icon": "/assets/icon.svg",

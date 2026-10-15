@@ -1,0 +1,33 @@
+{
+  "id": "distance_reset_above",
+  "title": {
+    "en": "Distance since reset !{{is|is not}} above ...",
+    "no": "Kjørt strekning fra tilbakestilling !{{er|er ikke}} over ..."
+  },
+  "titleFormatted": {
+    "en": "Distance since reset !{{is|is not}} above [[distance]] km",
+    "no": "Kjørt strekning fra tilbakestilling !{{er|er ikke}} over [[distance]] km"
+  },
+  "hint": {
+    "en": "Compares the distance driven since the trip computer was last reset - useful as a reminder to reset it in the car.",
+    "no": "Sammenligner kjørt strekning siden tripptelleren sist ble tilbakestilt – nyttig som påminnelse om å nullstille den i bilen."
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=mercedes-vehicle&capabilities=distance_reset"
+    },
+    {
+      "type": "number",
+      "name": "distance",
+      "title": {
+        "en": "km",
+        "no": "km"
+      },
+      "min": 0,
+      "max": 1000000,
+      "step": 1
+    }
+  ]
+}

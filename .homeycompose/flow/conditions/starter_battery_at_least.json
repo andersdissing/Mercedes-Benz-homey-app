@@ -1,0 +1,60 @@
+{
+  "id": "starter_battery_at_least",
+  "title": {
+    "en": "12 V battery !{{is|is not}} at least ...",
+    "no": "12 V-batteriet !{{er|er ikke}} minst ..."
+  },
+  "titleFormatted": {
+    "en": "12 V battery !{{is|is not}} at least [[colour]]",
+    "no": "12 V-batteriet !{{er|er ikke}} minst [[colour]]"
+  },
+  "hint": {
+    "en": "Compares the car's rating of its 12 V battery by severity: green, green-yellow, yellow, orange, red.",
+    "no": "Sammenligner bilens vurdering av 12 V-batteriet etter alvor: grønn, grønn-gul, gul, oransje, rød."
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=mercedes-vehicle&capabilities=starter_battery_level"
+    },
+    {
+      "type": "dropdown",
+      "name": "colour",
+      "title": {
+        "en": "Colour",
+        "no": "Farge"
+      },
+      "values": [
+        {
+          "id": "1",
+          "label": {
+            "en": "Green-Yellow",
+            "no": "Grønn-gul"
+          }
+        },
+        {
+          "id": "2",
+          "label": {
+            "en": "Yellow",
+            "no": "Gul"
+          }
+        },
+        {
+          "id": "3",
+          "label": {
+            "en": "Orange",
+            "no": "Oransje"
+          }
+        },
+        {
+          "id": "4",
+          "label": {
+            "en": "Red",
+            "no": "Rød"
+          }
+        }
+      ]
+    }
+  ]
+}

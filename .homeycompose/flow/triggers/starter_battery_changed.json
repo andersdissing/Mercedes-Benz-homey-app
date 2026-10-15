@@ -1,0 +1,41 @@
+{
+  "id": "starter_battery_changed",
+  "title": {
+    "en": "12 V battery changed",
+    "no": "12 V-batteriet endret seg"
+  },
+  "hint": {
+    "en": "Fires when the car's rating of its 12 V battery changes. Level by severity: green 0, green-yellow 1, yellow 2, orange 3, red 4.",
+    "no": "Utløses når bilens vurdering av 12 V-batteriet endrer seg. Nivå etter alvor: grønn 0, grønn-gul 1, gul 2, oransje 3, rød 4."
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=mercedes-vehicle&capabilities=starter_battery_level"
+    }
+  ],
+  "tokens": [
+    {
+      "name": "level",
+      "type": "number",
+      "title": {
+        "en": "Level (0-4)",
+        "no": "Nivå (0–4)"
+      },
+      "example": 2
+    },
+    {
+      "name": "colour",
+      "type": "string",
+      "title": {
+        "en": "Colour",
+        "no": "Farge"
+      },
+      "example": {
+        "en": "Yellow",
+        "no": "Gul"
+      }
+    }
+  ]
+}
