@@ -542,20 +542,23 @@ test('after an idle close the next connection comes 60s later, not sooner', asyn
   }
 });
 
-test('a 1001 rotation, a 1000 and a drop all come back on the 60s cycle', async (t) => {
+test('with nothing holding it, a 1001, a 1000 and a drop come back on the 60s cycle', async (t) => {
   useFakeClock(t);
 
   for (const code of [1001, 1000, 1006]) {
-    const { ws, sockets, push } = makeWs();
+    const { ws, sockets } = makeWs();
     try {
       const sock = await connectAndOpen(ws, sockets);
-      // While driving: held open, so it is Mercedes that ends it.
-      await push(sock, vep({ ignitionstate: 4 }));
+      // Parked, no command: Mercedes ends it 5s in, before the idle close.
       await advance(t, 5000);
 
-      sock.readyState = WebSocket.CLOSED;
-      sock.emit('close', code, Buffer.from(''));
+      await fromNetwork(() => {
+        sock.readyState = WebSocket.CLOSED;
+        sock.emit('close', code, Buffer.from(''));
+      });
 
+      // Our own choice, not mbapi2020's: it reconnects at once after any
+      // server close. Coming straight back from every one is always-on again.
       await advance(t, ws.RECONNECT_AFTER_CLOSE - 1);
       assert.equal(sockets.length, 1, `close ${code} must not reconnect inside the cycle`);
       await advance(t, 1);
@@ -566,7 +569,29 @@ test('a 1001 rotation, a 1000 and a drop all come back on the 60s cycle', async 
   }
 });
 
-test('a connection the liveness watchdog gave up on comes back on the cycle too', async (t) => {
+test('while the ignition holds it, a 1001, a 1000 and a drop come straight back', async (t) => {
+  useFakeClock(t);
+
+  for (const code of [1001, 1000, 1006]) {
+    const { ws, sockets, push } = makeWs();
+    try {
+      const sock = await connectAndOpen(ws, sockets);
+      await push(sock, vep({ ignitionstate: 4 }));
+      await advance(t, 5000);
+
+      await fromNetwork(() => {
+        sock.readyState = WebSocket.CLOSED;
+        sock.emit('close', code, Buffer.from(''));
+      });
+      await advance(t, 1);
+      assert.equal(sockets.length, 2, `close ${code} while driving reconnects at once, as mbapi2020 does`);
+    } finally {
+      ws.disconnect();
+    }
+  }
+});
+
+test('a connection the liveness watchdog gave up on comes straight back while held', async (t) => {
   useFakeClock(t);
   const { ws, sockets, push } = makeWs();
 
@@ -578,11 +603,93 @@ test('a connection the liveness watchdog gave up on comes back on the cycle too'
     await advance(t, ws.INITIAL_WATCHDOG_TIMEOUT);
     assert.equal(isOpen(ws), false, 'declared dead');
     assert.equal(ws.stats.closes.drop, 1);
+    assert.equal(sockets.length, 2, 'and replaced at once: the ignition still holds it');
+  } finally {
+    ws.disconnect();
+  }
+});
 
-    await advance(t, ws.RECONNECT_AFTER_CLOSE - 1);
-    assert.equal(sockets.length, 1);
+test('a 1001 between a command\'s acceptance and its FINISHED reconnects at once, and the next command goes through', async (t) => {
+  useFakeClock(t);
+  const { ws, sockets, push } = makeWs();
+
+  try {
+    const first = await connectAndOpen(ws, sockets);
+    const lock = ws.sendCommand(Buffer.from('lock'), 'REQ1', 'lock', 'VIN1');
+    await flush();
+    await push(first, commandStatus('REQ1', ACCEPTED));
+    await lock;
+
+    // Mercedes rotates the connection before the car reports FINISHED.
+    await advance(t, 3000);
+    await fromNetwork(() => {
+      first.readyState = WebSocket.CLOSED;
+      first.emit('close', 1001, Buffer.from('rotation'));
+    });
+    await advance(t, 1);
+    assert.equal(sockets.length, 2, 'not 60s later: the command hold is still on');
+
+    const second = await openLatest(sockets);
+    await push(second, commandStatus('REQ1', FINISHED, 3)); // reported on the new connection
+    assert.equal(ws.pendingCommands.size, 0);
+
+    const windows = ws.sendCommand(Buffer.from('windows'), 'REQ2', 'windows', 'VIN1');
+    await flush();
+    assert.ok(carried(second, 'windows'), 'sent on the connection that came straight back');
+    assert.equal(sockets.length, 2, 'without another handshake');
+    await push(second, commandStatus('REQ2', ACCEPTED, 4));
+    assert.deepEqual(await windows, { success: true, state: 'ACKED_BY_APPTWIN' });
+  } finally {
+    ws.disconnect();
+  }
+});
+
+test('a held connection does not come straight back into a 429 window', async (t) => {
+  useFakeClock(t);
+  const { ws, sockets, push } = makeWs();
+
+  try {
+    const sock = await connectAndOpen(ws, sockets);
+    await push(sock, vep({ ignitionstate: 4 }));
+    ws._registerRateLimit(120000);
+
+    await fromNetwork(() => {
+      sock.readyState = WebSocket.CLOSED;
+      sock.emit('close', 1001, Buffer.from(''));
+    });
+    await advance(t, 120000 - 1);
+    assert.equal(sockets.length, 1, 'the window is the floor, hold or not');
     await advance(t, 1);
     assert.equal(sockets.length, 2);
+  } finally {
+    ws.disconnect();
+  }
+});
+
+test('straight back at most once a minute: a connection closed again at once waits the cycle', async (t) => {
+  useFakeClock(t);
+  const { ws, sockets, push } = makeWs();
+
+  try {
+    const sock = await connectAndOpen(ws, sockets);
+    await push(sock, vep({ ignitionstate: 4 }));
+    await fromNetwork(() => {
+      sock.readyState = WebSocket.CLOSED;
+      sock.emit('close', 1001, Buffer.from(''));
+    });
+    await advance(t, 1);
+    assert.equal(sockets.length, 2, 'the first time, at once');
+
+    // Mercedes closes the new one straight away: no handshake loop.
+    const again = await openLatest(sockets);
+    await fromNetwork(() => {
+      again.readyState = WebSocket.CLOSED;
+      again.emit('close', 1001, Buffer.from(''));
+    });
+    await advance(t, ws.RECONNECT_AFTER_CLOSE - 1000);
+    assert.equal(sockets.length, 2, 'the second time within the minute, on the cycle');
+    await advance(t, 1000);
+    assert.equal(sockets.length, 3);
   } finally {
     ws.disconnect();
   }
