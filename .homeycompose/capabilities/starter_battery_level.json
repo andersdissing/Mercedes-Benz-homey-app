@@ -1,0 +1,15 @@
+{
+  "type": "number",
+  "title": {
+    "en": "12 V battery level",
+    "no": "12 V batterinivå"
+  },
+  "decimals": 0,
+  "min": 0,
+  "max": 4,
+  "getable": true,
+  "setable": false,
+  "insights": true,
+  "uiComponent": null,
+  "icon": "/assets/icons/car-battery.svg"
+}

@@ -19,6 +19,14 @@ const KILOMETERS = ['KILOMETERS', 'UNSPECIFIED_DISTANCE_UNIT'];
 /** starter_battery_state's enum ids; see _updateStarterBattery(). */
 const STARTER_BATTERY_STATES = ['0', '1', '2', '3', '4'];
 
+/**
+ * starter_battery_level: the same rating ordered by severity, as a number
+ * Insights can chart - Homey keeps no Insights for an enum. Green 0,
+ * green-yellow 1, yellow 2, orange 3, red 4; Mercedes' own codes run
+ * 0 green, 1 yellow, 2 red, 3 orange, 4 green-yellow.
+ */
+const STARTER_BATTERY_SEVERITY = { 0: 0, 4: 1, 1: 2, 3: 3, 2: 4 };
+
 const DISPLAY_VALUE_CAPABILITIES = [
   {
     capability: 'electric_consumption_start',
@@ -977,6 +985,9 @@ class MercedesVehicleDevice extends Homey.Device {
    * "Battery is low" trigger. Like the trip figures, the capability is added the
    * first time a car sends the attribute, so a car without it gets no tile. A
    * code outside 0-4 has no title, so it is logged once and not written.
+   *
+   * starter_battery_level carries the same reading as a severity number for
+   * Insights (no tile of its own), added and set alongside the enum.
    */
   async _updateStarterBattery(data) {
     const raw = data.starterBatteryState ?? data.starterbatterystate;
@@ -991,13 +1002,17 @@ class MercedesVehicleDevice extends Homey.Device {
       return;
     }
 
-    if (!this.hasCapability('starter_battery_state')) {
-      this.log('[UPDATE] Car reports starterBatteryState - adding starter_battery_state');
-      await this.addCapability('starter_battery_state');
+    for (const capability of ['starter_battery_state', 'starter_battery_level']) {
+      if (!this.hasCapability(capability)) {
+        this.log(`[UPDATE] Car reports starterBatteryState - adding ${capability}`);
+        await this.addCapability(capability);
+      }
     }
 
-    this.log(`[UPDATE] Setting 12 V battery state to: ${id}`);
+    const severity = STARTER_BATTERY_SEVERITY[id];
+    this.log(`[UPDATE] Setting 12 V battery state to: ${id} (severity ${severity})`);
     await this.setCapabilityValue('starter_battery_state', id);
+    await this.setCapabilityValue('starter_battery_level', severity);
   }
 
   /**
