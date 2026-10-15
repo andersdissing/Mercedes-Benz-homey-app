@@ -96,5 +96,12 @@
   "author": {
     "email": "ameq@ameq.dk",
     "name": "Anders Dissing"
+  },
+  "api": {
+    "getStats": {
+      "method": "GET",
+      "path": "/stats",
+      "public": false
+    }
   }
 }

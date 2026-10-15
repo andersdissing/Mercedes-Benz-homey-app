@@ -89,18 +89,21 @@ test('the summary line counts handshakes and closes, then starts over', (t) => {
   stats.noteClose('1001');
   stats.noteClose('drop');
   stats.noteClose('something-new');
+  stats.noteCommand('ok');
+  stats.noteCommand('ok');
+  stats.noteCommand('late');
 
   t.mock.timers.tick(3600000);
 
   assert.equal(
     stats.takeLine(),
     '[WS] Connection stats for the last 60 min: handshakes=3 (open=1, 429=1, failed=1), '
-      + 'closes: idle=1, 1001=1, drop=1, other=1',
+      + 'closes: idle=1, 1001=1, drop=1, other=1, commands: ok=2, failed=0, late=1',
   );
   assert.equal(
     stats.describe(),
     '[WS] Connection stats for the last 0 min: handshakes=0 (open=0, 429=0, failed=0), '
-      + 'closes: idle=0, 1001=0, drop=0, other=0',
+      + 'closes: idle=0, 1001=0, drop=0, other=0, commands: ok=0, failed=0, late=0',
     'taking the line starts a fresh period',
   );
 });

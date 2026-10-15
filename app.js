@@ -3,6 +3,7 @@
 const Homey = require('homey');
 const { installRedactedLogging } = require('./lib/log-redactor');
 const { AccountSessionRegistry } = require('./lib/account-session');
+const { StatsTimeline } = require('./lib/stats-timeline');
 
 class MercedesMeApp extends Homey.App {
 
@@ -12,6 +13,41 @@ class MercedesMeApp extends Homey.App {
     this._installCrashHandlers();
     this._logLastCrash();
     this._logLastLoginDiagnostic();
+    this.getStatsTimeline();
+  }
+
+  /**
+   * The app is stopping - an update, a restart, Homey shutting down. Store the
+   * hour in progress so the next run carries on counting into it.
+   */
+  async onUninit() {
+    if (this._statsTimer) {
+      clearInterval(this._statsTimer);
+      this._statsTimer = null;
+    }
+    if (this._statsTimeline) this._statsTimeline.flush();
+  }
+
+  /**
+   * The hourly connection timeline, 60 days of it, behind GET /stats.
+   *
+   * Counted in memory and written once an hour (and in onUninit), never per
+   * event - see lib/stats-timeline.js. Created on first use, like the account
+   * sessions, so a device initialising before onInit still finds it.
+   */
+  getStatsTimeline() {
+    if (!this._statsTimeline) {
+      this._statsTimeline = new StatsTimeline(this.homey.settings, { log: (message) => this.log(message) });
+      this._statsTimeline.load();
+      this._statsTimer = setInterval(() => this._statsTimeline.flush(), this.STATS_WRITE_INTERVAL || 3600000);
+    }
+
+    return this._statsTimeline;
+  }
+
+  /** GET /stats - see api.js. */
+  async getStats() {
+    return this.getStatsTimeline().toJSON();
   }
 
   /**
