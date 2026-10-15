@@ -1,0 +1,20 @@
+{
+  "type": "number",
+  "title": {
+    "en": "Distance Since Reset",
+    "nl": "Afstand sinds reset",
+    "de": "Strecke seit Zurücksetzen",
+    "no": "Distanse siden tilbakestilling"
+  },
+  "units": {
+    "en": "km"
+  },
+  "decimals": 1,
+  "min": 0,
+  "max": 999999,
+  "getable": true,
+  "setable": false,
+  "insights": true,
+  "uiComponent": "sensor",
+  "icon": "/assets/icons/distance_start.svg"
+}

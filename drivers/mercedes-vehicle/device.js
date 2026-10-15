@@ -4,6 +4,41 @@ const Homey = require('homey');
 const { installRedactedLogging } = require('../../lib/log-redactor');
 const { describePushStaleness } = require('../../lib/staleness-message');
 const { mergePrecondState, isPrecondRunning, describePrecondState } = require('../../lib/precond-status');
+const { parseDisplayNumber } = require('../../lib/display-value');
+
+const KWH_PER_100KM = ['KWH_PER_100KM', 'UNSPECIFIED_ELECTRICITY_CONSUMPTION_UNIT'];
+const KILOMETERS = ['KILOMETERS', 'UNSPECIFIED_DISTANCE_UNIT'];
+
+/**
+ * Capabilities read from an attribute's display value, as mbapi2020 reads
+ * them, and added only once a car reports the attribute. Both spellings are
+ * accepted: mbapi2020 names these `distanceReset` but `electricconsumptionreset`,
+ * and the trip distance has been seen as both `distancestart` and
+ * `distanceStart`. See _updateDisplayValueCapabilities().
+ */
+const DISPLAY_VALUE_CAPABILITIES = [
+  {
+    capability: 'electric_consumption_start',
+    keys: ['electricconsumptionstart', 'electricConsumptionStart'],
+    units: KWH_PER_100KM,
+    unitLabel: 'kWh/100 km',
+    label: 'trip consumption',
+  },
+  {
+    capability: 'electric_consumption_reset',
+    keys: ['electricconsumptionreset', 'electricConsumptionReset'],
+    units: KWH_PER_100KM,
+    unitLabel: 'kWh/100 km',
+    label: 'consumption since reset',
+  },
+  {
+    capability: 'distance_reset',
+    keys: ['distanceReset', 'distancereset'],
+    units: KILOMETERS,
+    unitLabel: 'km',
+    label: 'distance since reset',
+  },
+];
 
 class MercedesVehicleDevice extends Homey.Device {
   /**
@@ -878,43 +913,57 @@ class MercedesVehicleDevice extends Homey.Device {
   }
 
   /**
-   * Electric consumption since start, next to the trip distance it belongs
-   * with.
+   * Trip figures the Mercedes app shows - consumption since start, distance
+   * and consumption since reset - read the way mbapi2020 reads them: the
+   * attribute's display value, in the unit the account displays it in.
    *
-   * Read the way mbapi2020 reads it: the attribute's display value, which is
-   * the figure the Mercedes app shows, in the unit the account displays
-   * consumption in. That unit travels with the value, and the capability is
-   * kWh/100 km - so a value in any other unit is skipped rather than shown
-   * under the wrong label.
+   * That unit travels with the value, and each capability has a fixed one, so
+   * a value in any other unit is skipped (and said once) rather than shown
+   * under the wrong label. See lib/display-value.js for reading the text.
    *
-   * The capability is added the first time a car actually reports this, not
-   * at pairing: plenty of cars never do (any non-electric one), and a tile
-   * that stays empty forever is worse than none. Insights start with the
-   * first value.
+   * Each capability is added the first time a car actually reports its
+   * attribute, not at pairing: plenty of cars never do (any non-electric one
+   * for consumption), and a tile that stays empty forever is worse than none.
+   * Insights start with the first value. Each one is tried on its own, so a
+   * failure on one cannot cost the others.
    */
-  async _updateElectricConsumptionStart(data) {
-    const shown = data.electricconsumptionstart_display ?? data.electricconsumptionstart;
+  async _updateDisplayValueCapabilities(data) {
+    for (const spec of DISPLAY_VALUE_CAPABILITIES) {
+      try {
+        await this._updateDisplayValueCapability(data, spec);
+      } catch (e) {
+        this.error(`[UPDATE] Error updating ${spec.label}:`, e.message);
+      }
+    }
+  }
+
+  async _updateDisplayValueCapability(data, spec) {
+    const key = spec.keys.find((k) => data[`${k}_display`] !== undefined || data[k] !== undefined);
+    if (!key) return;
+
+    const shown = data[`${key}_display`] ?? data[key];
     if (shown === undefined || shown === null || shown === '') return;
 
-    const unit = data.electricconsumptionstart_unit;
-    if (unit && unit !== 'KWH_PER_100KM' && unit !== 'UNSPECIFIED_ELECTRICITY_CONSUMPTION_UNIT') {
-      if (!this._consumptionUnitSkipped) {
-        this._consumptionUnitSkipped = true;
-        this.log(`[UPDATE] Electric consumption arrives in ${unit}, not kWh/100 km - not shown`);
+    const unit = data[`${key}_unit`];
+    if (unit && !spec.units.includes(unit)) {
+      if (!this._displayUnitSkipped) this._displayUnitSkipped = new Set();
+      if (!this._displayUnitSkipped.has(spec.capability)) {
+        this._displayUnitSkipped.add(spec.capability);
+        this.log(`[UPDATE] ${spec.label} arrives in ${unit}, not ${spec.unitLabel} - not shown`);
       }
       return;
     }
 
-    const value = parseFloat(String(shown).replace(',', '.'));
+    const value = parseDisplayNumber(shown);
     if (!Number.isFinite(value)) return;
 
-    if (!this.hasCapability('electric_consumption_start')) {
-      this.log('[UPDATE] Car reports electric consumption - adding electric_consumption_start');
-      await this.addCapability('electric_consumption_start');
+    if (!this.hasCapability(spec.capability)) {
+      this.log(`[UPDATE] Car reports ${key} - adding ${spec.capability}`);
+      await this.addCapability(spec.capability);
     }
 
-    this.log(`[UPDATE] Setting trip consumption to: ${value} kWh/100 km`);
-    await this.setCapabilityValue('electric_consumption_start', value);
+    this.log(`[UPDATE] Setting ${spec.label} to: ${value} ${spec.unitLabel}`);
+    await this.setCapabilityValue(spec.capability, value);
   }
 
   /**
@@ -1167,13 +1216,10 @@ class MercedesVehicleDevice extends Homey.Device {
         this.error('[UPDATE] Error updating trip distance/time:', e.message);
       }
 
-      // Trip consumption - its own block, because it may add a capability and
-      // a failure there must not cost the trip distance and time above.
-      try {
-        await this._updateElectricConsumptionStart(data);
-      } catch (e) {
-        this.error('[UPDATE] Error updating trip consumption:', e.message);
-      }
+      // Trip consumption, and distance and consumption since reset - their own
+      // block, because they may add capabilities and a failure there must not
+      // cost the trip distance and time above.
+      await this._updateDisplayValueCapabilities(data);
 
       // Average speed since start - check both lowercase and camelCase variants
       try {

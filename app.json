@@ -1828,6 +1828,26 @@
       "uiComponent": "sensor",
       "icon": "/assets/icons/distance_electrical.svg"
     },
+    "distance_reset": {
+      "type": "number",
+      "title": {
+        "en": "Distance Since Reset",
+        "nl": "Afstand sinds reset",
+        "de": "Strecke seit Zurücksetzen",
+        "no": "Distanse siden tilbakestilling"
+      },
+      "units": {
+        "en": "km"
+      },
+      "decimals": 1,
+      "min": 0,
+      "max": 999999,
+      "getable": true,
+      "setable": false,
+      "insights": true,
+      "uiComponent": "sensor",
+      "icon": "/assets/icons/distance_start.svg"
+    },
     "distance_start": {
       "type": "number",
       "title": {
@@ -1980,6 +2000,26 @@
       "setable": false,
       "uiComponent": "sensor",
       "icon": "/assets/icons/ecoscore.svg"
+    },
+    "electric_consumption_reset": {
+      "type": "number",
+      "title": {
+        "en": "Consumption Since Reset",
+        "nl": "Verbruik sinds reset",
+        "de": "Verbrauch seit Zurücksetzen",
+        "no": "Forbruk siden tilbakestilling"
+      },
+      "units": {
+        "en": "kWh/100 km"
+      },
+      "decimals": 1,
+      "min": 0,
+      "max": 999,
+      "getable": true,
+      "setable": false,
+      "insights": true,
+      "uiComponent": "sensor",
+      "icon": "/assets/icons/electric_range.svg"
     },
     "electric_consumption_start": {
       "type": "number",
