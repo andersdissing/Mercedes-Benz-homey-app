@@ -436,6 +436,29 @@ test('wakes (w): counted per hour, left out when there were none, explained in t
   assert.match(body.keys.w, /vtime/);
 });
 
+test('logins (l): ahead of the session limit, after 429s and failed, explained in the legend', (t) => {
+  useFakeClock(t);
+  const timeline = new StatsTimeline(fakeSettings());
+  timeline.load();
+
+  timeline.count('open');
+  t.mock.timers.tick(HOUR);
+  timeline.count('loginAhead');
+  timeline.count('open');
+  t.mock.timers.tick(HOUR);
+  timeline.count('loginFailed');
+  timeline.count('loginAfter429');
+  timeline.count('loginAfter429');
+
+  const body = timeline.toJSON();
+  assert.deepEqual(body.hours, [
+    { t: T0 / 1000, h: [1] },
+    { t: (T0 + HOUR) / 1000, h: [1], l: [1] },
+    { t: (T0 + 2 * HOUR) / 1000, l: [0, 2, 1] },
+  ]);
+  assert.match(body.keys.l, /session limit/);
+});
+
 test('GET /stats serves every hour kept, with a legend, from api.js', async (t) => {
   useFakeClock(t);
   const app = loadApp(fakeSettings());
