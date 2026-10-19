@@ -68,17 +68,21 @@ test('the backoff window is capped', () => {
   );
 });
 
-test('a successful connection clears the strike count', () => {
+/** What the 'open' handler does: the window served is over, the ladder is not. */
+function noteOpened(ws) {
+  ws.accountBlocked = false;
+  ws.blockedSinceTime = null;
+  ws.blockedFor = 0;
+}
+
+test('a connection that lasts clears the strike count', () => {
   const ws = makeWs();
 
   ws._registerRateLimit();
   ws._registerRateLimit();
 
-  // What the 'open' handler does.
-  ws.accountBlocked = false;
-  ws.blockedSinceTime = null;
-  ws.blockedFor = 0;
-  ws.rateLimitStrikes = 0;
+  noteOpened(ws);
+  ws._noteConnectionProvenStable();
 
   ws._registerRateLimit();
 
@@ -87,6 +91,95 @@ test('a successful connection clears the strike count', () => {
     ws.RATE_LIMIT_BACKOFF,
     'a 429 after a healthy connection starts over at the shortest window',
   );
+});
+
+test('a session that dies young does not clear the ladder', () => {
+  // Issue #83: the ladder restarted at 30s three times in six hours, because
+  // every short-lived session reset the strike count. Each restart spent four
+  // more handshakes inside twenty minutes on a limiter that was still hot.
+  const ws = makeWs();
+
+  ws._registerRateLimit();
+  const first = ws.getRateLimitRemaining();
+  ws._registerRateLimit();
+  const second = ws.getRateLimitRemaining();
+
+  // A socket opens and is gone again before it proved anything.
+  noteOpened(ws);
+
+  ws._registerRateLimit();
+
+  assert.ok(
+    ws.getRateLimitRemaining() > second,
+    `the window after a short-lived session (${ws.getRateLimitRemaining()} ms) must keep `
+    + `widening past the one before it (${second} ms), not restart at ${first} ms`,
+  );
+});
+
+test('proving stable touches the ladder and nothing else', () => {
+  // The login budget is deliberately not held back: rationing the one lever
+  // known to end an episode is how an outage gets longer (12 Aug 2026).
+  const ws = makeWs();
+
+  ws._registerRateLimit();
+  ws._reloginAttempts = 2;
+
+  ws._noteConnectionProvenStable();
+
+  assert.equal(ws.rateLimitStrikes, 0);
+  assert.equal(ws._reloginAttempts, 2, 'the login budget is the open handler\'s business, not this one\'s');
+});
+
+test('the stability timer belongs to the socket that armed it', (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+
+  const ws = makeWs();
+  const socket = { id: 'first' };
+
+  ws._registerRateLimit();
+  ws._registerRateLimit();
+  ws.ws = socket;
+  ws._armStabilityTimer(socket);
+
+  // The recovery path replaced it before the timer was due. An abandoned
+  // socket clearing the ladder for its replacement is the same trap the
+  // close handler guards against.
+  ws.ws = { id: 'second' };
+  t.mock.timers.tick(ws.PROVEN_STABLE_AFTER + 1000);
+
+  assert.ok(ws.rateLimitStrikes > 0, 'a superseded socket must not clear the ladder');
+});
+
+test('a connection still up after the stability window clears the ladder', (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+
+  const ws = makeWs();
+  const socket = { id: 'only' };
+
+  ws._registerRateLimit();
+  ws.ws = socket;
+  ws._armStabilityTimer(socket);
+
+  t.mock.timers.tick(ws.PROVEN_STABLE_AFTER + 1000);
+
+  assert.equal(ws.rateLimitStrikes, 0, 'a session that outlived the window is real evidence');
+});
+
+test('tearing the socket down disarms the stability timer', (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+
+  const ws = makeWs();
+  const socket = { id: 'only' };
+
+  ws._registerRateLimit();
+  ws.ws = socket;
+  ws._armStabilityTimer(socket);
+  ws._stopWatchdogs();
+  ws.ws = socket;
+
+  t.mock.timers.tick(ws.PROVEN_STABLE_AFTER + 1000);
+
+  assert.ok(ws.rateLimitStrikes > 0, 'a connection that is gone cannot go on proving itself');
 });
 
 test('an elapsed window makes re-authentication available again', () => {
@@ -254,14 +347,37 @@ test('repeated refusals escalate from refreshing the token to logging in', async
   assert.ok(refreshes > 0, 'precondition: the cheap recovery was tried first');
   assert.equal(relogins, 1, 'the escalation must actually log in');
 
-  // The budget is per episode, not per attempt: a few logins paced by the
-  // widening windows, and after that only waiting.
-  for (let i = 0; i < 6; i++) await refuse(ws);
-  assert.equal(
-    relogins,
-    ws.MAX_RELOGIN_ATTEMPTS,
-    'the login budget must be spent one per attempt and then respected',
-  );
+  // Paced by the windows: one login per refused attempt, never two for the
+  // same one. A login is the heaviest request the app makes.
+  const spent = relogins;
+  await refuse(ws);
+  assert.equal(relogins, spent + 1, 'at most one login per backoff window');
+});
+
+test('a block long enough to reach the cap keeps logging in', async () => {
+  // Issue #81: the budget was three per *episode*, and the ladder reaches its
+  // half-hour cap on the fifth strike - about ten minutes in. So a nine-hour
+  // block spent every login it had in its first ten minutes and then knocked
+  // half-hourly for the rest of the day with nothing but a refreshed token,
+  // which is measured never to clear a session-level 429. The user's report is
+  // that exact loop: `Will re-authenticate before the next attempt (1/3)`,
+  // `Token refresh successful`, 429, over and over for nine hours.
+  const ws = makeWs();
+
+  let relogins = 0;
+  ws.setReloginHandler(async () => { relogins++; });
+
+  // Five refusals: 30s, 90s, 4.5 min, 13.5 min, then the cap.
+  for (let i = 0; i < 5; i++) await refuse(ws);
+
+  assert.equal(ws.blockedFor, ws.MAX_RATE_LIMIT_BACKOFF, 'precondition: the ladder is at its cap');
+  assert.equal(relogins, ws.MAX_RELOGIN_ATTEMPTS, 'precondition: the early budget is spent');
+
+  // From here the app knocks once every half hour. Spending that knock on a
+  // login rather than a refresh costs nothing extra and is the only lever it
+  // has left.
+  for (let i = 0; i < 4; i++) await refuse(ws);
+  assert.equal(relogins, ws.MAX_RELOGIN_ATTEMPTS + 4, 'every half-hourly knock must be a login');
 });
 
 test('a crashed login spends one attempt, not the whole recovery', async () => {
@@ -278,10 +394,13 @@ test('a crashed login spends one attempt, not the whole recovery', async () => {
     throw new Error('login crashed');
   });
 
-  for (let i = 0; i < 10; i++) await refuse(ws);
+  const refusals = 10;
+  for (let i = 0; i < refusals; i++) await refuse(ws);
 
   assert.ok(attempts >= 2, `a failed login must be retried on a later window (attempts: ${attempts})`);
-  assert.equal(attempts, ws.MAX_RELOGIN_ATTEMPTS, 'and the retries must still be bounded');
+  // Bounded by the backoff rather than by a counter: one login per refused
+  // attempt at most, and the attempts themselves are half an hour apart.
+  assert.ok(attempts <= refusals, `and never more than one per window (attempts: ${attempts})`);
 });
 
 test('the login budget survives the client being replaced', () => {

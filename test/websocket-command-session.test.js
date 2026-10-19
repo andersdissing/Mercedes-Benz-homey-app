@@ -589,6 +589,95 @@ test('a second command waits for the first to finish, not just to be accepted', 
   }
 });
 
+/**
+ * One client now serves every car on the account (lib/account-session.js), so
+ * the command gate has to be per vehicle. Mercedes' refusal always was:
+ * RIS_COULD_NOT_SEND_COMMAND means "I still have a command open *for this
+ * vehicle*".
+ */
+
+const VIN_A = 'WDD1111111A111111';
+const VIN_B = 'WDD2222222B222222';
+
+test('one car\'s open command does not hold up the other car', async () => {
+  const ws = makeWs();
+  const sockets = scriptSockets(ws);
+
+  await ws.connect(() => {});
+
+  const first = ws.sendCommand(Buffer.from('first'), 'req-1', 'doorsLock', VIN_A);
+  first.catch(() => {});
+  await waitFor(() => ws.pendingCommands.has('req-1'), 'the first car\'s command is in flight');
+
+  try {
+    const second = ws.sendCommand(Buffer.from('second'), 'req-2', 'doorsLock', VIN_B);
+    second.catch(() => {});
+
+    // Queuing this behind the other car would cost it up to
+    // COMMAND_COMPLETION_WAIT for a command Mercedes is perfectly willing to
+    // accept: the backend tracks commands per vehicle, and so must we.
+    await waitFor(() => sockets[0].sent.length === 2, 'the other car\'s command goes straight out');
+    assert.deepEqual(sockets[0].sent[1], Buffer.from('second'));
+  } finally {
+    cleanup(ws);
+  }
+});
+
+test('a command stuck open only refuses more commands for its own car', async () => {
+  const ws = makeWs();
+  const sockets = scriptSockets(ws);
+  ws.COMMAND_COMPLETION_WAIT = 60;
+
+  await ws.connect(() => {});
+
+  const first = ws.sendCommand(Buffer.from('first'), 'req-1', 'windowsClose', VIN_A);
+  first.catch(() => {});
+  await waitFor(() => ws.pendingCommands.has('req-1'), 'the first command is in flight');
+
+  try {
+    commandStatus(ws, 'req-1', 7); // accepted, then silence
+    await first;
+
+    // Same car: still open at Mercedes, so say so rather than collect a
+    // refusal. Other car: nothing is open for it at all, and telling its
+    // owner "Mercedes has had a command open for this vehicle" would have
+    // been simply untrue.
+    await assert.rejects(
+      ws.sendCommand(Buffer.from('same car'), 'req-2', 'windowsClose', VIN_A),
+      /has had a command open for this vehicle for \d+s/,
+    );
+
+    const other = ws.sendCommand(Buffer.from('other car'), 'req-3', 'windowsClose', VIN_B);
+    other.catch(() => {});
+    await waitFor(() => sockets[0].sent.length === 2, 'the other car is unaffected');
+    assert.deepEqual(sockets[0].sent[1], Buffer.from('other car'));
+  } finally {
+    cleanup(ws);
+  }
+});
+
+test('a command queue is forgotten once nothing is waiting on it', async () => {
+  const ws = makeWs();
+  scriptSockets(ws);
+
+  await ws.connect(() => {});
+
+  const first = ws.sendCommand(Buffer.from('first'), 'req-1', 'doorsLock', VIN_A);
+  first.catch(() => {});
+  await waitFor(() => ws.pendingCommands.has('req-1'), 'the command is in flight');
+
+  try {
+    commandStatus(ws, 'req-1', 5); // FINISHED
+    await first;
+
+    // One entry per VIN that is never dropped is a map that only grows, for
+    // the lifetime of a client that is meant to live for days.
+    await waitFor(() => ws._commandChains.size === 0, 'the settled queue is dropped');
+  } finally {
+    cleanup(ws);
+  }
+});
+
 test('a failed command releases the next one immediately', async () => {
   const ws = makeWs();
   const sockets = scriptSockets(ws);
