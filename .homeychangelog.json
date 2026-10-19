@@ -201,5 +201,10 @@
     "en": "Stop a short-lived push connection from restarting the rate-limit backoff: the escalation is now cleared only once a connection has lasted five minutes, so a blocked account gets the quiet period it needs instead of another burst of handshakes.",
     "nl": "Een kortstondige pushverbinding zet de wachttijd na een blokkade niet langer terug: die wordt pas gewist als een verbinding vijf minuten heeft standgehouden, zodat een geblokkeerd account rust krijgt in plaats van opnieuw een reeks verbindingspogingen.",
     "de": "Eine kurzlebige Push-Verbindung setzt die Wartezeit nach einer Sperre nicht mehr zurück: Sie wird erst gelöscht, wenn eine Verbindung fünf Minuten gehalten hat, damit ein gesperrtes Konto zur Ruhe kommt statt erneut eine Reihe von Verbindungsversuchen auszulösen."
+  },
+  "1.1.53": {
+    "en": "New, added automatically for cars that report them: Trip Consumption (kWh/100 km), Distance Since Reset, Consumption Since Reset and the 12 V battery state, with its level charted in Insights. New flow cards: \"12 V battery changed\" and \"Trip ended\", and conditions on the 12 V battery, the distance since reset and the consumption since reset.",
+    "nl": "Nieuw, automatisch toegevoegd bij auto's die ze melden: Ritverbruik (kWh/100 km), Afstand sinds reset, Verbruik sinds reset en de toestand van de 12V-accu, met het niveau als grafiek in Insights. Nieuwe flowkaarten: \"12 V battery changed\" en \"Trip ended\", en voorwaarden voor de 12V-accu, de afstand sinds reset en het verbruik sinds reset.",
+    "de": "Neu, automatisch hinzugefügt bei Fahrzeugen, die sie melden: Fahrtverbrauch (kWh/100 km), Strecke seit Zurücksetzen, Verbrauch seit Zurücksetzen und der Zustand der 12-V-Batterie, deren Stufe in Insights als Diagramm erscheint. Neue Flow-Karten: \"12 V battery changed\" und \"Trip ended\" sowie Bedingungen für die 12-V-Batterie, die Strecke seit Zurücksetzen und den Verbrauch seit Zurücksetzen."
   }
 }
