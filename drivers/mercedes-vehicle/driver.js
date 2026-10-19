@@ -418,10 +418,12 @@ class MercedesVehicleDriver extends Homey.Driver {
             id: vin,
             vin: vin
           },
+          // Powertrain-neutral only: the electric capabilities are added in
+          // onInit, once Mercedes has been asked whether this car has them.
+          // Pairing every car with measure_battery is what made a diesel a
+          // battery device stuck at 0% (#79).
           capabilities: [
             'locked',
-            'measure_battery',
-            'measure_charge_power',
             'odometer',
             'distance_start',
             'distance_electrical',
