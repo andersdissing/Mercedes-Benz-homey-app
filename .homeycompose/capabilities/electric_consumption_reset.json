@@ -16,5 +16,5 @@
   "setable": false,
   "insights": true,
   "uiComponent": "sensor",
-  "icon": "/assets/icons/electric_range.svg"
+  "icon": "/assets/icons/chart-line.svg"
 }

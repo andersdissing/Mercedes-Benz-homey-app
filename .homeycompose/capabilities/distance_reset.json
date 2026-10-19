@@ -16,5 +16,5 @@
   "setable": false,
   "insights": true,
   "uiComponent": "sensor",
-  "icon": "/assets/icons/distance_start.svg"
+  "icon": "/assets/icons/map-marker-distance.svg"
 }

@@ -1846,7 +1846,7 @@
       "setable": false,
       "insights": true,
       "uiComponent": "sensor",
-      "icon": "/assets/icons/distance_start.svg"
+      "icon": "/assets/icons/map-marker-distance.svg"
     },
     "distance_start": {
       "type": "number",
@@ -2019,7 +2019,7 @@
       "setable": false,
       "insights": true,
       "uiComponent": "sensor",
-      "icon": "/assets/icons/electric_range.svg"
+      "icon": "/assets/icons/chart-line.svg"
     },
     "electric_consumption_start": {
       "type": "number",
@@ -2038,7 +2038,7 @@
       "setable": false,
       "insights": true,
       "uiComponent": "sensor",
-      "icon": "/assets/icons/electric_range.svg"
+      "icon": "/assets/icons/chart-line.svg"
     },
     "engine_running": {
       "type": "boolean",
