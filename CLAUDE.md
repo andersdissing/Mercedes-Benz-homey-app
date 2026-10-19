@@ -104,11 +104,19 @@ unlock ~4 s. Faster when the car is already awake.
   after a successfully refreshed token, then one `oauth.login()` and the
   socket opened in 194 ms. The refusal is about the session, and a refresh
   returns a token for the session being refused. Hence the re-login
-  escalation on the second strike — bounded to three per episode, at most one
-  per backoff window, because a login is the heaviest request the app makes.
-  It was one per episode until the 12 Aug 2026 outage showed a single failed
-  login ending recovery for a five-hour block; mbapi2020 budgets three the
-  same way (`MAX_RELOGIN_ATTEMPTS`, incremented on failure).
+  escalation on the second strike — at most one per backoff window, because a
+  login is the heaviest request the app makes. It was one per episode until
+  the 12 Aug 2026 outage showed a single failed login ending recovery for a
+  five-hour block; mbapi2020 budgets three the same way
+  (`MAX_RELOGIN_ATTEMPTS`, incremented on failure). Three per *episode* was
+  still too few, as #81 showed: the ladder caps at half an hour on the fifth
+  strike, so a long block spends every login in its first ten minutes and then
+  knocks half-hourly with nothing but the refresh that cannot work — nine
+  hours of `Will re-authenticate before the next attempt (1/3)` →
+  `Token refresh successful` → 429. The budget now bounds how *closely spaced*
+  logins can be, not how many an outage gets: once the window is at the cap,
+  the knock the app was going to make anyway is spent on a login instead of a
+  refresh.
 - **There is no REST source for doors, windows, lock or sunroof.** Checked
   against mbapi2020's `webapi.py` (Aug 2026): the only vehicle-state REST
   endpoint anyone knows is the widget `vehicleattributes` one the app already
@@ -170,6 +178,22 @@ unlock ~4 s. Faster when the car is already awake.
   (`[WS] Handshake refused with HTTP 429 - rate-limit headers: ...`,
   `[API] REST refused with HTTP 429 - ...`), so the next block re-checks this
   for free.
+- **One push session per account, not per car.** The stream is account-wide —
+  `vepUpdates.updates` and `apptwin_command_status_updates_by_vin` arrive keyed
+  by VIN and every device drops the keys that are not its own — so a second
+  session buys nothing and costs a second login, a second APP-SESSION-ID, a
+  second handshake on every app start and, once refused, a second 429 backoff
+  ladder. #81 is what that looks like from the log: two interleaved
+  `consecutive rate-limited attempts` series counting up separately (9 at
+  12:58 and 9 at 13:06, 10 at 13:28 and 10 at 13:36, …), each backing off half
+  an hour, so the account was knocked every fifteen minutes and never got the
+  quiet period the ladder exists to buy — nine hours, two cars, no recovery.
+  `lib/account-session.js` owns one OAuth, one `MercedesAPI` and one socket per
+  account now, keyed on login+region (*not* deviceGuid — that differs between
+  pairing runs of the same account); devices attach by VIN and the session
+  fans updates back out. Commands are gated per VIN for the same reason
+  Mercedes refuses them per VIN. mbapi2020 keeps one connection per account
+  too. Don't give a device its own client again.
 - **APP-SESSION-ID must outlive the WebSocket client object.** The client is
   rebuilt on every recovery (`MercedesAPI.connectWebSocket`), so a session id
   minted in its constructor meant a new app session every few minutes during
