@@ -4,7 +4,6 @@ const Homey = require('homey');
 const { installRedactedLogging } = require('../../lib/log-redactor');
 const { describePushStaleness } = require('../../lib/staleness-message');
 const { mergePrecondState, isPrecondRunning, describePrecondState } = require('../../lib/precond-status');
-const { classifyFromFeatures, resolvePowertrain, capabilityPlan } = require('../../lib/powertrain');
 
 class MercedesVehicleDevice extends Homey.Device {
   /**
@@ -65,8 +64,7 @@ class MercedesVehicleDevice extends Homey.Device {
       this.registerCapabilityListener('locked', this.onCapabilityLocked.bind(this));
       this.registerCapabilityListener('engine_running', this.onCapabilityEngine.bind(this));
       this.registerCapabilityListener('climate_active', this.onCapabilityClimate.bind(this));
-      // onoff_charging is registered by _applyPowertrainCapabilities(), which
-      // is what decides whether this car has it at all.
+      this.registerCapabilityListener('onoff_charging', this.onCapabilityCharging.bind(this));
 
       // Add average_speed capability if it doesn't exist (for devices paired before this was added)
       if (!this.hasCapability('average_speed')) {
@@ -136,21 +134,26 @@ class MercedesVehicleDevice extends Homey.Device {
         }
       }
 
-      // Add text capabilities that might be missing. The electric ones are
-      // not here: _applyPowertrainCapabilities() owns those, so a combustion
-      // car does not get them added and removed again on every init.
+      // Add text capabilities that might be missing
       const textCaps = [
+        'text_charging_status', 'text_charge_program', 'text_end_charge_time',
         'window_sunroof', 'measure_fuel', 'measure_adblue_level',
-        'measure_oil_level',
+        'measure_max_soc', 'measure_oil_level',
         'ecoscore_accel', 'ecoscore_const', 'ecoscore_freewhl',
         'distance_start', 'distance_electrical', 'driven_time_start',
-        'odometer', 'alarm_generic'
+        'odometer', 'measure_charge_power', 'alarm_generic',
+        'text_connector_status'
       ];
       for (const cap of textCaps) {
         if (!this.hasCapability(cap)) {
           this.log(`[INIT] Adding missing ${cap} capability`);
           await this.addCapability(cap);
         }
+      }
+
+      // Force-update measure_charge_power capability options in case Homey cached a stale definition
+      if (this.hasCapability('measure_charge_power')) {
+        await this.setCapabilityOptions('measure_charge_power', { units: 'kW' });
       }
 
       // Add tire pressure capabilities
@@ -267,10 +270,17 @@ class MercedesVehicleDevice extends Homey.Device {
         await this.addCapability('measure_service_days');
       }
 
-      // measure_battery_temperature and measure_range_electric are electric
-      // capabilities and belong to _applyPowertrainCapabilities().
+      // Add battery temperature capability
+      if (!this.hasCapability('measure_battery_temperature')) {
+        this.log('[INIT] Adding missing measure_battery_temperature capability');
+        await this.addCapability('measure_battery_temperature');
+      }
 
       // Add range capabilities
+      if (!this.hasCapability('measure_range_electric')) {
+        this.log('[INIT] Adding missing measure_range_electric capability');
+        await this.addCapability('measure_range_electric');
+      }
       if (!this.hasCapability('measure_range_liquid')) {
         this.log('[INIT] Adding missing measure_range_liquid capability');
         await this.addCapability('measure_range_liquid');
@@ -340,8 +350,17 @@ class MercedesVehicleDevice extends Homey.Device {
         await this.addCapability('theft_system_armed');
       }
 
-      // onoff_charging and onoff_connector are electric capabilities and
-      // belong to _applyPowertrainCapabilities().
+      // Add charging control capability
+      if (!this.hasCapability('onoff_charging')) {
+        this.log('[INIT] Adding missing onoff_charging capability');
+        await this.addCapability('onoff_charging');
+      }
+
+      // Add connector connected boolean capability
+      if (!this.hasCapability('onoff_connector')) {
+        this.log('[INIT] Adding missing onoff_connector capability');
+        await this.addCapability('onoff_connector');
+      }
 
       // Add departure time capability
       if (!this.hasCapability('text_departure_time')) {
@@ -364,12 +383,6 @@ class MercedesVehicleDevice extends Homey.Device {
         await this.addCapability('measure_climate_setpoint');
       }
 
-      // Everything above adds what every Mercedes has. What only an electric
-      // car has depends on the car, and asking Mercedes is the only way to
-      // know: a diesel used to be paired as a battery device stuck at 0% and
-      // Homey raised a low-battery alert for it (#79).
-      await this._applyPowertrainCapabilities(await this._resolvePowertrain());
-
       // Initialize text capabilities with default values if not set
       const textCapabilities = [
         'text_departure_time',
@@ -387,15 +400,13 @@ class MercedesVehicleDevice extends Homey.Device {
       }
 
       // Initialize numeric capabilities with 0 if not set (prevents UI crashes on null)
-      //
-      // Deliberately not the powertrain-specific ones. Writing 0 to
-      // measure_battery is how a diesel came to report a real 0% battery
-      // rather than "no reading" (#79), and an empty tank and a tank the car
-      // has not reported yet are just as different. Left null, they show as
-      // blank until the car actually says something.
       const numericCapabilities = [
+        'measure_battery',
         'meter_power',
+        'measure_range_electric',
         'measure_range_liquid',
+        'measure_fuel',
+        'measure_battery_temperature',
         'measure_service_days'
       ];
 
@@ -462,136 +473,6 @@ class MercedesVehicleDevice extends Homey.Device {
   }
 
   /**
-   * Write a capability value only if this car actually has that capability.
-   *
-   * A combustion car no longer carries the electric ones (#79), so a car that
-   * reports an electric attribute anyway - a plug-in hybrid Mercedes describes
-   * in a vocabulary this app does not recognise, or an override set to
-   * "Petrol / diesel" by mistake - must degrade to one log line rather than an
-   * error on every push. That line is also how such a car gets noticed.
-   */
-  async _setIfPresent(capability, value) {
-    if (!this.hasCapability(capability)) {
-      if (!this._missingCapabilityLogged) this._missingCapabilityLogged = new Set();
-      if (!this._missingCapabilityLogged.has(capability)) {
-        this._missingCapabilityLogged.add(capability);
-        this.log(`[UPDATE] Car reported ${capability} but this device does not have it - check the Powertrain setting`);
-      }
-      return false;
-    }
-
-    await this.setCapabilityValue(capability, value);
-    return true;
-  }
-
-  /**
-   * Read a capability value, or the fallback if this car does not have that
-   * capability. `getCapabilityValue()` throws for a capability the device does
-   * not carry, and a combustion car no longer carries the electric ones (#79)
-   * - including in the flow conditions, which must answer rather than fail.
-   */
-  _getIfPresent(capability, fallback = null) {
-    return this.hasCapability(capability) ? this.getCapabilityValue(capability) : fallback;
-  }
-
-  /**
-   * Whether this car is electric, combustion, or not yet known.
-   *
-   * The `powertrain` setting wins outright when it is not `auto`: it is the
-   * escape hatch for a car Mercedes describes in a vocabulary this app has
-   * not seen, and it saves a request. Otherwise the verdict comes from what
-   * Mercedes says the car can be commanded to do, cached in the store because
-   * both capability endpoints 401 for some cars and neither is reachable
-   * while the app is rate-limited.
-   */
-  async _resolvePowertrain() {
-    const override = this.getSetting('powertrain') || 'auto';
-
-    if (override === 'ev' || override === 'ice') {
-      this.log(`[INIT] Powertrain set by hand to ${override} - skipping detection`);
-      return resolvePowertrain({ override });
-    }
-
-    const cached = this.getStoreValue('powertrain');
-    let detected = cached;
-
-    try {
-      const features = await this.api.getVehicleFeatures(this.vin);
-      const classified = classifyFromFeatures(features);
-
-      if (classified !== 'unknown') {
-        detected = classified;
-        if (classified !== cached) {
-          await this.setStoreValue('powertrain', classified);
-        }
-      } else if (cached) {
-        this.log(`[INIT] Vehicle capabilities gave no verdict - keeping the cached ${cached}`);
-      }
-    } catch (error) {
-      // getVehicleFeatures() is best-effort and swallows its own failures, so
-      // this is only reached if the request itself could not be made at all.
-      this.error('[INIT] Could not read vehicle capabilities:', error.message);
-    }
-
-    const powertrain = resolvePowertrain({ override, detected });
-    this.log(`[INIT] Powertrain resolved to ${powertrain}`);
-    return powertrain;
-  }
-
-  /**
-   * Add the capabilities this car has, remove the ones it does not, and tell
-   * Homey whether it is a battery-powered device.
-   *
-   * That last part is what closes #79: the low-battery alert follows the
-   * device's `energy.batteries` declaration, which the driver used to make for
-   * every car. An `unknown` car keeps its capabilities - removing one destroys
-   * its history and breaks any flow using it, far too destructive to do on a
-   * guess - but declares no battery, so it cannot raise the alert either.
-   */
-  async _applyPowertrainCapabilities(powertrain) {
-    const plan = capabilityPlan(powertrain);
-
-    for (const cap of plan.add) {
-      if (this.hasCapability(cap)) continue;
-      try {
-        this.log(`[INIT] Adding ${cap} capability (powertrain: ${powertrain})`);
-        await this.addCapability(cap);
-      } catch (e) {
-        this.log(`[INIT] Could not add ${cap}:`, e.message);
-      }
-    }
-
-    for (const cap of plan.remove) {
-      if (!this.hasCapability(cap)) continue;
-      try {
-        this.log(`[INIT] Removing ${cap} capability (powertrain: ${powertrain})`);
-        await this.removeCapability(cap);
-      } catch (e) {
-        this.log(`[INIT] Could not remove ${cap}:`, e.message);
-      }
-    }
-
-    // Force-update measure_charge_power capability options in case Homey cached a stale definition
-    if (this.hasCapability('measure_charge_power')) {
-      await this.setCapabilityOptions('measure_charge_power', { units: 'kW' });
-    }
-
-    // Registered here rather than in onInit because the capability may only
-    // have appeared a few lines ago - an owner switching the override to
-    // electric gets a working charging switch without restarting the app.
-    if (this.hasCapability('onoff_charging') && !this._chargingListenerRegistered) {
-      this._chargingListenerRegistered = true;
-      this.registerCapabilityListener('onoff_charging', this.onCapabilityCharging.bind(this));
-    }
-
-    try {
-      await this.setEnergy(plan.batteries ? { batteries: ['OTHER'] } : {});
-    } catch (e) {
-      this.error('[INIT] Could not update the energy declaration:', e.message);
-    }
-  }
-
-  /**
    * onAdded is called when the user adds the device
    */
   async onAdded() {
@@ -603,14 +484,6 @@ class MercedesVehicleDevice extends Homey.Device {
    */
   async onSettings({ oldSettings, newSettings, changedKeys }) {
     this.log('Mercedes Vehicle settings were changed');
-
-    // Applied here as well as in onInit so a wrong verdict is corrected the
-    // moment the owner says so, without restarting the app.
-    if (changedKeys.includes('powertrain')) {
-      const override = newSettings.powertrain || 'auto';
-      this.log(`[SETTINGS] Powertrain override set to ${override}`);
-      await this._applyPowertrainCapabilities(await this._resolvePowertrain());
-    }
 
     // Handle auto refresh toggle or polling interval changes
     if (changedKeys.includes('disable_auto_refresh') || changedKeys.includes('polling_interval')) {
@@ -1043,18 +916,11 @@ class MercedesVehicleDevice extends Homey.Device {
       try {
         if (data.soc !== undefined) {
           const battery = parseInt(data.soc);
-
-          // Read before the write: this used to compare the new value with
-          // itself, so the crossing was never detected and the trigger never
-          // fired.
-          const previous = this._getIfPresent('measure_battery');
-
           this.log(`[UPDATE] Setting battery to: ${battery}%`);
-          const written = await this._setIfPresent('measure_battery', battery);
+          await this.setCapabilityValue('measure_battery', battery);
 
-          // Trigger low battery warning, on the crossing only - a car left
-          // below 20% must not re-trigger on every push.
-          if (written && battery < 20 && (previous === null || previous >= 20)) {
+          // Trigger low battery warning
+          if (battery < 20 && this.getCapabilityValue('measure_battery') >= 20) {
             await this.homey.flow.getDeviceTriggerCard('low_battery')
               .trigger(this, { battery_level: battery });
           }
@@ -1067,7 +933,7 @@ class MercedesVehicleDevice extends Homey.Device {
       try {
         const chargingPowerValue = data.chargingpower ?? data.chargingPower;
         if (chargingPowerValue !== undefined) {
-          await this._setIfPresent('measure_charge_power', parseFloat(chargingPowerValue));
+          await this.setCapabilityValue('measure_charge_power', parseFloat(chargingPowerValue));
         }
       } catch (e) {
         this.error('[UPDATE] Error updating charging power:', e.message);
@@ -1108,23 +974,23 @@ class MercedesVehicleDevice extends Homey.Device {
         }
 
         if (isCharging !== null && this.hasCapability('onoff_charging')) {
-          const wasCharging = this._getIfPresent('onoff_charging') === true;
+          const wasCharging = this.getCapabilityValue('onoff_charging') === true;
 
           if (wasCharging !== isCharging) {
             this.log(`[UPDATE] Setting charging to: ${isCharging} (from ${source})`);
           }
-          await this._setIfPresent('onoff_charging', isCharging);
+          await this.setCapabilityValue('onoff_charging', isCharging);
 
           // Power is only meaningful while charging, and Mercedes stops
           // reporting it entirely when it stops - so clear it here rather than
           // leaving the last session's figure on display.
-          if (!isCharging && this._getIfPresent('measure_charge_power') > 0) {
-            await this._setIfPresent('measure_charge_power', 0);
+          if (!isCharging && this.getCapabilityValue('measure_charge_power') > 0) {
+            await this.setCapabilityValue('measure_charge_power', 0);
           }
 
           // Trigger charging flow cards
           if (!wasCharging && isCharging) {
-            const chargingPower = this._getIfPresent('measure_charge_power') || 0;
+            const chargingPower = this.getCapabilityValue('measure_charge_power') || 0;
             await this.homey.flow.getDeviceTriggerCard('charging_started')
               .trigger(this, { charging_power: chargingPower });
             this.log(`[TRIGGER] Charging started with ${chargingPower} kW`);
@@ -1317,7 +1183,7 @@ class MercedesVehicleDevice extends Homey.Device {
       try {
         if (data.rangeelectric !== undefined) {
           this.log(`[UPDATE] Setting electric range to: ${data.rangeelectric} km`);
-          await this._setIfPresent('measure_range_electric', parseFloat(data.rangeelectric));
+          await this.setCapabilityValue('measure_range_electric', parseFloat(data.rangeelectric));
         }
 
         if (data.rangeliquid !== undefined) {
@@ -1363,7 +1229,7 @@ class MercedesVehicleDevice extends Homey.Device {
       // Charging status (text) with charging completed trigger
       try {
         if (data.chargingstatus !== undefined) {
-          const oldStatus = this._getIfPresent('text_charging_status');
+          const oldStatus = this.getCapabilityValue('text_charging_status');
           // Translate Mercedes charging status codes to readable text
           const statusMap = {
             '0': 'Charging',
@@ -1387,7 +1253,7 @@ class MercedesVehicleDevice extends Homey.Device {
           const rawStatus = String(data.chargingstatus);
           const readableStatus = statusMap[rawStatus] || rawStatus;
           this.log(`[UPDATE] Setting charging status to: ${rawStatus} (${readableStatus})`);
-          await this._setIfPresent('text_charging_status', readableStatus);
+          await this.setCapabilityValue('text_charging_status', readableStatus);
 
           // Trigger charging completed when status changes to "charging ends" (1)
           const completedStatuses = ['CHARGING ENDS', 'FINISHED', 'COMPLETED', 'END'];
@@ -1395,7 +1261,7 @@ class MercedesVehicleDevice extends Homey.Device {
           const isCompleted = rawStatus === '1' || completedStatuses.includes(readableStatus.toUpperCase());
 
           if (wasCharging && isCompleted) {
-            const batteryLevel = this._getIfPresent('measure_battery') || 0;
+            const batteryLevel = this.getCapabilityValue('measure_battery') || 0;
             await this.homey.flow.getDeviceTriggerCard('charging_completed')
               .trigger(this, { battery_level: batteryLevel });
           }
@@ -1409,7 +1275,7 @@ class MercedesVehicleDevice extends Homey.Device {
         const couplerValue = data.chargeCouplerACStatus ?? data.chargecoupleracstatus
           ?? data.chargeCouplerDCStatus ?? data.chargecoupledcstatus;
         if (couplerValue === null) {
-          await this._setIfPresent('text_connector_status', 'Unknown');
+          await this.setCapabilityValue('text_connector_status', 'Unknown');
         } else if (couplerValue !== undefined) {
           const statusMap = {
             '0': 'Connected (locked)',
@@ -1420,10 +1286,10 @@ class MercedesVehicleDevice extends Homey.Device {
           };
           const rawStatus = String(couplerValue);
           const readableStatus = statusMap[rawStatus] || rawStatus;
-          const oldStatus = this._getIfPresent('text_connector_status');
+          const oldStatus = this.getCapabilityValue('text_connector_status');
           this.log(`[UPDATE] Setting connector status to: ${rawStatus} (${readableStatus})`);
-          await this._setIfPresent('text_connector_status', readableStatus);
-          await this._setIfPresent('onoff_connector', readableStatus !== 'Disconnected');
+          await this.setCapabilityValue('text_connector_status', readableStatus);
+          await this.setCapabilityValue('onoff_connector', readableStatus !== 'Disconnected');
 
           // Determine connected state (anything that is not 'Disconnected')
           const isConnected = readableStatus !== 'Disconnected';
@@ -1452,7 +1318,7 @@ class MercedesVehicleDevice extends Homey.Device {
           const rawProgram = String(data.selectedChargeProgram);
           const readableProgram = programMap[rawProgram] || rawProgram;
           this.log(`[UPDATE] Setting selected charge program to: ${rawProgram} (${readableProgram})`);
-          await this._setIfPresent('text_charge_program', readableProgram);
+          await this.setCapabilityValue('text_charge_program', readableProgram);
           await this.setStoreValue('selectedChargeProgramRaw', data.selectedChargeProgram);
         }
       } catch (e) {
@@ -1481,7 +1347,7 @@ class MercedesVehicleDevice extends Homey.Device {
 
         if (maxSocValue !== undefined) {
           this.log(`[UPDATE] Setting max SoC to: ${maxSocValue}%`);
-          await this._setIfPresent('measure_max_soc', parseInt(maxSocValue));
+          await this.setCapabilityValue('measure_max_soc', parseInt(maxSocValue));
         }
       } catch (e) {
         this.error('[UPDATE] Error updating max SoC:', e.message);
@@ -1495,7 +1361,7 @@ class MercedesVehicleDevice extends Homey.Device {
           const mm = String(totalMinutes % 60).padStart(2, '0');
           const timeStr = `${hh}:${mm}`;
           this.log(`[UPDATE] Setting end of charge time to: ${timeStr} (raw: ${data.endofchargetime})`);
-          await this._setIfPresent('text_end_charge_time', timeStr);
+          await this.setCapabilityValue('text_end_charge_time', timeStr);
         }
       } catch (e) {
         this.error('[UPDATE] Error updating end of charge time:', e.message);
@@ -1747,7 +1613,7 @@ class MercedesVehicleDevice extends Homey.Device {
           data.batterytemperature ?? data.batteryTemperature;
         if (batteryTempValue !== undefined) {
           this.log('[DATA] Battery temperature found:', batteryTempValue);
-          await this._setIfPresent('measure_battery_temperature', parseFloat(batteryTempValue));
+          await this.setCapabilityValue('measure_battery_temperature', parseFloat(batteryTempValue));
         }
 
         // Debug: Log all attributes containing 'temp' or 'battery' to find correct key
@@ -2368,7 +2234,7 @@ class MercedesVehicleDevice extends Homey.Device {
    * Flow condition: Is vehicle charging?
    */
   async isCharging() {
-    const chargingPower = this._getIfPresent('measure_charge_power');
+    const chargingPower = this.getCapabilityValue('measure_charge_power');
     const isCharging = chargingPower > 0;
     this.log(`[FLOW] Is charging condition checked: ${isCharging} (power: ${chargingPower} kW)`);
     return isCharging;
@@ -2378,7 +2244,7 @@ class MercedesVehicleDevice extends Homey.Device {
    * Flow condition: Is charge connector plugged in?
    */
   async isConnectorConnected() {
-    const connected = this._getIfPresent('onoff_connector') === true;
+    const connected = this.getCapabilityValue('onoff_connector') === true;
     this.log(`[FLOW] Is connector connected condition checked: ${connected}`);
     return connected;
   }
@@ -2485,7 +2351,7 @@ class MercedesVehicleDevice extends Homey.Device {
    * @param {number} threshold - Battery percentage threshold
    */
   async batteryLevelAbove(threshold) {
-    const batteryLevel = this._getIfPresent('measure_battery') || 0;
+    const batteryLevel = this.getCapabilityValue('measure_battery') || 0;
     const isAbove = batteryLevel >= threshold;
     this.log(`[FLOW] Battery level condition: ${batteryLevel}% >= ${threshold}% = ${isAbove}`);
     return isAbove;

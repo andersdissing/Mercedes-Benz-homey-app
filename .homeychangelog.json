@@ -201,10 +201,5 @@
     "en": "Stop a short-lived push connection from restarting the rate-limit backoff: the escalation is now cleared only once a connection has lasted five minutes, so a blocked account gets the quiet period it needs instead of another burst of handshakes.",
     "nl": "Een kortstondige pushverbinding zet de wachttijd na een blokkade niet langer terug: die wordt pas gewist als een verbinding vijf minuten heeft standgehouden, zodat een geblokkeerd account rust krijgt in plaats van opnieuw een reeks verbindingspogingen.",
     "de": "Eine kurzlebige Push-Verbindung setzt die Wartezeit nach einer Sperre nicht mehr zurück: Sie wird erst gelöscht, wenn eine Verbindung fünf Minuten gehalten hat, damit ein gesperrtes Konto zur Ruhe kommt statt erneut eine Reihe von Verbindungsversuchen auszulösen."
-  },
-  "1.1.53": {
-    "en": "Petrol and diesel cars no longer report a battery level or raise low-battery alerts. The powertrain is detected from what Mercedes reports your car can do, and can be set by hand under Powertrain in the device settings.",
-    "nl": "Benzine- en dieselauto's melden geen accuniveau meer en geven geen waarschuwingen voor een lage accu. De aandrijflijn wordt bepaald op basis van wat Mercedes over uw auto meldt en kan handmatig worden ingesteld bij Aandrijflijn in de apparaatinstellingen.",
-    "de": "Benzin- und Dieselfahrzeuge melden keinen Batteriestand mehr und lösen keine Warnungen wegen niedriger Batterie aus. Der Antrieb wird anhand der von Mercedes gemeldeten Fahrzeugfunktionen erkannt und kann in den Geräteeinstellungen unter Antrieb manuell eingestellt werden."
   }
 }
