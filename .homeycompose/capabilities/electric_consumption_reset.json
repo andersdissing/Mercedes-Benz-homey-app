@@ -4,7 +4,7 @@
     "en": "Consumption Since Reset",
     "nl": "Verbruik sinds reset",
     "de": "Verbrauch seit Zurücksetzen",
-    "no": "Forbruk siden tilbakestilling"
+    "no": "Gjennomsnittsforbruk fra tilbakestilling"
   },
   "units": {
     "en": "kWh/100 km"

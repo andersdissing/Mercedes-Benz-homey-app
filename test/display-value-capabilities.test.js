@@ -203,11 +203,11 @@ test('both are read-only, logged to Insights, with the titles asked for', () => 
 
   const distance = read('distance_reset');
   assert.equal(distance.units.en, 'km');
-  assert.equal(distance.title.no, 'Distanse siden tilbakestilling');
+  assert.equal(distance.title.no, 'Kjørt strekning fra tilbakestilling');
 
   const consumption = read('electric_consumption_reset');
   assert.equal(consumption.units.en, 'kWh/100 km');
-  assert.equal(consumption.title.no, 'Forbruk siden tilbakestilling');
+  assert.equal(consumption.title.no, 'Gjennomsnittsforbruk fra tilbakestilling');
 
   for (const definition of [distance, consumption]) {
     assert.equal(definition.type, 'number');

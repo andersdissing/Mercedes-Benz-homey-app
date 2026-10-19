@@ -3,7 +3,8 @@
   "title": {
     "en": "Trip Consumption",
     "nl": "Ritverbruik",
-    "de": "Fahrtverbrauch"
+    "de": "Fahrtverbrauch",
+    "no": "Gjennomsnittsforbruk fra start"
   },
   "units": {
     "en": "kWh/100 km"

@@ -2066,7 +2066,7 @@
         "en": "Distance Since Reset",
         "nl": "Afstand sinds reset",
         "de": "Strecke seit Zurücksetzen",
-        "no": "Distanse siden tilbakestilling"
+        "no": "Kjørt strekning fra tilbakestilling"
       },
       "units": {
         "en": "km"
@@ -2239,7 +2239,7 @@
         "en": "Consumption Since Reset",
         "nl": "Verbruik sinds reset",
         "de": "Verbrauch seit Zurücksetzen",
-        "no": "Forbruk siden tilbakestilling"
+        "no": "Gjennomsnittsforbruk fra tilbakestilling"
       },
       "units": {
         "en": "kWh/100 km"
@@ -2258,7 +2258,8 @@
       "title": {
         "en": "Trip Consumption",
         "nl": "Ritverbruik",
-        "de": "Fahrtverbrauch"
+        "de": "Fahrtverbrauch",
+        "no": "Gjennomsnittsforbruk fra start"
       },
       "units": {
         "en": "kWh/100 km"
