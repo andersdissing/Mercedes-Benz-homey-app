@@ -1,0 +1,79 @@
+{
+  "id": "trip_ended",
+  "title": {
+    "en": "Trip ended",
+    "nl": "Rit beëindigd",
+    "de": "Fahrt beendet",
+    "no": "Tur avsluttet"
+  },
+  "hint": {
+    "en": "Fires when the ignition is switched off after a drive, once the car has sent its final figures (at most 3 minutes later, with the latest figures it has). The tags are the car's own \"from start\" figures, which can cover more than one drive if the car has not reset them in between. Trips under 2 km, and consumption shown as 99.9, are skipped.",
+    "nl": "Wordt geactiveerd wanneer het contact na een rit wordt uitgeschakeld, zodra de auto zijn laatste waarden heeft verzonden (uiterlijk 3 minuten later, met de laatste waarden die hij heeft). De tags zijn de eigen \"vanaf start\"-waarden van de auto, die meer dan één rit kunnen omvatten als de auto ze tussendoor niet heeft gereset. Ritten korter dan 2 km en een verbruik van 99,9 worden overgeslagen.",
+    "de": "Wird ausgelöst, wenn die Zündung nach einer Fahrt ausgeschaltet wird, sobald das Fahrzeug seine letzten Werte gesendet hat (spätestens 3 Minuten danach, mit den letzten Werten, die es hat). Die Tags sind die eigenen \"ab Start\"-Werte des Fahrzeugs, die mehr als eine Fahrt umfassen können, wenn das Fahrzeug sie zwischendurch nicht zurückgesetzt hat. Fahrten unter 2 km und ein Verbrauch von 99,9 werden übersprungen.",
+    "no": "Utløses når tenningen slås av etter en kjøretur, når bilen har sendt de siste verdiene (senest 3 minutter etter, med de siste verdiene den har). Taggene er bilens egne \"fra start\"-verdier, som kan gjelde flere turer hvis bilen ikke har nullstilt dem i mellomtiden. Turer under 2 km, og forbruk vist som 99,9, hoppes over."
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=mercedes-vehicle&capabilities=electric_consumption_start"
+    }
+  ],
+  "tokens": [
+    {
+      "name": "distance_start",
+      "type": "number",
+      "title": {
+        "en": "Distance from start (km)",
+        "nl": "Afstand vanaf start (km)",
+        "de": "Strecke ab Start (km)",
+        "no": "Kjørt strekning fra start (km)"
+      },
+      "example": 52.5
+    },
+    {
+      "name": "driving_time_start",
+      "type": "number",
+      "title": {
+        "en": "Driving time from start (min)",
+        "nl": "Rijtijd vanaf start (min)",
+        "de": "Fahrzeit ab Start (min)",
+        "no": "Kjøretid fra start (min)"
+      },
+      "example": 101
+    },
+    {
+      "name": "consumption_start",
+      "type": "number",
+      "title": {
+        "en": "Average consumption from start (kWh/100 km)",
+        "nl": "Gemiddeld verbruik vanaf start (kWh/100 km)",
+        "de": "Durchschnittsverbrauch ab Start (kWh/100 km)",
+        "no": "Gjennomsnittsforbruk fra start (kWh/100 km)"
+      },
+      "example": 21.5
+    },
+    {
+      "name": "energy_start",
+      "type": "number",
+      "title": {
+        "en": "Energy from start (kWh)",
+        "nl": "Energie vanaf start (kWh)",
+        "de": "Energie ab Start (kWh)",
+        "no": "Energi fra start (kWh)"
+      },
+      "example": 11.29
+    },
+    {
+      "name": "average_speed_start",
+      "type": "number",
+      "title": {
+        "en": "Average speed from start (km/h)",
+        "nl": "Gemiddelde snelheid vanaf start (km/h)",
+        "de": "Durchschnittsgeschwindigkeit ab Start (km/h)",
+        "no": "Gjennomsnittshastighet fra start (km/h)"
+      },
+      "example": 31
+    }
+  ]
+}

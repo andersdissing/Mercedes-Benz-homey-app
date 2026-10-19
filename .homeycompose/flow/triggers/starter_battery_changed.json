@@ -1,0 +1,51 @@
+{
+  "id": "starter_battery_changed",
+  "title": {
+    "en": "12 V battery changed",
+    "nl": "12V-accu veranderd",
+    "de": "12V-Batterie geändert",
+    "no": "12 V-batteriet endret seg"
+  },
+  "hint": {
+    "en": "Fires when the car's rating of its 12 V battery changes. Level by severity: green 0, green-yellow 1, yellow 2, orange 3, red 4.",
+    "nl": "Wordt geactiveerd wanneer de beoordeling van de 12V-accu door de auto verandert. Niveau naar ernst: groen 0, groen-geel 1, geel 2, oranje 3, rood 4.",
+    "de": "Wird ausgelöst, wenn sich die Bewertung der 12V-Batterie durch das Fahrzeug ändert. Stufe nach Schweregrad: grün 0, grün-gelb 1, gelb 2, orange 3, rot 4.",
+    "no": "Utløses når bilens vurdering av 12 V-batteriet endrer seg. Nivå etter alvor: grønn 0, grønn-gul 1, gul 2, oransje 3, rød 4."
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=mercedes-vehicle&capabilities=starter_battery_level"
+    }
+  ],
+  "tokens": [
+    {
+      "name": "level",
+      "type": "number",
+      "title": {
+        "en": "Level (0-4)",
+        "nl": "Niveau (0-4)",
+        "de": "Stufe (0-4)",
+        "no": "Nivå (0-4)"
+      },
+      "example": 2
+    },
+    {
+      "name": "colour",
+      "type": "string",
+      "title": {
+        "en": "Colour",
+        "nl": "Kleur",
+        "de": "Farbe",
+        "no": "Farge"
+      },
+      "example": {
+        "en": "Yellow",
+        "nl": "Geel",
+        "de": "Gelb",
+        "no": "Gul"
+      }
+    }
+  ]
+}

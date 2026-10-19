@@ -4,6 +4,66 @@ const Homey = require('homey');
 const { installRedactedLogging } = require('../../lib/log-redactor');
 const { describePushStaleness } = require('../../lib/staleness-message');
 const { mergePrecondState, isPrecondRunning, describePrecondState } = require('../../lib/precond-status');
+const { parseDisplayNumber } = require('../../lib/display-value');
+
+const KWH_PER_100KM = ['KWH_PER_100KM', 'UNSPECIFIED_ELECTRICITY_CONSUMPTION_UNIT'];
+const KILOMETERS = ['KILOMETERS', 'UNSPECIFIED_DISTANCE_UNIT'];
+
+/** The app's built manifest, for titles a flow token should carry. */
+const MANIFEST = require('../../app.json');
+
+/**
+ * "Trip ended": how long after the ignition goes off to wait for the trip's
+ * final figures before going with the latest ones. A connection that drops in
+ * between comes back with a full update carrying every figure, so this leaves
+ * room for a reconnect, and it is what keeps the card from waiting on a
+ * figure that never comes.
+ */
+const TRIP_END_WAIT = 180000; // 3 minutes
+const TRIP_MIN_DISTANCE = 2; // km - shorter trips are skipped
+const TRIP_CONSUMPTION_INVALID = 99.9; // what the car shows when it has no figure
+
+/** starter_battery_state's enum ids; see _updateStarterBattery(). */
+const STARTER_BATTERY_STATES = ['0', '1', '2', '3', '4'];
+
+/**
+ * starter_battery_level: the same rating ordered by severity, as a number
+ * Insights can chart - Homey keeps no Insights for an enum. Green 0,
+ * green-yellow 1, yellow 2, orange 3, red 4; Mercedes' own codes run
+ * 0 green, 1 yellow, 2 red, 3 orange, 4 green-yellow.
+ */
+const STARTER_BATTERY_SEVERITY = { 0: 0, 4: 1, 1: 2, 3: 3, 2: 4 };
+
+/**
+ * Capabilities read from an attribute's display value, as mbapi2020 reads
+ * them, and added only once a car reports the attribute. Both spellings are
+ * accepted: mbapi2020 names these `distanceReset` but `electricconsumptionreset`,
+ * and the trip distance has been seen as both `distancestart` and
+ * `distanceStart`. See _updateDisplayValueCapabilities().
+ */
+const DISPLAY_VALUE_CAPABILITIES = [
+  {
+    capability: 'electric_consumption_start',
+    keys: ['electricconsumptionstart', 'electricConsumptionStart'],
+    units: KWH_PER_100KM,
+    unitLabel: 'kWh/100 km',
+    label: 'trip consumption',
+  },
+  {
+    capability: 'electric_consumption_reset',
+    keys: ['electricconsumptionreset', 'electricConsumptionReset'],
+    units: KWH_PER_100KM,
+    unitLabel: 'kWh/100 km',
+    label: 'consumption since reset',
+  },
+  {
+    capability: 'distance_reset',
+    keys: ['distanceReset', 'distancereset'],
+    units: KILOMETERS,
+    unitLabel: 'km',
+    label: 'distance since reset',
+  },
+];
 
 class MercedesVehicleDevice extends Homey.Device {
   /**
@@ -542,6 +602,10 @@ class MercedesVehicleDevice extends Homey.Device {
       this.pollInterval = null;
     }
 
+    // A trip end still waiting for its figures must not fire on a device
+    // that is going away.
+    this._cancelTripEnd();
+
     this._stopWebSocketHealthCheck();
 
     if (!this.session) return;
@@ -844,6 +908,9 @@ class MercedesVehicleDevice extends Homey.Device {
 
       // Update capabilities with the new data
       await this.updateCapabilities(vehicleData);
+
+      // Push only - see _trackTrip().
+      this._trackTrip(vehicleData);
       this.log('[WEBSOCKET] Capabilities updated from WebSocket data');
 
     } catch (error) {
@@ -875,6 +942,252 @@ class MercedesVehicleDevice extends Homey.Device {
     this._capabilityChain = run.then(() => {}, () => {});
 
     return run;
+  }
+
+  /**
+   * Trip figures the Mercedes app shows - consumption since start, distance
+   * and consumption since reset - read the way mbapi2020 reads them: the
+   * attribute's display value, in the unit the account displays it in.
+   *
+   * That unit travels with the value, and each capability has a fixed one, so
+   * a value in any other unit is skipped (and said once) rather than shown
+   * under the wrong label. See lib/display-value.js for reading the text.
+   *
+   * Each capability is added the first time a car actually reports its
+   * attribute, not at pairing: plenty of cars never do (any non-electric one
+   * for consumption), and a tile that stays empty forever is worse than none.
+   * Insights start with the first value. Each one is tried on its own, so a
+   * failure on one cannot cost the others.
+   */
+  async _updateDisplayValueCapabilities(data) {
+    for (const spec of DISPLAY_VALUE_CAPABILITIES) {
+      try {
+        await this._updateDisplayValueCapability(data, spec);
+      } catch (e) {
+        this.error(`[UPDATE] Error updating ${spec.label}:`, e.message);
+      }
+    }
+  }
+
+  async _updateDisplayValueCapability(data, spec) {
+    const key = spec.keys.find((k) => data[`${k}_display`] !== undefined || data[k] !== undefined);
+    if (!key) return;
+
+    const shown = data[`${key}_display`] ?? data[key];
+    if (shown === undefined || shown === null || shown === '') return;
+
+    const unit = data[`${key}_unit`];
+    if (unit && !spec.units.includes(unit)) {
+      if (!this._displayUnitSkipped) this._displayUnitSkipped = new Set();
+      if (!this._displayUnitSkipped.has(spec.capability)) {
+        this._displayUnitSkipped.add(spec.capability);
+        this.log(`[UPDATE] ${spec.label} arrives in ${unit}, not ${spec.unitLabel} - not shown`);
+      }
+      return;
+    }
+
+    const value = parseDisplayNumber(shown);
+    if (!Number.isFinite(value)) return;
+
+    if (!this.hasCapability(spec.capability)) {
+      this.log(`[UPDATE] Car reports ${key} - adding ${spec.capability}`);
+      await this.addCapability(spec.capability);
+    }
+
+    this.log(`[UPDATE] Setting ${spec.label} to: ${value} ${spec.unitLabel}`);
+    await this.setCapabilityValue(spec.capability, value);
+  }
+
+  /**
+   * The 12 V starter battery's state, as the car rates it: starterBatteryState,
+   * 0 green, 1 yellow, 2 red, 3 orange, 4 green/yellow (mbapi2020's reading).
+   *
+   * Not the high-voltage battery - that is soc, behind measure_battery and the
+   * "Battery is low" trigger. Like the trip figures, the capability is added the
+   * first time a car sends the attribute, so a car without it gets no tile. A
+   * code outside 0-4 has no title, so it is logged once and not written.
+   *
+   * starter_battery_level carries the same reading as a severity number for
+   * Insights (no tile of its own), added and set alongside the enum.
+   */
+  async _updateStarterBattery(data) {
+    const raw = data.starterBatteryState ?? data.starterbatterystate;
+    if (raw === undefined || raw === null) return;
+
+    const id = String(Number(raw));
+    if (!STARTER_BATTERY_STATES.includes(id)) {
+      if (!this._starterBatteryUnknownLogged) {
+        this._starterBatteryUnknownLogged = true;
+        this.log(`[UPDATE] Unknown 12 V battery state ${JSON.stringify(raw)} - not shown`);
+      }
+      return;
+    }
+
+    for (const capability of ['starter_battery_state', 'starter_battery_level']) {
+      if (!this.hasCapability(capability)) {
+        this.log(`[UPDATE] Car reports starterBatteryState - adding ${capability}`);
+        await this.addCapability(capability);
+      }
+    }
+
+    const severity = STARTER_BATTERY_SEVERITY[id];
+    const previous = this.getCapabilityValue('starter_battery_state');
+    this.log(`[UPDATE] Setting 12 V battery state to: ${id} (severity ${severity})`);
+    await this.setCapabilityValue('starter_battery_state', id);
+    await this.setCapabilityValue('starter_battery_level', severity);
+
+    // Only a real change: not the first reading, not the same rating again.
+    if (previous !== null && previous !== undefined && previous !== id) {
+      this.log(`[TRIGGER] 12 V battery changed: ${previous} -> ${id} (level ${severity})`);
+      await this.homey.flow.getDeviceTriggerCard('starter_battery_changed')
+        .trigger(this, { level: severity, colour: this._starterBatteryColour(id) });
+    }
+  }
+
+  /** The colour's title in the Homey's language, from the capability's enum. */
+  _starterBatteryColour(id) {
+    const value = MANIFEST.capabilities.starter_battery_state.values.find((v) => v.id === id);
+    let language = 'en';
+    try { language = this.homey.i18n.getLanguage(); } catch (e) { /* English */ }
+    return (value && (value.title[language] || value.title.en)) || id;
+  }
+
+  /**
+   * Follow a drive from push updates, and fire "Trip ended" once it is over.
+   *
+   * A trip starts when the car is ready to drive (ignitionstate 4) and ends
+   * when the ignition goes off (0). The "from start" figures are what the car
+   * shows for the trip, but the last of them can arrive after the ignition
+   * has gone off - so the card waits for all four to be heard again, or for
+   * TRIP_END_WAIT, and then goes with the latest of each. A restart (4) before
+   * that cancels the end: the drive carries on.
+   *
+   * Push only: the widget poll can carry an older ignition state than the
+   * push already has, which would start a trip that is over.
+   */
+  _trackTrip(data) {
+    if (!this._trip) this._trip = { active: false, values: {}, ending: null };
+    const trip = this._trip;
+
+    const ignition = data.ignitionstate ?? data.ignitionState;
+    if (ignition !== undefined && ignition !== null) {
+      const state = Number(ignition);
+      if (state === 4) {
+        if (trip.ending) {
+          this.log('[TRIP] Ignition back on before the trip ended - carrying on');
+          this._cancelTripEnd();
+        } else if (!trip.active) {
+          // A new trip: nothing from the last one may stand in for a figure
+          // this one never sends.
+          trip.values = {};
+        }
+        trip.active = true;
+      } else if (state === 0 && trip.active) {
+        trip.active = false;
+        this.log('[TRIP] Ignition off - waiting for the trip\'s final figures');
+        trip.ending = {
+          heard: new Set(),
+          timer: setTimeout(() => this._finishTrip('timeout'), TRIP_END_WAIT),
+        };
+      }
+    }
+
+    const figures = this._tripFigures(data);
+    for (const [name, value] of Object.entries(figures)) {
+      trip.values[name] = value;
+      if (trip.ending) trip.ending.heard.add(name);
+    }
+
+    if (trip.ending && trip.ending.heard.size === 4) this._finishTrip('all figures in');
+  }
+
+  /** The trip figures an update carries, read as the capabilities read them. */
+  _tripFigures(data) {
+    const figures = {};
+    const distance = data.distanceStart ?? data.distancestart;
+    if (distance !== undefined && distance !== null) figures.distance = parseFloat(distance);
+
+    const time = data.drivenTimeStart ?? data.driventimestart;
+    if (time !== undefined && time !== null) figures.drivingTime = parseInt(time, 10);
+
+    const speed = data.averageSpeedStart ?? data.averagespeedstart;
+    if (speed !== undefined && speed !== null) figures.averageSpeed = parseFloat(speed);
+
+    const shown = data.electricconsumptionstart_display ?? data.electricconsumptionstart;
+    const unit = data.electricconsumptionstart_unit;
+    if (shown !== undefined && shown !== null && shown !== ''
+      && (!unit || KWH_PER_100KM.includes(unit))) {
+      const consumption = parseDisplayNumber(shown);
+      if (Number.isFinite(consumption)) figures.consumption = consumption;
+    }
+    return figures;
+  }
+
+  _cancelTripEnd() {
+    if (!this._trip || !this._trip.ending) return;
+    clearTimeout(this._trip.ending.timer);
+    this._trip.ending = null;
+  }
+
+  async _finishTrip(why) {
+    if (!this._trip || !this._trip.ending) return;
+    this._cancelTripEnd();
+
+    const { distance, drivingTime, consumption, averageSpeed } = this._trip.values;
+    const missing = [['distance', distance], ['driving time', drivingTime], ['consumption', consumption], ['average speed', averageSpeed]]
+      .filter(([, value]) => !Number.isFinite(value)).map(([name]) => name);
+
+    if (missing.length) {
+      this.log(`[TRIP] Trip ended (${why}) without ${missing.join(', ')} - not triggered`);
+      return;
+    }
+    if (distance < TRIP_MIN_DISTANCE) {
+      this.log(`[TRIP] Trip ended (${why}): ${distance} km is under ${TRIP_MIN_DISTANCE} km - skipped`);
+      return;
+    }
+    if (consumption === TRIP_CONSUMPTION_INVALID) {
+      this.log(`[TRIP] Trip ended (${why}): consumption ${TRIP_CONSUMPTION_INVALID} means none - skipped`);
+      return;
+    }
+
+    const energy = Math.round(distance * consumption) / 100;
+    const tokens = {
+      distance_start: distance,
+      driving_time_start: drivingTime,
+      consumption_start: consumption,
+      energy_start: energy,
+      average_speed_start: averageSpeed,
+    };
+    this.log(`[TRIGGER] Trip ended (${why}): ${JSON.stringify(tokens)}`);
+    try {
+      await this.homey.flow.getDeviceTriggerCard('trip_ended').trigger(this, tokens);
+    } catch (error) {
+      this.error('[TRIGGER] Could not fire trip_ended:', error.message);
+    }
+  }
+
+  /** 12 V battery at least this severity (1 green-yellow ... 4 red)? */
+  async starterBatteryAtLeast(level) {
+    const value = this.getCapabilityValue('starter_battery_level');
+    const result = typeof value === 'number' && value >= level;
+    this.log(`[FLOW] 12 V battery at least ${level} checked: ${result} (level: ${value})`);
+    return result;
+  }
+
+  /** Consumption since reset above the threshold? */
+  async consumptionResetAbove(threshold) {
+    const value = this.getCapabilityValue('electric_consumption_reset');
+    const result = typeof value === 'number' && value > threshold;
+    this.log(`[FLOW] Consumption since reset above ${threshold} checked: ${result} (value: ${value})`);
+    return result;
+  }
+
+  /** Distance since reset above the threshold? */
+  async distanceResetAbove(threshold) {
+    const value = this.getCapabilityValue('distance_reset');
+    const result = typeof value === 'number' && value > threshold;
+    this.log(`[FLOW] Distance since reset above ${threshold} checked: ${result} (value: ${value})`);
+    return result;
   }
 
   /**
@@ -1125,6 +1438,19 @@ class MercedesVehicleDevice extends Homey.Device {
         }
       } catch (e) {
         this.error('[UPDATE] Error updating trip distance/time:', e.message);
+      }
+
+      // Trip consumption, and distance and consumption since reset - their own
+      // block, because they may add capabilities and a failure there must not
+      // cost the trip distance and time above.
+      await this._updateDisplayValueCapabilities(data);
+
+      // The 12 V starter battery, as the car rates it - its own block for the
+      // same reason.
+      try {
+        await this._updateStarterBattery(data);
+      } catch (e) {
+        this.error('[UPDATE] Error updating 12 V battery state:', e.message);
       }
 
       // Average speed since start - check both lowercase and camelCase variants

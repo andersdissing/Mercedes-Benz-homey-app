@@ -289,6 +289,24 @@ class MercedesVehicleDriver extends Homey.Driver {
           return await args.device.isInGeofence(args.zone_name);
         });
 
+      // 12 V battery at least a given severity?
+      this.homey.flow.getConditionCard('starter_battery_at_least')
+        .registerRunListener(async (args) => {
+          return await args.device.starterBatteryAtLeast(Number(args.colour));
+        });
+
+      // Consumption since reset above a threshold?
+      this.homey.flow.getConditionCard('consumption_reset_above')
+        .registerRunListener(async (args) => {
+          return await args.device.consumptionResetAbove(args.consumption);
+        });
+
+      // Distance since reset above a threshold?
+      this.homey.flow.getConditionCard('distance_reset_above')
+        .registerRunListener(async (args) => {
+          return await args.device.distanceResetAbove(args.distance);
+        });
+
       this.log('Flow cards registered successfully');
     } catch (error) {
       this.error('Error registering flow cards:', error.message);

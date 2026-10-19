@@ -1,7 +1,7 @@
 {
   "_comment": "This file is generated. Please edit .homeycompose/app.json instead.",
   "id": "com.mercedes.mbapi",
-  "version": "1.1.52",
+  "version": "1.1.53",
   "compatibility": ">=12.3.0",
   "sdk": 3,
   "platforms": [
@@ -419,6 +419,136 @@
         ]
       },
       {
+        "id": "starter_battery_changed",
+        "title": {
+          "en": "12 V battery changed",
+          "nl": "12V-accu veranderd",
+          "de": "12V-Batterie geändert",
+          "no": "12 V-batteriet endret seg"
+        },
+        "hint": {
+          "en": "Fires when the car's rating of its 12 V battery changes. Level by severity: green 0, green-yellow 1, yellow 2, orange 3, red 4.",
+          "nl": "Wordt geactiveerd wanneer de beoordeling van de 12V-accu door de auto verandert. Niveau naar ernst: groen 0, groen-geel 1, geel 2, oranje 3, rood 4.",
+          "de": "Wird ausgelöst, wenn sich die Bewertung der 12V-Batterie durch das Fahrzeug ändert. Stufe nach Schweregrad: grün 0, grün-gelb 1, gelb 2, orange 3, rot 4.",
+          "no": "Utløses når bilens vurdering av 12 V-batteriet endrer seg. Nivå etter alvor: grønn 0, grønn-gul 1, gul 2, oransje 3, rød 4."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle&capabilities=starter_battery_level"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "level",
+            "type": "number",
+            "title": {
+              "en": "Level (0-4)",
+              "nl": "Niveau (0-4)",
+              "de": "Stufe (0-4)",
+              "no": "Nivå (0-4)"
+            },
+            "example": 2
+          },
+          {
+            "name": "colour",
+            "type": "string",
+            "title": {
+              "en": "Colour",
+              "nl": "Kleur",
+              "de": "Farbe",
+              "no": "Farge"
+            },
+            "example": {
+              "en": "Yellow",
+              "nl": "Geel",
+              "de": "Gelb",
+              "no": "Gul"
+            }
+          }
+        ]
+      },
+      {
+        "id": "trip_ended",
+        "title": {
+          "en": "Trip ended",
+          "nl": "Rit beëindigd",
+          "de": "Fahrt beendet",
+          "no": "Tur avsluttet"
+        },
+        "hint": {
+          "en": "Fires when the ignition is switched off after a drive, once the car has sent its final figures (at most 3 minutes later, with the latest figures it has). The tags are the car's own \"from start\" figures, which can cover more than one drive if the car has not reset them in between. Trips under 2 km, and consumption shown as 99.9, are skipped.",
+          "nl": "Wordt geactiveerd wanneer het contact na een rit wordt uitgeschakeld, zodra de auto zijn laatste waarden heeft verzonden (uiterlijk 3 minuten later, met de laatste waarden die hij heeft). De tags zijn de eigen \"vanaf start\"-waarden van de auto, die meer dan één rit kunnen omvatten als de auto ze tussendoor niet heeft gereset. Ritten korter dan 2 km en een verbruik van 99,9 worden overgeslagen.",
+          "de": "Wird ausgelöst, wenn die Zündung nach einer Fahrt ausgeschaltet wird, sobald das Fahrzeug seine letzten Werte gesendet hat (spätestens 3 Minuten danach, mit den letzten Werten, die es hat). Die Tags sind die eigenen \"ab Start\"-Werte des Fahrzeugs, die mehr als eine Fahrt umfassen können, wenn das Fahrzeug sie zwischendurch nicht zurückgesetzt hat. Fahrten unter 2 km und ein Verbrauch von 99,9 werden übersprungen.",
+          "no": "Utløses når tenningen slås av etter en kjøretur, når bilen har sendt de siste verdiene (senest 3 minutter etter, med de siste verdiene den har). Taggene er bilens egne \"fra start\"-verdier, som kan gjelde flere turer hvis bilen ikke har nullstilt dem i mellomtiden. Turer under 2 km, og forbruk vist som 99,9, hoppes over."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle&capabilities=electric_consumption_start"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "distance_start",
+            "type": "number",
+            "title": {
+              "en": "Distance from start (km)",
+              "nl": "Afstand vanaf start (km)",
+              "de": "Strecke ab Start (km)",
+              "no": "Kjørt strekning fra start (km)"
+            },
+            "example": 52.5
+          },
+          {
+            "name": "driving_time_start",
+            "type": "number",
+            "title": {
+              "en": "Driving time from start (min)",
+              "nl": "Rijtijd vanaf start (min)",
+              "de": "Fahrzeit ab Start (min)",
+              "no": "Kjøretid fra start (min)"
+            },
+            "example": 101
+          },
+          {
+            "name": "consumption_start",
+            "type": "number",
+            "title": {
+              "en": "Average consumption from start (kWh/100 km)",
+              "nl": "Gemiddeld verbruik vanaf start (kWh/100 km)",
+              "de": "Durchschnittsverbrauch ab Start (kWh/100 km)",
+              "no": "Gjennomsnittsforbruk fra start (kWh/100 km)"
+            },
+            "example": 21.5
+          },
+          {
+            "name": "energy_start",
+            "type": "number",
+            "title": {
+              "en": "Energy from start (kWh)",
+              "nl": "Energie vanaf start (kWh)",
+              "de": "Energie ab Start (kWh)",
+              "no": "Energi fra start (kWh)"
+            },
+            "example": 11.29
+          },
+          {
+            "name": "average_speed_start",
+            "type": "number",
+            "title": {
+              "en": "Average speed from start (km/h)",
+              "nl": "Gemiddelde snelheid vanaf start (km/h)",
+              "de": "Durchschnittsgeschwindigkeit ab Start (km/h)",
+              "no": "Gjennomsnittshastighet fra start (km/h)"
+            },
+            "example": 31
+          }
+        ]
+      },
+      {
         "id": "vehicle_alarm",
         "title": {
           "en": "Vehicle alarm triggered",
@@ -613,6 +743,88 @@
         "id": "battery_level"
       },
       {
+        "id": "consumption_reset_above",
+        "title": {
+          "en": "Consumption since reset !{{is|is not}} above ...",
+          "nl": "Verbruik sinds reset !{{is|is niet}} boven ...",
+          "de": "Verbrauch seit Zurücksetzen !{{ist|ist nicht}} über ...",
+          "no": "Snittforbruk fra tilbakestilling !{{er|er ikke}} over ..."
+        },
+        "titleFormatted": {
+          "en": "Consumption since reset !{{is|is not}} above [[consumption]] kWh/100 km",
+          "nl": "Verbruik sinds reset !{{is|is niet}} boven [[consumption]] kWh/100 km",
+          "de": "Verbrauch seit Zurücksetzen !{{ist|ist nicht}} über [[consumption]] kWh/100 km",
+          "no": "Snittforbruk fra tilbakestilling !{{er|er ikke}} over [[consumption]] kWh/100 km"
+        },
+        "hint": {
+          "en": "Compares the average consumption since the trip computer was last reset.",
+          "nl": "Vergelijkt het gemiddelde verbruik sinds de boordcomputer voor het laatst is gereset.",
+          "de": "Vergleicht den Durchschnittsverbrauch seit dem letzten Zurücksetzen des Bordcomputers.",
+          "no": "Sammenligner gjennomsnittsforbruket siden tripptelleren sist ble tilbakestilt."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle&capabilities=electric_consumption_reset"
+          },
+          {
+            "type": "number",
+            "name": "consumption",
+            "title": {
+              "en": "kWh/100 km",
+              "nl": "kWh/100 km",
+              "de": "kWh/100 km",
+              "no": "kWh/100 km"
+            },
+            "min": 0,
+            "max": 100,
+            "step": 0.1
+          }
+        ]
+      },
+      {
+        "id": "distance_reset_above",
+        "title": {
+          "en": "Distance since reset !{{is|is not}} above ...",
+          "nl": "Afstand sinds reset !{{is|is niet}} boven ...",
+          "de": "Strecke seit Zurücksetzen !{{ist|ist nicht}} über ...",
+          "no": "Kjørt strekning fra tilbakestilling !{{er|er ikke}} over ..."
+        },
+        "titleFormatted": {
+          "en": "Distance since reset !{{is|is not}} above [[distance]] km",
+          "nl": "Afstand sinds reset !{{is|is niet}} boven [[distance]] km",
+          "de": "Strecke seit Zurücksetzen !{{ist|ist nicht}} über [[distance]] km",
+          "no": "Kjørt strekning fra tilbakestilling !{{er|er ikke}} over [[distance]] km"
+        },
+        "hint": {
+          "en": "Compares the distance driven since the trip computer was last reset - useful as a reminder to reset it in the car.",
+          "nl": "Vergelijkt de afgelegde afstand sinds de boordcomputer voor het laatst is gereset, handig als herinnering om hem in de auto te resetten.",
+          "de": "Vergleicht die gefahrene Strecke seit dem letzten Zurücksetzen des Bordcomputers, nützlich als Erinnerung, ihn im Fahrzeug zurückzusetzen.",
+          "no": "Sammenligner kjørt strekning siden tripptelleren sist ble tilbakestilt, nyttig som påminnelse om å nullstille den i bilen."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle&capabilities=distance_reset"
+          },
+          {
+            "type": "number",
+            "name": "distance",
+            "title": {
+              "en": "km",
+              "nl": "km",
+              "de": "km",
+              "no": "km"
+            },
+            "min": 0,
+            "max": 1000000,
+            "step": 1
+          }
+        ]
+      },
+      {
         "icon": "/assets/icon.svg",
         "title": {
           "en": "Auxiliary heating !{{is|is not}} active",
@@ -800,6 +1012,82 @@
           }
         ],
         "id": "is_preconditioning"
+      },
+      {
+        "id": "starter_battery_at_least",
+        "title": {
+          "en": "12 V battery !{{is|is not}} at least ...",
+          "nl": "12V-accu !{{is|is niet}} minstens ...",
+          "de": "12V-Batterie !{{ist|ist nicht}} mindestens ...",
+          "no": "12 V-batteriet !{{er|er ikke}} minst ..."
+        },
+        "titleFormatted": {
+          "en": "12 V battery !{{is|is not}} at least [[colour]]",
+          "nl": "12V-accu !{{is|is niet}} minstens [[colour]]",
+          "de": "12V-Batterie !{{ist|ist nicht}} mindestens [[colour]]",
+          "no": "12 V-batteriet !{{er|er ikke}} minst [[colour]]"
+        },
+        "hint": {
+          "en": "Compares the car's rating of its 12 V battery by severity: green, green-yellow, yellow, orange, red.",
+          "nl": "Vergelijkt de beoordeling van de 12V-accu door de auto naar ernst: groen, groen-geel, geel, oranje, rood.",
+          "de": "Vergleicht die Bewertung der 12V-Batterie durch das Fahrzeug nach Schweregrad: grün, grün-gelb, gelb, orange, rot.",
+          "no": "Sammenligner bilens vurdering av 12 V-batteriet etter alvor: grønn, grønn-gul, gul, oransje, rød."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mercedes-vehicle&capabilities=starter_battery_level"
+          },
+          {
+            "type": "dropdown",
+            "name": "colour",
+            "title": {
+              "en": "Colour",
+              "nl": "Kleur",
+              "de": "Farbe",
+              "no": "Farge"
+            },
+            "values": [
+              {
+                "id": "1",
+                "label": {
+                  "en": "Green-Yellow",
+                  "nl": "Groen-geel",
+                  "de": "Grün-Gelb",
+                  "no": "Grønn-gul"
+                }
+              },
+              {
+                "id": "2",
+                "label": {
+                  "en": "Yellow",
+                  "nl": "Geel",
+                  "de": "Gelb",
+                  "no": "Gul"
+                }
+              },
+              {
+                "id": "3",
+                "label": {
+                  "en": "Orange",
+                  "nl": "Oranje",
+                  "de": "Orange",
+                  "no": "Oransje"
+                }
+              },
+              {
+                "id": "4",
+                "label": {
+                  "en": "Red",
+                  "nl": "Rood",
+                  "de": "Rot",
+                  "no": "Rød"
+                }
+              }
+            ]
+          }
+        ]
       },
       {
         "icon": "/assets/icon.svg",
@@ -1828,6 +2116,26 @@
       "uiComponent": "sensor",
       "icon": "/assets/icons/distance_electrical.svg"
     },
+    "distance_reset": {
+      "type": "number",
+      "title": {
+        "en": "Distance Since Reset",
+        "nl": "Afstand sinds reset",
+        "de": "Strecke seit Zurücksetzen",
+        "no": "Kjørt strekning fra tilbakestilling"
+      },
+      "units": {
+        "en": "km"
+      },
+      "decimals": 1,
+      "min": 0,
+      "max": 999999,
+      "getable": true,
+      "setable": false,
+      "insights": true,
+      "uiComponent": "sensor",
+      "icon": "/assets/icons/map-marker-distance.svg"
+    },
     "distance_start": {
       "type": "number",
       "title": {
@@ -1980,6 +2288,46 @@
       "setable": false,
       "uiComponent": "sensor",
       "icon": "/assets/icons/ecoscore.svg"
+    },
+    "electric_consumption_reset": {
+      "type": "number",
+      "title": {
+        "en": "Consumption Since Reset",
+        "nl": "Verbruik sinds reset",
+        "de": "Verbrauch seit Zurücksetzen",
+        "no": "Gjennomsnittsforbruk fra tilbakestilling"
+      },
+      "units": {
+        "en": "kWh/100 km"
+      },
+      "decimals": 1,
+      "min": 0,
+      "max": 999,
+      "getable": true,
+      "setable": false,
+      "insights": true,
+      "uiComponent": "sensor",
+      "icon": "/assets/icons/chart-line.svg"
+    },
+    "electric_consumption_start": {
+      "type": "number",
+      "title": {
+        "en": "Trip Consumption",
+        "nl": "Ritverbruik",
+        "de": "Fahrtverbrauch",
+        "no": "Gjennomsnittsforbruk fra start"
+      },
+      "units": {
+        "en": "kWh/100 km"
+      },
+      "decimals": 1,
+      "min": 0,
+      "max": 999,
+      "getable": true,
+      "setable": false,
+      "insights": true,
+      "uiComponent": "sensor",
+      "icon": "/assets/icons/chart-line.svg"
     },
     "engine_running": {
       "type": "boolean",
@@ -2398,6 +2746,84 @@
       "setable": false,
       "uiComponent": "sensor",
       "icon": "/assets/icons/parking_brake.svg"
+    },
+    "starter_battery_level": {
+      "type": "number",
+      "title": {
+        "en": "12 V battery level",
+        "nl": "12V-accuniveau",
+        "de": "12V-Batteriestufe",
+        "no": "12 V batterinivå"
+      },
+      "decimals": 0,
+      "min": 0,
+      "max": 4,
+      "getable": true,
+      "setable": false,
+      "insights": true,
+      "uiComponent": null,
+      "icon": "/assets/icons/car-battery.svg"
+    },
+    "starter_battery_state": {
+      "type": "enum",
+      "title": {
+        "en": "12 V battery",
+        "nl": "12V-accu",
+        "de": "12V-Batterie",
+        "no": "12 V batteri"
+      },
+      "values": [
+        {
+          "id": "0",
+          "title": {
+            "en": "Green",
+            "nl": "Groen",
+            "de": "Grün",
+            "no": "Grønn"
+          }
+        },
+        {
+          "id": "1",
+          "title": {
+            "en": "Yellow",
+            "nl": "Geel",
+            "de": "Gelb",
+            "no": "Gul"
+          }
+        },
+        {
+          "id": "2",
+          "title": {
+            "en": "Red",
+            "nl": "Rood",
+            "de": "Rot",
+            "no": "Rød"
+          }
+        },
+        {
+          "id": "3",
+          "title": {
+            "en": "Orange",
+            "nl": "Oranje",
+            "de": "Orange",
+            "no": "Oransje"
+          }
+        },
+        {
+          "id": "4",
+          "title": {
+            "en": "Green-Yellow",
+            "nl": "Groen-geel",
+            "de": "Grün-Gelb",
+            "no": "Grønn-gul"
+          }
+        }
+      ],
+      "getable": true,
+      "setable": false,
+      "insights": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/icons/car-battery.svg"
     },
     "text_charge_program": {
       "type": "string",

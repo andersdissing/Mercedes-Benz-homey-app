@@ -1,0 +1,21 @@
+{
+  "type": "enum",
+  "title": {
+    "en": "12 V battery",
+    "nl": "12V-accu",
+    "de": "12V-Batterie",
+    "no": "12 V batteri"
+  },
+  "values": [
+    { "id": "0", "title": { "en": "Green", "nl": "Groen", "de": "Grün", "no": "Grønn" } },
+    { "id": "1", "title": { "en": "Yellow", "nl": "Geel", "de": "Gelb", "no": "Gul" } },
+    { "id": "2", "title": { "en": "Red", "nl": "Rood", "de": "Rot", "no": "Rød" } },
+    { "id": "3", "title": { "en": "Orange", "nl": "Oranje", "de": "Orange", "no": "Oransje" } },
+    { "id": "4", "title": { "en": "Green-Yellow", "nl": "Groen-geel", "de": "Grün-Gelb", "no": "Grønn-gul" } }
+  ],
+  "getable": true,
+  "setable": false,
+  "insights": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/icons/car-battery.svg"
+}
