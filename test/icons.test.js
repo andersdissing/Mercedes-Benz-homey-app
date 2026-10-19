@@ -28,6 +28,8 @@ test('MDI icons only on the capabilities added for #85; the others keep their ow
     distance_reset: 'map-marker-distance',
     electric_consumption_start: 'chart-line',
     electric_consumption_reset: 'chart-line',
+    starter_battery_state: 'car-battery',
+    starter_battery_level: 'car-battery',
   };
   const licence = fs.readFileSync(path.join(root, 'assets', 'icons', 'LICENSE-mdi.txt'), 'utf8');
 

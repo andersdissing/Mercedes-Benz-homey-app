@@ -13,7 +13,7 @@
   ],
   "getable": true,
   "setable": false,
-  "insights": true,
+  "insights": false,
   "uiComponent": "sensor",
   "icon": "/assets/icons/car-battery.svg"
 }

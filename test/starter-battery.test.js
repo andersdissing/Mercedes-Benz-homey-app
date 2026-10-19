@@ -53,7 +53,7 @@ test('the definition: read-only enum 0-4 with the agreed titles (Homey keeps no 
   ]);
   assert.equal(definition.setable, false);
   assert.equal(definition.getable, true);
-  assert.equal(definition.insights, true);
+  assert.equal(definition.insights, false, 'Homey keeps no Insights for an enum, the level carries them');
 
   const compose = JSON.parse(fs.readFileSync(path.join(root, 'drivers/mercedes-vehicle/driver.compose.json'), 'utf8'));
   assert.ok(!compose.capabilities.includes('starter_battery_state'), 'not handed out at pairing');
