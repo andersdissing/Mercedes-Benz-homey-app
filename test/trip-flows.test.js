@@ -124,6 +124,15 @@ test('12 V battery changed: the colour is in the Homey\'s language', async () =>
   assert.deepEqual(fired(device, 'starter_battery_changed')[0].tokens, { level: 1, colour: 'Grønn-gul' });
 });
 
+test('12 V battery changed: Dutch and German Homeys get the colour in their language too', async () => {
+  for (const [language, colour] of [['nl', 'Groen-geel'], ['de', 'Grün-Gelb']]) {
+    const device = makeDevice({ language });
+    await device.updateCapabilities({ starterBatteryState: 0 });
+    await device.updateCapabilities({ starterBatteryState: 4 });
+    assert.equal(fired(device, 'starter_battery_changed')[0].tokens.colour, colour, language);
+  }
+});
+
 // --- trigger: trip ended --------------------------------------------------------
 
 const DRIVE = {
@@ -264,4 +273,33 @@ test('consumption and distance since reset are above: strictly above the thresho
   const none = makeDevice();
   assert.equal(await none.consumptionResetAbove(0), false);
   assert.equal(await none.distanceResetAbove(0), false);
+});
+
+// --- languages ----------------------------------------------------------------
+
+test('the new cards and the 12 V battery are in English, Dutch, German and Norwegian', () => {
+  const files = [
+    ['flow/triggers', 'starter_battery_changed'],
+    ['flow/triggers', 'trip_ended'],
+    ['flow/conditions', 'starter_battery_at_least'],
+    ['flow/conditions', 'consumption_reset_above'],
+    ['flow/conditions', 'distance_reset_above'],
+    ['capabilities', 'starter_battery_state'],
+    ['capabilities', 'starter_battery_level'],
+  ];
+  const missing = [];
+  const walk = (node, where) => {
+    if (Array.isArray(node)) return node.forEach((child) => walk(child, where));
+    if (!node || typeof node !== 'object') return;
+    if (typeof node.en === 'string') {
+      for (const language of ['nl', 'de', 'no']) {
+        if (typeof node[language] !== 'string') missing.push(`${where}: "${node.en}" has no ${language}`);
+      }
+    }
+    Object.values(node).forEach((child) => walk(child, where));
+  };
+  for (const [dir, id] of files) {
+    walk(JSON.parse(fs.readFileSync(path.join(root, '.homeycompose', dir, `${id}.json`), 'utf8')), id);
+  }
+  assert.deepEqual(missing, []);
 });

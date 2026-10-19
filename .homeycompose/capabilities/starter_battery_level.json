@@ -2,6 +2,8 @@
   "type": "number",
   "title": {
     "en": "12 V battery level",
+    "nl": "12V-accuniveau",
+    "de": "12V-Batteriestufe",
     "no": "12 V batterinivå"
   },
   "decimals": 0,

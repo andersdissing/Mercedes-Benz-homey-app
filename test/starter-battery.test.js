@@ -43,13 +43,13 @@ function makeDevice({ already = false } = {}) {
 
 test('the definition: read-only enum 0-4 with the agreed titles (Homey keeps no Insights for an enum)', () => {
   assert.equal(definition.type, 'enum');
-  assert.deepEqual(definition.title, { en: '12 V battery', no: '12 V batteri' });
-  assert.deepEqual(definition.values.map((v) => [v.id, v.title.en, v.title.no]), [
-    ['0', 'Green', 'Grønn'],
-    ['1', 'Yellow', 'Gul'],
-    ['2', 'Red', 'Rød'],
-    ['3', 'Orange', 'Oransje'],
-    ['4', 'Green-Yellow', 'Grønn-gul'],
+  assert.deepEqual(definition.title, { en: '12 V battery', nl: '12V-accu', de: '12V-Batterie', no: '12 V batteri' });
+  assert.deepEqual(definition.values.map((v) => [v.id, v.title.en, v.title.nl, v.title.de, v.title.no]), [
+    ['0', 'Green', 'Groen', 'Grün', 'Grønn'],
+    ['1', 'Yellow', 'Geel', 'Gelb', 'Gul'],
+    ['2', 'Red', 'Rood', 'Rot', 'Rød'],
+    ['3', 'Orange', 'Oranje', 'Orange', 'Oransje'],
+    ['4', 'Green-Yellow', 'Groen-geel', 'Grün-Gelb', 'Grønn-gul'],
   ]);
   assert.equal(definition.setable, false);
   assert.equal(definition.getable, true);
@@ -62,7 +62,7 @@ test('the definition: read-only enum 0-4 with the agreed titles (Homey keeps no 
 
 test('the level: a read-only number 0-4 for Insights, with no tile of its own', () => {
   assert.equal(level.type, 'number');
-  assert.deepEqual(level.title, { en: '12 V battery level', no: '12 V batterinivå' });
+  assert.deepEqual(level.title, { en: '12 V battery level', nl: '12V-accuniveau', de: '12V-Batteriestufe', no: '12 V batterinivå' });
   assert.equal(level.setable, false);
   assert.equal(level.getable, true);
   assert.equal(level.insights, true);
