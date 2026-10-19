@@ -21,7 +21,7 @@
       "type": "number",
       "title": {
         "en": "Level (0-4)",
-        "no": "Nivå (0–4)"
+        "no": "Nivå (0-4)"
       },
       "example": 2
     },

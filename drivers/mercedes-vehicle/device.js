@@ -1076,6 +1076,10 @@ class MercedesVehicleDevice extends Homey.Device {
         if (trip.ending) {
           this.log('[TRIP] Ignition back on before the trip ended - carrying on');
           this._cancelTripEnd();
+        } else if (!trip.active) {
+          // A new trip: nothing from the last one may stand in for a figure
+          // this one never sends.
+          trip.values = {};
         }
         trip.active = true;
       } else if (state === 0 && trip.active) {
@@ -1147,7 +1151,13 @@ class MercedesVehicleDevice extends Homey.Device {
     }
 
     const energy = Math.round(distance * consumption) / 100;
-    const tokens = { distance, driving_time: drivingTime, consumption, energy, average_speed: averageSpeed };
+    const tokens = {
+      distance_start: distance,
+      driving_time_start: drivingTime,
+      consumption_start: consumption,
+      energy_start: energy,
+      average_speed_start: averageSpeed,
+    };
     this.log(`[TRIGGER] Trip ended (${why}): ${JSON.stringify(tokens)}`);
     try {
       await this.homey.flow.getDeviceTriggerCard('trip_ended').trigger(this, tokens);

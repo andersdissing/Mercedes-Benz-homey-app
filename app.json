@@ -441,7 +441,7 @@
             "type": "number",
             "title": {
               "en": "Level (0-4)",
-              "no": "Nivå (0–4)"
+              "no": "Nivå (0-4)"
             },
             "example": 2
           },
@@ -466,8 +466,8 @@
           "no": "Tur avsluttet"
         },
         "hint": {
-          "en": "Fires when the ignition is switched off after a drive, once the car has sent the trip's final figures (at most 3 minutes later, with the latest figures it has). Trips under 2 km, and consumption shown as 99.9, are skipped.",
-          "no": "Utløses når tenningen slås av etter en kjøretur, når bilen har sendt turens siste verdier (senest 3 minutter etter, med de siste verdiene den har). Turer under 2 km, og forbruk vist som 99,9, hoppes over."
+          "en": "Fires when the ignition is switched off after a drive, once the car has sent its final figures (at most 3 minutes later, with the latest figures it has). The tags are the car's own \"from start\" figures, which can cover more than one drive if the car has not reset them in between. Trips under 2 km, and consumption shown as 99.9, are skipped.",
+          "no": "Utløses når tenningen slås av etter en kjøretur, når bilen har sendt de siste verdiene (senest 3 minutter etter, med de siste verdiene den har). Taggene er bilens egne \"fra start\"-verdier, som kan gjelde flere turer hvis bilen ikke har nullstilt dem i mellomtiden. Turer under 2 km, og forbruk vist som 99,9, hoppes over."
         },
         "args": [
           {
@@ -478,47 +478,47 @@
         ],
         "tokens": [
           {
-            "name": "distance",
+            "name": "distance_start",
             "type": "number",
             "title": {
-              "en": "Distance driven (km)",
-              "no": "Kjørt strekning (km)"
+              "en": "Distance from start (km)",
+              "no": "Kjørt strekning fra start (km)"
             },
             "example": 52.5
           },
           {
-            "name": "driving_time",
+            "name": "driving_time_start",
             "type": "number",
             "title": {
-              "en": "Driving time (min)",
-              "no": "Kjøretid (min)"
+              "en": "Driving time from start (min)",
+              "no": "Kjøretid fra start (min)"
             },
             "example": 101
           },
           {
-            "name": "consumption",
+            "name": "consumption_start",
             "type": "number",
             "title": {
-              "en": "Average consumption (kWh/100 km)",
-              "no": "Gjennomsnittsforbruk (kWh/100 km)"
+              "en": "Average consumption from start (kWh/100 km)",
+              "no": "Gjennomsnittsforbruk fra start (kWh/100 km)"
             },
             "example": 21.5
           },
           {
-            "name": "energy",
+            "name": "energy_start",
             "type": "number",
             "title": {
-              "en": "Energy (kWh)",
-              "no": "Energi (kWh)"
+              "en": "Energy from start (kWh)",
+              "no": "Energi fra start (kWh)"
             },
             "example": 11.29
           },
           {
-            "name": "average_speed",
+            "name": "average_speed_start",
             "type": "number",
             "title": {
-              "en": "Average speed (km/h)",
-              "no": "Gjennomsnittshastighet (km/h)"
+              "en": "Average speed from start (km/h)",
+              "no": "Gjennomsnittshastighet fra start (km/h)"
             },
             "example": 31
           }
@@ -763,7 +763,7 @@
         },
         "hint": {
           "en": "Compares the distance driven since the trip computer was last reset - useful as a reminder to reset it in the car.",
-          "no": "Sammenligner kjørt strekning siden tripptelleren sist ble tilbakestilt – nyttig som påminnelse om å nullstille den i bilen."
+          "no": "Sammenligner kjørt strekning siden tripptelleren sist ble tilbakestilt, nyttig som påminnelse om å nullstille den i bilen."
         },
         "args": [
           {

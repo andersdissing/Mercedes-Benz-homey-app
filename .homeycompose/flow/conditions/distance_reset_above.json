@@ -10,7 +10,7 @@
   },
   "hint": {
     "en": "Compares the distance driven since the trip computer was last reset - useful as a reminder to reset it in the car.",
-    "no": "Sammenligner kjørt strekning siden tripptelleren sist ble tilbakestilt – nyttig som påminnelse om å nullstille den i bilen."
+    "no": "Sammenligner kjørt strekning siden tripptelleren sist ble tilbakestilt, nyttig som påminnelse om å nullstille den i bilen."
   },
   "args": [
     {

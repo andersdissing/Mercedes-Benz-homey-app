@@ -66,9 +66,13 @@ test('every new card is in English and Norwegian, and only offered for cars that
   }
   assert.equal(card('triggers', 'starter_battery_changed').title.no, '12 V-batteriet endret seg');
   assert.equal(card('triggers', 'trip_ended').title.no, 'Tur avsluttet');
-  assert.deepEqual(card('triggers', 'trip_ended').tokens.map((t) => [t.name, t.type]), [
-    ['distance', 'number'], ['driving_time', 'number'], ['consumption', 'number'], ['energy', 'number'], ['average_speed', 'number'],
-  ]);
+  assert.deepEqual(card('triggers', 'trip_ended').tokens.map((t) => [t.name, t.type, t.title.no]), [
+    ['distance_start', 'number', 'Kjørt strekning fra start (km)'],
+    ['driving_time_start', 'number', 'Kjøretid fra start (min)'],
+    ['consumption_start', 'number', 'Gjennomsnittsforbruk fra start (kWh/100 km)'],
+    ['energy_start', 'number', 'Energi fra start (kWh)'],
+    ['average_speed_start', 'number', 'Gjennomsnittshastighet fra start (km/h)'],
+  ], 'named as the car names them: the figures can cover more than one drive');
   assert.deepEqual(card('conditions', 'starter_battery_at_least').args[1].values.map((v) => [v.id, v.label.no]), [
     ['1', 'Grønn-gul'], ['2', 'Gul'], ['3', 'Oransje'], ['4', 'Rød'],
   ]);
@@ -137,7 +141,7 @@ test('trip ended: fires as soon as all four figures are in after the ignition go
 
   device._trackTrip({ drivenTimeStart: 101, averageSpeedStart: 31, electricconsumptionstart_display: '21.5', electricconsumptionstart: 21.53 });
   assert.deepEqual(fired(device, 'trip_ended').map((x) => x.tokens), [{
-    distance: 52.5, driving_time: 101, consumption: 21.5, energy: 11.29, average_speed: 31,
+    distance_start: 52.5, driving_time_start: 101, consumption_start: 21.5, energy_start: 11.29, average_speed_start: 31,
   }]);
   t.mock.timers.tick(200000);
   assert.equal(fired(device, 'trip_ended').length, 1, 'and only once - the wait was cancelled');
@@ -154,7 +158,7 @@ test('trip ended: does not hang when a figure never comes - it goes with the lat
   assert.equal(fired(device, 'trip_ended').length, 0);
   t.mock.timers.tick(1);
   assert.equal(fired(device, 'trip_ended').length, 1);
-  assert.equal(fired(device, 'trip_ended')[0].tokens.distance, 52.5);
+  assert.equal(fired(device, 'trip_ended')[0].tokens.distance_start, 52.5);
   assert.ok(device.logs.some((l) => l.includes('Trip ended (timeout)')));
 });
 
@@ -166,6 +170,23 @@ test('trip ended: a figure never seen at all means no trigger, not a made-up val
   device._trackTrip({ ignitionstate: 0 });
   t.mock.timers.tick(180000);
   assert.equal(fired(device, 'trip_ended').length, 0);
+  assert.ok(device.logs.some((l) => l.includes('without consumption')));
+});
+
+test('trip ended: a new trip starts empty - a figure from the last trip never stands in', (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const device = makeDevice();
+
+  // Trip 1 has every figure.
+  device._trackTrip({ ignitionstate: 4, ...DRIVE });
+  device._trackTrip({ ignitionstate: 0, ...DRIVE });
+  assert.equal(fired(device, 'trip_ended').length, 1);
+
+  // Trip 2 never sends a consumption figure.
+  device._trackTrip({ ignitionstate: 4, distanceStart: 12, drivenTimeStart: 20, averageSpeedStart: 36 });
+  device._trackTrip({ ignitionstate: 0 });
+  t.mock.timers.tick(180000);
+  assert.equal(fired(device, 'trip_ended').length, 1, 'trip 2 does not fire on trip 1\'s consumption');
   assert.ok(device.logs.some((l) => l.includes('without consumption')));
 });
 
