@@ -1,0 +1,20 @@
+{
+  "type": "number",
+  "title": {
+    "en": "Trip Consumption",
+    "nl": "Ritverbruik",
+    "de": "Fahrtverbrauch",
+    "no": "Gjennomsnittsforbruk fra start"
+  },
+  "units": {
+    "en": "kWh/100 km"
+  },
+  "decimals": 1,
+  "min": 0,
+  "max": 999,
+  "getable": true,
+  "setable": false,
+  "insights": true,
+  "uiComponent": "sensor",
+  "icon": "/assets/icons/chart-line.svg"
+}

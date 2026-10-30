@@ -1,0 +1,76 @@
+{
+  "id": "starter_battery_at_least",
+  "title": {
+    "en": "12 V battery !{{is|is not}} at least ...",
+    "nl": "12V-accu !{{is|is niet}} minstens ...",
+    "de": "12V-Batterie !{{ist|ist nicht}} mindestens ...",
+    "no": "12 V-batteriet !{{er|er ikke}} minst ..."
+  },
+  "titleFormatted": {
+    "en": "12 V battery !{{is|is not}} at least [[colour]]",
+    "nl": "12V-accu !{{is|is niet}} minstens [[colour]]",
+    "de": "12V-Batterie !{{ist|ist nicht}} mindestens [[colour]]",
+    "no": "12 V-batteriet !{{er|er ikke}} minst [[colour]]"
+  },
+  "hint": {
+    "en": "Compares the car's rating of its 12 V battery by severity: green, green-yellow, yellow, orange, red.",
+    "nl": "Vergelijkt de beoordeling van de 12V-accu door de auto naar ernst: groen, groen-geel, geel, oranje, rood.",
+    "de": "Vergleicht die Bewertung der 12V-Batterie durch das Fahrzeug nach Schweregrad: grün, grün-gelb, gelb, orange, rot.",
+    "no": "Sammenligner bilens vurdering av 12 V-batteriet etter alvor: grønn, grønn-gul, gul, oransje, rød."
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=mercedes-vehicle&capabilities=starter_battery_level"
+    },
+    {
+      "type": "dropdown",
+      "name": "colour",
+      "title": {
+        "en": "Colour",
+        "nl": "Kleur",
+        "de": "Farbe",
+        "no": "Farge"
+      },
+      "values": [
+        {
+          "id": "1",
+          "label": {
+            "en": "Green-Yellow",
+            "nl": "Groen-geel",
+            "de": "Grün-Gelb",
+            "no": "Grønn-gul"
+          }
+        },
+        {
+          "id": "2",
+          "label": {
+            "en": "Yellow",
+            "nl": "Geel",
+            "de": "Gelb",
+            "no": "Gul"
+          }
+        },
+        {
+          "id": "3",
+          "label": {
+            "en": "Orange",
+            "nl": "Oranje",
+            "de": "Orange",
+            "no": "Oransje"
+          }
+        },
+        {
+          "id": "4",
+          "label": {
+            "en": "Red",
+            "nl": "Rood",
+            "de": "Rot",
+            "no": "Rød"
+          }
+        }
+      ]
+    }
+  ]
+}

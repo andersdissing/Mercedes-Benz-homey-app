@@ -1,0 +1,41 @@
+{
+  "id": "consumption_reset_above",
+  "title": {
+    "en": "Consumption since reset !{{is|is not}} above ...",
+    "nl": "Verbruik sinds reset !{{is|is niet}} boven ...",
+    "de": "Verbrauch seit Zurücksetzen !{{ist|ist nicht}} über ...",
+    "no": "Snittforbruk fra tilbakestilling !{{er|er ikke}} over ..."
+  },
+  "titleFormatted": {
+    "en": "Consumption since reset !{{is|is not}} above [[consumption]] kWh/100 km",
+    "nl": "Verbruik sinds reset !{{is|is niet}} boven [[consumption]] kWh/100 km",
+    "de": "Verbrauch seit Zurücksetzen !{{ist|ist nicht}} über [[consumption]] kWh/100 km",
+    "no": "Snittforbruk fra tilbakestilling !{{er|er ikke}} over [[consumption]] kWh/100 km"
+  },
+  "hint": {
+    "en": "Compares the average consumption since the trip computer was last reset.",
+    "nl": "Vergelijkt het gemiddelde verbruik sinds de boordcomputer voor het laatst is gereset.",
+    "de": "Vergleicht den Durchschnittsverbrauch seit dem letzten Zurücksetzen des Bordcomputers.",
+    "no": "Sammenligner gjennomsnittsforbruket siden tripptelleren sist ble tilbakestilt."
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=mercedes-vehicle&capabilities=electric_consumption_reset"
+    },
+    {
+      "type": "number",
+      "name": "consumption",
+      "title": {
+        "en": "kWh/100 km",
+        "nl": "kWh/100 km",
+        "de": "kWh/100 km",
+        "no": "kWh/100 km"
+      },
+      "min": 0,
+      "max": 100,
+      "step": 0.1
+    }
+  ]
+}
