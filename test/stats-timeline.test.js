@@ -376,7 +376,7 @@ test('no record carries a VIN, an e-mail address, a position or a token', async 
   // And by construction: an hour and counters, nothing else.
   for (const record of [...settings.get('connectionTimeline').hours, settings.get('connectionTimeline').cur, ...hours]) {
     for (const [key, value] of Object.entries(record)) {
-      assert.ok(['t', 'h', 'c', 'i', 'k'].includes(key), `unexpected key ${key}`);
+      assert.ok(['t', 'h', 'c', 'i', 'k', 'w'].includes(key), `unexpected key ${key}`);
       const values = Array.isArray(value) ? value : [value];
       assert.ok(values.every(Number.isInteger), `${key} holds only whole numbers`);
     }
@@ -418,6 +418,22 @@ test('the app writes once an hour and once more when it stops', async (t) => {
   assert.equal(settings.writes, 4, 'the hour in progress is stored on the way out');
   t.mock.timers.tick(5 * HOUR);
   assert.equal(settings.writes, 4, 'and the timer stopped with the app');
+});
+
+test('wakes (w): counted per hour, left out when there were none, explained in the legend', (t) => {
+  useFakeClock(t);
+  const timeline = new StatsTimeline(fakeSettings());
+  timeline.load();
+
+  timeline.count('open');
+  timeline.count('wake');
+  timeline.count('wake');
+  t.mock.timers.tick(HOUR);
+  timeline.count('open');
+
+  const body = timeline.toJSON();
+  assert.deepEqual(body.hours, [{ t: T0 / 1000, h: [1], w: 2 }, { t: (T0 + HOUR) / 1000, h: [1] }]);
+  assert.match(body.keys.w, /vtime/);
 });
 
 test('GET /stats serves every hour kept, with a legend, from api.js', async (t) => {
