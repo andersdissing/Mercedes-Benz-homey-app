@@ -67,6 +67,42 @@ A command's life:
 Measured: acceptance 59-290 ms, window commands complete in 7.5-12.8 s,
 unlock ~4 s. Faster when the car is already awake.
 
+The idle cycle (1.1.54), on a parked car, repeats every ~90 s:
+
+```
+[WS] Connected to Mercedes WebSocket
+[WS] No data from the car for 30s - closing the connection until it is needed
+[WS] Connection closed while idle - next connection in 60s
+```
+
+Once an hour: `[WS] Connection stats for the last 60 min: handshakes=…
+(open=, 429=, failed=), closes: idle=, 1001=, drop=, other=, commands: …`.
+
+## Reading the 60-day connection timeline
+
+The same counts, by clock hour, are kept for 60 days in `homey.settings`
+(`lib/stats-timeline.js`) and served by `GET /stats`:
+
+```
+npx homey@4 api raw --path /api/app/com.mercedes.mbapi/stats --json
+```
+
+The CLI pinned in `devDependencies` (3.9.x) has no `api` command; 4.x does.
+The endpoint is `"public": false` — Homey has no owner-only option for app
+endpoints, so "not public" means a token for this Homey is required. The
+response carries its own legend (`keys`). Records hold an hour and counters
+only (`t`, `h`, `c`, `i`, `k`, `w`, `l`) — a test drives the real pipeline with a
+VIN, e-mail, position and token and checks none of them gets in. `w` counts
+the times a car sent a newer `vtime` (its own clock at its last report, read
+as local time): a car waking and reporting, beside the app's own handshakes
+in `h`. `l` counts the logins the push connection asked for: ahead of the
+session limit (see the 18-hour fact below), after 429s, and failed. Counted
+in memory, written hourly and in the app's `onUninit`; the hour in progress
+is stored as `cur` and resumed after a restart in the same hour, so an hour
+is not counted twice. The `onUninit` write does not land when an install
+replaces the app, so an install can cost what was counted since the last
+hourly write. A missing hour means the app was not running.
+
 ## Things that look like bugs but are not
 
 - **HTTP 429 on every app restart.** Restarting tears down the old session
@@ -74,8 +110,15 @@ unlock ~4 s. Faster when the car is already awake.
   and reconnects in ~12 s. Expected — and the reason the first backoff window
   is 30 s, not minutes: a long opening window bills every app update for a
   block that was already over.
-- **1001 "Going away" every ~13 minutes.** Mercedes rotates connections;
-  reconnect takes ~150 ms.
+- **The push connection is closed most of the time.** On purpose since
+  1.1.54: closed 30 s after the last frame from the car, back 60 s later, so
+  a parked car handshakes about 40 times an hour. The health check and the
+  staleness warning treat that rest as healthy (`isResting()`).
+- **1001 "Going away" every ~13 minutes.** Mercedes rotates connections. It
+  shows on a connection held open (ignition on, command under way or sent
+  < 180 s ago), and while that hold lasts the app reconnects at once, as
+  mbapi2020 does. Only with nothing holding the connection does a 1001 wait
+  the 60 s cycle.
 - **The Flow editor's Test button reports timeouts that never happened.** It
   abandons a run after well under 30 s and blames whichever card it was
   nearest, so any Flow with a delay shows a timeout even though every card
@@ -117,6 +160,21 @@ unlock ~4 s. Faster when the car is already awake.
   logins can be, not how many an outage gets: once the window is at the cap,
   the knock the app was going to make anyway is spent on a login instead of a
   refresh.
+- **A session is refused at about 18 hours old, so it is renewed at 16.**
+  The idle-close test build on a parked car (15-18 Oct 2026, read from
+  `GET /stats`)
+  met two WebSocket 429s every 18 hours, in the same clock hour each time:
+  20:00, 14:00, 08:00, 02:00, 20:00. Each episode was a refreshed token
+  refused again and then the escalation's login let through, and that login
+  started the next 18 hours. With hourly records that puts the limit within
+  about a quarter of an hour of 18 h. So `login()` stamps the token with
+  `logged_in_at`, a refresh carries the stamp over, and `connectOrThrow()`
+  logs in before the handshake once the session is 16 h old
+  (`SESSION_RENEW_AFTER`; a token without the stamp counts as due). Sixteen,
+  not seventeen, in case the limit counts handshakes: about 680 went by
+  between episodes, and the interval with a drive had fewer and still lasted
+  18 h. A failed renewal still handshakes and is retried 15 min later.
+  Whether this ends the 429s is read from `l[0]` and `h[1]` in `GET /stats`.
 - **There is no REST source for doors, windows, lock or sunroof.** Checked
   against mbapi2020's `webapi.py` (Aug 2026): the only vehicle-state REST
   endpoint anyone knows is the widget `vehicleattributes` one the app already
@@ -215,6 +273,39 @@ unlock ~4 s. Faster when the car is already awake.
   `onoff_charging` stuck true forever and the widget animating a charging
   battery on an unplugged car. Prefer an attribute the car always sends
   (`chargingactive`, `chargingstatus`) over one that disappears.
+- **The push connection idles out, as mbapi2020's does (1.1.54).** Holding
+  it open around the clock - ping every 20 s, the health check reconnecting
+  at once - is the suspected cause of hours-long WebSocket 429 blocks, during
+  which no command (preheat included) gets through. mbapi2020 closes after
+  30 s without data and reconnects 60 s later and is not seen blocked. The
+  rules, all in `lib/websocket.js`: 30 s after the last *frame* (a pong is
+  not data); held open while any car on the account has `ignitionstate` 4
+  (mbapi2020's definition - the `ignition_on` capability also counts 1/2),
+  while a command is queued or awaiting its caller, and for 180 s after a
+  command is sent (an accepted command that never finishes holds no longer
+  than that); after our own idle close, the next handshake is 60 s later
+  (mbapi2020's `RECONNECT_WATCHDOG_TIMEOUT`); after Mercedes closes it or it
+  drops (1001, 1000, 1006, liveness timeout), it comes back at once while a
+  hold applies - mbapi2020 reconnects at once after *any* server close
+  (`websocket.py` 440-443, 525-544) - but at most once per 60 s, a brake
+  mbapi2020 does not have, against a connection closed straight after it
+  opens; with no hold, 60 s, which is this app's own choice and not
+  mbapi2020's; a command skips any wait but never a 429 window; ping every
+  32 s. The 429 ladder clears after 5 min of stable
+  connection (1dab8c4) *or* 5 clean idle cycles in a row - one is not
+  enough, that is #83's loop.
+- **A failed upgrade is not a closed connection.** `ws` reports every failed
+  upgrade - 429, 401, 418, ECONNREFUSED, timeout - as `'error'` and then
+  `'close'` 1006, on a socket that never opened, and after a network event the
+  close runs *before* `connect()`'s catch. Ask the `opened` flag set in the
+  `'open'` handler, never `settled`: taking that close for an open
+  connection's put every refusal on the flat 60 s cycle, skipped the failure
+  backoff and the ladder's 30 s first step, and counted refusals as drops. A
+  scripted test socket must fail the same way (error, then close 1006) and
+  deliver refusals from a macrotask (`fromNetwork()` in
+  `test/websocket-idle-cycle.test.js`) - emitted from promise code the order
+  inverts and the bug hides; the real-`ws` tests in
+  `test/websocket-handshake-response.test.js` pin it.
 - **PIN-gated commands** (open windows, open/tilt sunroof) need the PIN in
   device settings. Re-pairing wipes it, along with the widget's device
   selection — the widget stores the Homey device ID and re-pairing mints a
@@ -235,4 +326,14 @@ npx homey app build                   # regenerates app.json from .homeycompose
 
 `require()`ing a driver or device file outside Homey fails with
 `Class extends value undefined` — that is the runtime being absent, not a
-syntax error. Use `node --check <file>`.
+syntax error. Use `node --check <file>` for syntax. To *test* `device.js` or
+`app.js`, put a stand-in for `homey` in `require.cache` first (`exports:
+{ Device: class {} }` or `{ App: class {} }`) and call methods on
+`Object.create(Class.prototype)` - see `loadDeviceClass()` in
+`test/websocket-idle-cycle.test.js`. That tests the real code; a copy of its
+logic in the test does not.
+
+Timer tests use `node:test`'s `mock.timers`. Its `tick(ms)` moves the clock
+to the *end* before running what fell due, so a timer armed inside a callback
+starts from the wrong time - step in small increments (`advance()` in
+`test/websocket-idle-cycle.test.js`) when timers chain.

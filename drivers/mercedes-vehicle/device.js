@@ -663,7 +663,11 @@ class MercedesVehicleDevice extends Homey.Device {
         // path was dropped without a close frame stays in readyState OPEN
         // indefinitely. Checking "connected" alone would keep declaring
         // that zombie healthy while no vehicle data ever arrives again.
-        if (!this.api.isWebSocketHealthy()) {
+        //
+        // A connection the app closed itself and will bring back on the idle
+        // cycle is neither. Reconnecting it from here would handshake inside
+        // the 60s wait - the always-on pattern again, five minutes at a time.
+        if (!this.api.isWebSocketHealthy() && !this.api.isWebSocketResting()) {
           const idle = this.api.getWebSocketIdleTime();
           const why = this.api.isWebSocketConnected()
             ? `stale (no traffic for ${Math.round((idle || 0) / 1000)}s)`
@@ -690,10 +694,11 @@ class MercedesVehicleDevice extends Homey.Device {
    *
    * Keyed off how long the socket has been down rather than how long since
    * the last push: a parked car legitimately pushes nothing for hours, so
-   * silence alone is not a fault.
+   * silence alone is not a fault. Nor is the idle cycle's rest between
+   * connections: that is the connection working as intended.
    */
   async _reportPushStaleness() {
-    if (this.api.isWebSocketHealthy()) {
+    if (this.api.isWebSocketHealthy() || this.api.isWebSocketResting()) {
       this._wsDownSince = null;
       await this._clearPushStaleWarning();
       return;
@@ -1044,6 +1049,31 @@ class MercedesVehicleDevice extends Homey.Device {
     }
   }
 
+  /**
+   * vtime: the car's own clock at its last report (unix seconds, read as the
+   * car's local time). A newer value means the car woke and sent data. Each
+   * one is counted in the connection timeline (w) beside the app's own
+   * handshakes (h), to see whether the app's activity is what wakes the car -
+   * and with it the 12 V battery level in Insights.
+   *
+   * Only newer values count: the widget poll can carry an older vtime than a
+   * push already brought. The first one after a start is not counted - there
+   * is nothing to compare it with.
+   */
+  _noteVtime(data) {
+    const vtime = Number(data.vtime);
+    if (data.vtime === undefined || data.vtime === null || !Number.isFinite(vtime)) return;
+
+    const previous = this._lastVtime;
+    if (previous !== undefined && vtime <= previous) return;
+    this._lastVtime = vtime;
+    if (previous === undefined) return;
+
+    this.log(`[UPDATE] Car reported a new vtime (${previous} -> ${vtime}) - counted as a wake`);
+    const app = this.homey && this.homey.app;
+    if (app && typeof app.getStatsTimeline === 'function') app.getStatsTimeline().count('wake');
+  }
+
   /** The colour's title in the Homey's language, from the capability's enum. */
   _starterBatteryColour(id) {
     const value = MANIFEST.capabilities.starter_battery_state.values.find((v) => v.id === id);
@@ -1196,6 +1226,8 @@ class MercedesVehicleDevice extends Homey.Device {
   async _applyCapabilityUpdate(data) {
     try {
       this.log('[UPDATE] Updating capabilities from vehicle data...');
+
+      this._noteVtime(data);
 
       // Door lock status
       try {
