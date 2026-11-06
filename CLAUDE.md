@@ -322,7 +322,11 @@ npx homey app build                   # regenerates app.json from .homeycompose
 `app.json` is generated — edit `.homeycompose/` and rebuild. Version lives in
 `.homeycompose/app.json`; add a matching `.homeychangelog.json` entry with
 `en`/`nl`/`de` text. Publishing is the `publish.yml` workflow, which is
-`workflow_dispatch` only and runs against the default branch.
+`workflow_dispatch` only and publishes whichever branch it is started on —
+releases often go out from the feature branch before it is merged, so
+`main` can trail what is live. It publishes to the Homey App Store and
+creates no GitHub release, so the GitHub release list is not a record of
+what shipped; `gh run list --workflow publish.yml` is.
 
 `require()`ing a driver or device file outside Homey fails with
 `Class extends value undefined` — that is the runtime being absent, not a
