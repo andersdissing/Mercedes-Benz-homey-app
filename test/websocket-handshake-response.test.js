@@ -165,3 +165,88 @@ test('a refusal that is not a rate limit is unaffected', { timeout: 15000 }, asy
     await server.close();
   }
 });
+
+/**
+ * A failed upgrade is not a closed connection.
+ *
+ * ws reports every failed upgrade as 'error' and then 'close' 1006, on a
+ * socket that never opened, and the close lands before connect() reaches its
+ * catch. Read as the close of an open connection, that put each refusal on
+ * the idle cycle's flat 60s retry, counted it as a drop and called it resting
+ * - and the failure backoff and the 429 ladder's 30s first step never ran.
+ * Scripted sockets got the order wrong and hid it, so these use real ones.
+ */
+function makeLoggingWs(port) {
+  const ws = makeWs(port);
+  ws.logs = [];
+  ws.homey = {
+    app: {
+      log: (...args) => ws.logs.push(args.join(' ')),
+      error: (...args) => ws.logs.push(args.join(' ')),
+    },
+  };
+  return ws;
+}
+
+/** A port on loopback with nothing listening, so a connect is refused. */
+function closedPort() {
+  const server = http.createServer();
+  return new Promise((resolve) => {
+    server.listen(0, '127.0.0.1', () => {
+      const { port } = server.address();
+      server.close(() => resolve(port));
+    });
+  });
+}
+
+/** Let ws deliver the 'close' 1006 that follows a failed upgrade. */
+async function closeDelivered(ws) {
+  for (let i = 0; i < 100; i++) {
+    if (ws.logs.some((l) => l.includes('Abnormal closure (1006)'))) return;
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  assert.fail('ws never reported the close that follows a failed upgrade');
+}
+
+test('a real 429 goes on the ladder\'s 30s first step, not the idle cycle', { timeout: 15000 }, async () => {
+  const server = await refusingServer('429 Too Many Requests');
+  const ws = makeLoggingWs(server.port);
+
+  try {
+    await ws.connect(() => {});
+    await closeDelivered(ws);
+
+    // What is left of the 30s window when the retry is planned - a real clock
+    // has moved on a millisecond or two by then.
+    const planned = ws.logs.map((l) => l.match(/Scheduling reconnect attempt 1 in ([\d.]+)s/)).find(Boolean);
+    assert.ok(planned, ws.logs.join('\n'));
+    const seconds = Number(planned[1]);
+    assert.ok(seconds > 25 && seconds <= 30, `the ladder's first step, not ${seconds}s`);
+    assert.equal(ws.logs.some((l) => l.includes('next connection in')), false, 'not the 60s cycle');
+    assert.equal(ws.reconnectAttempts, 1, 'a failed attempt, counted as one');
+    assert.equal(ws.isResting(), false, 'a retry after a refusal is not the cycle resting');
+    assert.equal(ws.stats.rateLimited, 1);
+    assert.equal(ws.stats.closes.drop, 0, 'a refused upgrade is not a lost connection');
+  } finally {
+    ws.disconnect();
+    await server.close();
+  }
+});
+
+test('a real refused connection goes on the 10s failure backoff, not the idle cycle', { timeout: 15000 }, async () => {
+  const ws = makeLoggingWs(await closedPort());
+
+  try {
+    await ws.connect(() => {});
+    await closeDelivered(ws);
+
+    assert.ok(ws.logs.some((l) => l.includes('ECONNREFUSED')), ws.logs.join('\n'));
+    assert.ok(ws.logs.some((l) => l.includes('Scheduling reconnect attempt 1 in 10s')), ws.logs.join('\n'));
+    assert.equal(ws.logs.some((l) => l.includes('next connection in')), false, 'not the 60s cycle');
+    assert.equal(ws.isResting(), false);
+    assert.equal(ws.stats.failed, 1);
+    assert.equal(ws.stats.closes.drop, 0);
+  } finally {
+    ws.disconnect();
+  }
+});
